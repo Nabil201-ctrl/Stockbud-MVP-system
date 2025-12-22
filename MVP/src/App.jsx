@@ -17,6 +17,12 @@ import Notifications from './pages/onboarding/Notifications';
 import ShopAccess from './pages/onboarding/ShopAccess';
 import LinkShop from './pages/onboarding/LinkShop';
 
+// Auth Pages
+import Login from './pages/auth/Login';
+import Signup from './pages/auth/Signup';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+
 
 import { AuthProvider } from './context/AuthContext';
 import AuthSuccess from './pages/AuthSuccess';
@@ -51,6 +57,10 @@ function App() {
         <Router>
           <Routes>
             {/* Auth Routes */}
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/signup" element={<Signup />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth/reset-password" element={<ResetPassword />} />
             <Route path="/auth/success" element={<AuthSuccess />} />
 
             {/* Onboarding Routes - No Layout */}
