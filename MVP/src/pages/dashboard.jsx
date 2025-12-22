@@ -1,5 +1,6 @@
 // Dashboard.jsx
 import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { storage } from '../utils/db'; // Import storage
 import Sidebar from '../components/Dashboard/Sidebar';
 import Header from '../components/Dashboard/Header';
 import DashboardStats from '../components/Dashboard/DashboardStats';
@@ -25,11 +26,34 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('http://localhost:3000/dashboard/stats');
+        // 1. Try to load from cache first for instant load
+        const cachedStats = await storage.get('dashboard_stats');
+        if (cachedStats) {
+          setStats(cachedStats);
+          setLoading(false); // Show content immediately if we have cache
+        }
+
+        const shop = await storage.get('shopifyShop');
+        const token = await storage.get('shopifyToken');
+
+        // 2. Fetch fresh data
+        const response = await fetch('http://localhost:3000/dashboard/stats', {
+          headers: {
+            'x-shopify-shop': shop,
+            'x-shopify-token': token
+          }
+        });
+        if (!response.ok) throw new Error('Network response was not ok');
+
         const data = await response.json();
+
+        // 3. Update state and cache
         setStats(data);
+        await storage.set('dashboard_stats', data);
+
       } catch (error) {
         console.error('Failed to fetch dashboard stats:', error);
+        // We rely on the cached data if fetch fails
       } finally {
         setLoading(false);
       }

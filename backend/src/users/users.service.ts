@@ -1,7 +1,84 @@
 import { Injectable } from '@nestjs/common';
 
+export interface User {
+    id: string;
+    email: string;
+    name: string;
+    password?: string; // Hashed password
+    picture?: string;
+    shopifyShop?: string;
+    shopifyToken?: string;
+}
+
 @Injectable()
 export class UsersService {
+    private users: Map<string, User> = new Map();
+
+    async findByEmail(email: string): Promise<User | undefined> {
+        return Array.from(this.users.values()).find(user => user.email === email);
+    }
+
+    async createOrFind(profile: any): Promise<User> {
+        const email = profile.emails[0].value;
+        let user = await this.findByEmail(email);
+
+        if (!user) {
+            user = {
+                id: profile.id || Math.random().toString(36).substr(2, 9),
+                email,
+                name: profile.displayName,
+                picture: profile.photos?.[0]?.value,
+            };
+            this.users.set(user.id, user);
+        }
+        return user;
+    }
+
+    async createUser(email: string, name: string, passwordHash: string): Promise<User> {
+        const existing = await this.findByEmail(email);
+        if (existing) throw new Error('User already exists');
+
+        const user: User = {
+            id: Math.random().toString(36).substr(2, 9),
+            email,
+            name,
+            password: passwordHash,
+        };
+        this.users.set(user.id, user);
+        return user;
+    }
+
+    async findById(id: string): Promise<User | undefined> {
+        return this.users.get(id);
+    }
+
+    async updateShopifyCredentials(userId: string, shop: string, token: string): Promise<User> {
+        const user = this.users.get(userId);
+        if (user) {
+            user.shopifyShop = shop;
+            user.shopifyToken = token;
+            this.users.set(userId, user);
+            return user;
+        }
+        throw new Error('User not found');
+    }
+
+    async updateProfile(userId: string, data: Partial<User>): Promise<User> {
+        const user = this.users.get(userId);
+        if (user) {
+            if (data.name) user.name = data.name;
+            if (data.email) user.email = data.email; // Caution: verify uniqueness if real DB
+            if (data.password) user.password = data.password;
+
+            this.users.set(userId, user);
+            return user;
+        }
+        throw new Error('User not found');
+    }
+
+    // Keeping the original mock data method for dashboard compatibility if needed, 
+    // but ideally we should move away from this.
+    // For now, I'll keep it to avoid breaking other parts.
     findAll() {
         return {
             users: [

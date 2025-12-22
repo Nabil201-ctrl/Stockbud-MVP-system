@@ -1,19 +1,16 @@
 // components/charts/SourcePieChart.jsx
 import React from 'react';
-import { 
+import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   Legend
 } from 'recharts';
 import { useTheme } from '../../context/ThemeContext';
 
-const SourcePieChart = () => {
+const SourcePieChart = ({ data }) => {
   const { isDarkMode } = useTheme();
 
-  const sourceData = [
-    { name: 'Social Media', value: 48, color: '#3B82F6' },
-    { name: 'Direct Search', value: 38, color: '#10B981' },
-    { name: 'Email Marketing', value: 24, color: '#8B5CF6' },
-    { name: 'Referrals', value: 19, color: '#F59E0B' },
+  const sourceData = data && data.length > 0 ? data : [
+    { name: 'No Data', value: 100, color: '#E5E7EB' }
   ];
 
   const CustomTooltip = ({ active, payload }) => {
@@ -37,11 +34,11 @@ const SourcePieChart = () => {
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central"
         fontSize={12}
         fontWeight="bold"
@@ -67,8 +64,8 @@ const SourcePieChart = () => {
             labelLine={false}
           >
             {sourceData.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
+              <Cell
+                key={`cell-${index}`}
                 fill={entry.color}
                 stroke={isDarkMode ? '#1F2937' : '#FFFFFF'}
                 strokeWidth={2}
@@ -76,7 +73,7 @@ const SourcePieChart = () => {
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          <Legend 
+          <Legend
             layout="vertical"
             verticalAlign="middle"
             align="right"

@@ -1,14 +1,8 @@
 // components/Dashboard/SalesHistory.jsx
 import React from 'react';
 
-const SalesHistory = ({ isDarkMode }) => {
-  const salesHistory = [
-    { name: 'Alpha Turner', amount: 50.52, avatar: 'AT', color: 'bg-red-500' },
-    { name: 'Bela Panch', amount: 198.39, avatar: 'BP', color: 'bg-orange-500' },
-    { name: 'Cinderlla', amount: 30.00, avatar: 'C', color: 'bg-purple-500' },
-    { name: 'David Johnson', amount: 58.98, avatar: 'DJ', color: 'bg-green-500' },
-    { name: 'Peter Parker', amount: 68.98, avatar: 'PP', color: 'bg-gray-500' }
-  ];
+const SalesHistory = ({ isDarkMode, data }) => {
+  const salesHistory = data || [];
 
   return (
     <div className={`rounded-lg p-6 border ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>

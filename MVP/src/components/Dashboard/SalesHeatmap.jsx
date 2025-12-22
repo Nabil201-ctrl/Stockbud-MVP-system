@@ -1,14 +1,26 @@
 // components/Dashboard/SalesHeatmap.jsx
 import React from 'react';
 
-const SalesHeatmap = ({ isDarkMode }) => {
-  const heatmapData = [
-    [0, 0, 1, 1, 2, 1, 2],
-    [2, 2, 1, 2, 2, 3, 2],
-    [1, 2, 2, 1, 2, 2, 3],
-    [0, 1, 1, 2, 1, 2, 1],
-    [1, 0, 1, 1, 2, 1, 0]
-  ];
+const SalesHeatmap = ({ isDarkMode, data }) => {
+  // Construct 5x7 grid from data
+  const heatmapData = React.useMemo(() => {
+    if (!data || data.length === 0) {
+      // Return clear grid
+      return [
+        [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]
+      ];
+    }
+
+    // Map data to levels. Assuming full 35 day history or sparse.
+    const flatLevels = data.map(d => d.level);
+    while (flatLevels.length < 35) flatLevels.push(0);
+
+    const grid = [];
+    for (let i = 0; i < 5; i++) {
+      grid.push(flatLevels.slice(i * 7, (i + 1) * 7));
+    }
+    return grid;
+  }, [data]);
 
   return (
     <div className={`rounded-lg p-6 border ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
@@ -22,15 +34,14 @@ const SalesHeatmap = ({ isDarkMode }) => {
             {row.map((cell, cellIdx) => (
               <div
                 key={cellIdx}
-                className={`aspect-square rounded ${
-                  cell === 0
-                    ? 'bg-gray-100 dark:bg-gray-700'
-                    : cell === 1
+                className={`aspect-square rounded ${cell === 0
+                  ? 'bg-gray-100 dark:bg-gray-700'
+                  : cell === 1
                     ? 'bg-blue-200 dark:bg-blue-900'
                     : cell === 2
-                    ? 'bg-blue-400 dark:bg-blue-700'
-                    : 'bg-blue-600 dark:bg-blue-600'
-                }`}
+                      ? 'bg-blue-400 dark:bg-blue-700'
+                      : 'bg-blue-600 dark:bg-blue-600'
+                  }`}
               ></div>
             ))}
           </React.Fragment>

@@ -1,7 +1,8 @@
 // components/pages/Products.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { storage } from '../utils/db';
 
 const ProductsPage = () => {
   const { isDarkMode } = useTheme();
@@ -23,11 +24,68 @@ const ProductsPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch('http://localhost:3000/products');
+        // 1. Load from cache first
+        const cachedProducts = await storage.get('products_cache');
+        if (cachedProducts) {
+          setProducts(cachedProducts);
+          setLoading(false);
+        }
+
+        const shop = await storage.get('shopifyShop');
+        const token = await storage.get('shopifyToken');
+
+        if (!shop || !token) {
+          console.log("No Shopify credentials found in storage");
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('http://localhost:3000/shopify/products', {
+          headers: {
+            'x-shopify-shop': shop,
+            'x-shopify-token': token
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch from backend');
+        }
+
         const data = await response.json();
-        // The service returns { data: [...], stats: {...} }
-        setProducts(data.data);
-        setProductStats(data.stats);
+
+        // Transform data
+        const transformedProducts = data.map(p => ({
+          id: p.id,
+          name: p.title,
+          category: p.product_type || 'Uncategorized',
+          price: p.variants?.[0]?.price || '0.00',
+          stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || 0,
+          status: p.status === 'active' ? 'active' : 'archived',
+          image: p.image?.src || p.images?.[0]?.src || '📦',
+          revenue: 0,
+          rating: 5.0
+        })).sort((a, b) => b.stock - a.stock);
+
+        // 2. Update state and cache
+        setProducts(transformedProducts);
+        await storage.set('products_cache', transformedProducts);
+
+        // Calculate stats based on real data
+        const total = transformedProducts.length;
+        const active = transformedProducts.filter(p => p.stock >= 10).length;
+        const outOfStock = transformedProducts.filter(p => p.stock === 0).length;
+        const lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
+        const revenue = transformedProducts.reduce((sum, p) => sum + p.revenue, 0);
+
+        setProductStats({
+          total,
+          active,
+          outOfStock,
+          lowStock,
+          totalRevenue: revenue,
+          avgRating: 5.0
+        });
+
       } catch (error) {
         console.error('Failed to fetch products:', error);
       } finally {
@@ -37,14 +95,39 @@ const ProductsPage = () => {
     fetchProducts();
   }, []);
 
-  const categories = [
-    { name: 'All Products', count: 156 },
-    { name: 'Electronics', count: 42 },
-    { name: 'Home & Garden', count: 38 },
-    { name: 'Furniture', count: 24 },
-    { name: 'Clothing', count: 32 },
-    { name: 'Stationery', count: 20 }
-  ];
+  // Dynamic Categories calculation
+  const categories = useMemo(() => {
+    const cats = { 'all': 0 };
+    products.forEach(p => {
+      cats['all'] = (cats['all'] || 0) + 1;
+      const catName = p.category ? p.category.toLowerCase() : 'uncategorized';
+      cats[catName] = (cats[catName] || 0) + 1;
+    });
+
+    return Object.entries(cats).map(([name, count]) => ({
+      name: name === 'all' ? 'All Products' : name.charAt(0).toUpperCase() + name.slice(1),
+      id: name,
+      count
+    })).sort((a, b) => {
+      if (a.id === 'all') return -1;
+      if (b.id === 'all') return 1;
+      return b.count - a.count;
+    });
+  }, [products]);
+
+  // Max Stock for bar scaling
+  const maxStock = useMemo(() => {
+    if (!products.length) return 100;
+    return Math.max(100, ...products.map(p => p.stock));
+  }, [products]);
+
+  // Filter products based on search and category
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = category === 'all' ||
+      (product.category && product.category.toLowerCase() === category);
+    return matchesSearch && matchesCategory;
+  });
 
   if (loading) {
     return (
@@ -131,16 +214,22 @@ const ProductsPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
+                  {filteredProducts.map((product) => (
                     <tr key={product.id} className={`border-b ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'}`}>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="text-2xl">{product.image}</div>
+                          <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {product.image.startsWith('http') ? (
+                              <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-2xl">{product.image}</span>
+                            )}
+                          </div>
                           <div>
                             <div className="font-medium">{product.name}</div>
                             <div className={`text-xs px-2 py-1 rounded-full inline-block ${product.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                product.status === 'low' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                  'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                              product.status === 'low' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                               }`}>
                               {product.status === 'active' ? 'In Stock' : product.status === 'low' ? 'Low Stock' : 'Out of Stock'}
                             </div>
@@ -160,9 +249,9 @@ const ProductsPage = () => {
                             }`}>
                             <div
                               className={`h-2 rounded-full ${product.stock > 50 ? 'bg-green-500' :
-                                  product.stock > 10 ? 'bg-yellow-500' : 'bg-red-500'
+                                product.stock > 10 ? 'bg-yellow-500' : 'bg-red-500'
                                 }`}
-                              style={{ width: `${Math.min(product.stock, 100)}%` }}
+                              style={{ width: `${Math.min((product.stock / maxStock) * 100, 100)}%` }}
                             ></div>
                           </div>
                           <span>{product.stock}</span>
@@ -200,14 +289,14 @@ const ProductsPage = () => {
               <div className="space-y-3">
                 {categories.map((cat) => (
                   <button
-                    key={cat.name}
-                    onClick={() => setCategory(cat.name.toLowerCase())}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${category === cat.name.toLowerCase()
-                        ? isDarkMode ? 'bg-blue-900/30 border-blue-500' : 'bg-blue-50 border-blue-500'
-                        : isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'
+                    key={cat.id}
+                    onClick={() => setCategory(cat.id)}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${category === cat.id
+                      ? isDarkMode ? 'bg-blue-900/30 border-blue-500' : 'bg-blue-50 border-blue-500'
+                      : isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'
                       } border`}
                   >
-                    <span>{cat.name}</span>
+                    <span className="capitalize">{cat.name}</span>
                     <span className={`px-2 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'
                       }`}>
                       {cat.count}
@@ -252,9 +341,15 @@ const ProductsPage = () => {
                 {products.slice(0, 3).map((product, idx) => (
                   <div key={product.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
                     <div className="flex items-center gap-3">
-                      <div className="text-xl">{product.image}</div>
-                      <div>
-                        <div className="font-medium">{product.name}</div>
+                      <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {product.image.startsWith('http') ? (
+                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xl">{product.image}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{product.name}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
                           ${product.revenue.toLocaleString()} revenue
                         </div>
