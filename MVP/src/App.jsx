@@ -1,5 +1,6 @@
 // App.jsx with routing
 import React from 'react';
+import ReloadPrompt from './ReloadPrompt';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { storage } from './utils/db'; // Import storage
@@ -82,6 +83,7 @@ function App() {
             </Route>
           </Routes>
         </Router>
+        <ReloadPrompt />
       </AuthProvider>
     </ThemeProvider>
   );
