@@ -80,7 +80,7 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Revenue Chart */}
               <div className="lg:col-span-2 rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                   <div>
                     <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Revenue</div>
                     <div className="flex items-center gap-2">

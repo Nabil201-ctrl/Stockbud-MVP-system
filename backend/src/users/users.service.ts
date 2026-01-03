@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface User {
     id: string;
@@ -8,11 +10,51 @@ export interface User {
     picture?: string;
     shopifyShop?: string;
     shopifyToken?: string;
+    isOnboardingComplete?: boolean;
+    refreshToken?: string;
+    botSettings?: {
+        name: string;
+        personality: string;
+        responseSpeed: string;
+        theme: string;
+        language: string;
+        notifications: boolean;
+        voiceEnabled: boolean;
+        dataAccess: string;
+        autoRespond: boolean;
+    };
 }
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
     private users: Map<string, User> = new Map();
+    private readonly filePath = path.join(__dirname, '..', '..', 'users.json');
+
+    onModuleInit() {
+        this.loadUsers();
+    }
+
+    private loadUsers() {
+        if (fs.existsSync(this.filePath)) {
+            try {
+                const data = fs.readFileSync(this.filePath, 'utf8');
+                const usersArray = JSON.parse(data);
+                this.users = new Map(usersArray.map((user: User) => [user.id, user]));
+                console.log(`Loaded ${this.users.size} users from ${this.filePath}`);
+            } catch (error) {
+                console.error('Error loading users from file:', error);
+            }
+        }
+    }
+
+    private saveUsers() {
+        try {
+            const usersArray = Array.from(this.users.values());
+            fs.writeFileSync(this.filePath, JSON.stringify(usersArray, null, 2), 'utf8');
+        } catch (error) {
+            console.error('Error saving users to file:', error);
+        }
+    }
 
     async findByEmail(email: string): Promise<User | undefined> {
         return Array.from(this.users.values()).find(user => user.email === email);
@@ -28,8 +70,10 @@ export class UsersService {
                 email,
                 name: profile.displayName,
                 picture: profile.photos?.[0]?.value,
+                isOnboardingComplete: false,
             };
             this.users.set(user.id, user);
+            this.saveUsers();
         }
         return user;
     }
@@ -43,8 +87,10 @@ export class UsersService {
             email,
             name,
             password: passwordHash,
+            isOnboardingComplete: false,
         };
         this.users.set(user.id, user);
+        this.saveUsers();
         return user;
     }
 
@@ -58,6 +104,7 @@ export class UsersService {
             user.shopifyShop = shop;
             user.shopifyToken = token;
             this.users.set(userId, user);
+            this.saveUsers();
             return user;
         }
         throw new Error('User not found');
@@ -69,11 +116,23 @@ export class UsersService {
             if (data.name) user.name = data.name;
             if (data.email) user.email = data.email; // Caution: verify uniqueness if real DB
             if (data.password) user.password = data.password;
+            if (data.isOnboardingComplete !== undefined) user.isOnboardingComplete = data.isOnboardingComplete;
+            if (data.refreshToken !== undefined) user.refreshToken = data.refreshToken;
+            if (data.botSettings !== undefined) user.botSettings = data.botSettings;
 
             this.users.set(userId, user);
+            this.saveUsers();
             return user;
         }
         throw new Error('User not found');
+    }
+
+    async setRefreshToken(userId: string, refreshToken: string) {
+        return this.updateProfile(userId, { refreshToken });
+    }
+
+    async completeOnboarding(userId: string) {
+        return this.updateProfile(userId, { isOnboardingComplete: true });
     }
 
     // Keeping the original mock data method for dashboard compatibility if needed, 

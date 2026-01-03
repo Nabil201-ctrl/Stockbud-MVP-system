@@ -28,4 +28,10 @@ export class UsersController {
     async updateShopifyCredentials(@Req() req, @Body() body: { shop: string; token: string }) {
         return this.usersService.updateShopifyCredentials(req.user.id, body.shop, body.token);
     }
+
+    @Post('onboarding/complete')
+    @UseGuards(AuthGuard('jwt'))
+    async completeOnboarding(@Req() req) {
+        return this.usersService.completeOnboarding(req.user.id);
+    }
 }

@@ -7,55 +7,93 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            if (token) {
-                try {
-                    const response = await fetch('http://localhost:3000/users/me', {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
-                    if (response.ok) {
-                        const userData = await response.json();
-                        setUser(userData);
-                    } else {
-                        logout();
-                    }
-                } catch (error) {
-                    console.error('Failed to fetch user', error);
-                    logout();
-                }
+    const authenticatedFetch = async (url, options = {}) => {
+        let response = await fetch(url, {
+            ...options,
+            credentials: 'include', //  Send cookies
+            headers: {
+                ...options.headers,
+                // No Authorization header needed
             }
-            setLoading(false);
-        };
+        });
 
-        fetchUser();
-    }, [token]);
+        if (response.status === 401) {
+            // Try refresh
+            try {
+                const refreshResponse = await fetch('http://localhost:3000/auth/refresh', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
 
-    const login = (newToken) => {
-        localStorage.setItem('token', newToken);
-        setToken(newToken);
+                if (refreshResponse.ok) {
+                    // Retry original request
+                    response = await fetch(url, {
+                        ...options,
+                        credentials: 'include'
+                    });
+                } else {
+                    // Refresh failed, logout
+                    setUser(null);
+                }
+            } catch (error) {
+                console.error("Token refresh failed", error);
+                setUser(null);
+            }
+        }
+        return response;
     };
+
+    const checkAuth = async () => {
+        try {
+            // We use users/me to check if we are logged in (cookie is valid)
+            const response = await authenticatedFetch('http://localhost:3000/users/me');
+            if (response.ok) {
+                const userData = await response.json();
+                setUser(userData);
+            } else {
+                setUser(null);
+            }
+        } catch (error) {
+            console.error('Failed to check auth', error);
+            setUser(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        checkAuth();
+    }, []);
 
     const loginLocal = async (email, password) => {
         const response = await fetch('http://localhost:3000/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ email, password })
         });
 
         if (response.ok) {
             const data = await response.json();
-            login(data.access_token);
             setUser(data.user);
             return { success: true };
         } else {
             return { success: false, error: 'Invalid credentials' };
         }
+    };
+
+    const logout = async () => {
+        try {
+            await fetch('http://localhost:3000/auth/logout', {
+                method: 'POST',
+                credentials: 'include'
+            });
+        } catch (err) {
+            console.error("Logout failed", err);
+        }
+        setUser(null);
     };
 
     const register = async (name, email, password) => {
@@ -74,20 +112,23 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
+    const updateProfile = async (data) => {
+        const response = await authenticatedFetch('http://localhost:3000/users/me', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            const updatedUser = await response.json();
+            setUser(updatedUser);
+            return { success: true };
+        }
+        return { success: false };
     };
 
-    const updateProfile = async (data) => {
-        const response = await fetch('http://localhost:3000/users/me', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(data)
+    const completeOnboarding = async () => {
+        const response = await authenticatedFetch('http://localhost:3000/users/onboarding/complete', {
+            method: 'POST'
         });
         if (response.ok) {
             const updatedUser = await response.json();
@@ -99,14 +140,14 @@ export const AuthProvider = ({ children }) => {
 
     const value = {
         user,
-        token,
-        login,
         loginLocal,
         register,
         logout,
         updateProfile,
-        isAuthenticated: !!token,
-        loading
+        completeOnboarding,
+        isAuthenticated: !!user,
+        loading,
+        authenticatedFetch
     };
 
     return (

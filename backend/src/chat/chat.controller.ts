@@ -1,0 +1,34 @@
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ChatService } from './chat.service';
+
+@Controller('chats')
+@UseGuards(AuthGuard('jwt'))
+export class ChatController {
+    constructor(private readonly chatService: ChatService) { }
+
+    @Get()
+    getUserChats(@Req() req) {
+        return this.chatService.getUserChats(req.user.id);
+    }
+
+    @Get(':id')
+    getChat(@Req() req, @Param('id') id: string) {
+        return this.chatService.getChat(req.user.id, id);
+    }
+
+    @Post()
+    createChat(@Req() req, @Body() body: { title?: string, firstMessage?: string }) {
+        return this.chatService.createChat(req.user.id, body.title, body.firstMessage);
+    }
+
+    @Post(':id/messages')
+    sendMessage(@Req() req, @Param('id') id: string, @Body() body: { content: string }) {
+        return this.chatService.addMessage(req.user.id, id, body.content);
+    }
+
+    @Delete(':id')
+    deleteChat(@Req() req, @Param('id') id: string) {
+        return this.chatService.deleteChat(req.user.id, id);
+    }
+}

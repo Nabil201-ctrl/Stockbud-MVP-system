@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const LinkShop = () => {
     const navigate = useNavigate();
-    const { token, isAuthenticated } = useAuth();
+    const { token, isAuthenticated, completeOnboarding } = useAuth();
     const [connecting, setConnecting] = useState(null);
     const [success, setSuccess] = useState(false);
     const [selectedPlatform, setSelectedPlatform] = useState(null);
@@ -76,6 +76,9 @@ const LinkShop = () => {
                 await storage.set('shopifyToken', shopifyToken);
                 console.log('Credentials saved to IndexedDB');
 
+                // Complete Onboarding
+                await completeOnboarding();
+
                 setSuccess(true);
                 setTimeout(() => {
                     navigate('/dashboard');
@@ -89,7 +92,8 @@ const LinkShop = () => {
             }
         } else {
             // Simulate connection for other platforms
-            setTimeout(() => {
+            setTimeout(async () => {
+                await completeOnboarding(); // Mark as complete for other platforms too
                 setSuccess(true);
                 setTimeout(() => {
                     navigate('/dashboard');

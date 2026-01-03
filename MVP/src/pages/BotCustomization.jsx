@@ -1,11 +1,16 @@
 // components/pages/BotCustomization.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bot, MessageSquare, Settings, Palette, Zap, Shield, Globe, Brain } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { TrendingUp } from 'lucide-react';
 
 const BotCustomization = () => {
   const { isDarkMode } = useTheme();
+  const { user, updateProfile } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('');
+
   const [botSettings, setBotSettings] = useState({
     name: 'Analytics Assistant',
     personality: 'Professional',
@@ -18,11 +23,39 @@ const BotCustomization = () => {
     autoRespond: true
   });
 
+  useEffect(() => {
+    if (user?.botSettings) {
+      setBotSettings(prev => ({
+        ...prev,
+        ...user.botSettings
+      }));
+    }
+  }, [user]);
+
   const handleSettingChange = (setting, value) => {
     setBotSettings(prev => ({
       ...prev,
       [setting]: value
     }));
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    setSaveStatus('');
+    try {
+      const result = await updateProfile({ botSettings });
+      if (result.success) {
+        setSaveStatus('Settings saved successfully!');
+        setTimeout(() => setSaveStatus(''), 3000);
+      } else {
+        setSaveStatus('Failed to save settings.');
+      }
+    } catch (error) {
+      console.error(error);
+      setSaveStatus('Error saving settings.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const personalityOptions = [
@@ -53,14 +86,14 @@ const BotCustomization = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Bot Preview */}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className={`w-16 h-16 rounded-full ${themeOptions.find(t => t.id === botSettings.theme.toLowerCase())?.color || 'bg-blue-500'} flex items-center justify-center`}>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <div className={`w-16 h-16 rounded-full flex-shrink-0 ${themeOptions.find(t => t.id === botSettings.theme.toLowerCase())?.color || 'bg-blue-500'} flex items-center justify-center`}>
                   <Bot size={32} className="text-white" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold">{botSettings.name}</h2>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className={`px-2 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                       {botSettings.personality} Personality
                     </span>
@@ -70,7 +103,7 @@ const BotCustomization = () => {
                   </div>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="flex items-center justify-between w-full sm:w-auto sm:block text-right">
                 <div className="text-sm text-gray-500 dark:text-gray-400">Status</div>
                 <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -97,13 +130,13 @@ const BotCustomization = () => {
                   </div>
                   <div className={`rounded-lg p-3 max-w-[70%] ${isDarkMode ? 'bg-gray-600' : 'bg-white'}`}>
                     <p className="text-sm">
-                      {botSettings.personality === 'Friendly' 
-                        ? "Hey there! 😊 Your revenue today is $40,256.92 with a 2.94% increase from yesterday. Great job!" 
+                      {botSettings.personality === 'Friendly'
+                        ? "Hey there! 😊 Your revenue today is $40,256.92 with a 2.94% increase from yesterday. Great job!"
                         : botSettings.personality === 'Technical'
-                        ? "Revenue analysis: $40,256.92 as of current time. This represents a 2.94% increase from previous period. Data sourced from multiple revenue streams."
-                        : botSettings.personality === 'Concise'
-                        ? "Revenue: $40,256.92 (+2.94%)"
-                        : "Your current revenue stands at $40,256.92, reflecting a 2.94% growth from the previous period."
+                          ? "Revenue analysis: $40,256.92 as of current time. This represents a 2.94% increase from previous period. Data sourced from multiple revenue streams."
+                          : botSettings.personality === 'Concise'
+                            ? "Revenue: $40,256.92 (+2.94%)"
+                            : "Your current revenue stands at $40,256.92, reflecting a 2.94% growth from the previous period."
                       }
                     </p>
                   </div>
@@ -144,7 +177,7 @@ const BotCustomization = () => {
           {/* Right Column - Settings */}
           <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <h2 className="text-xl font-bold mb-6">Configuration Settings</h2>
-            
+
             <div className="space-y-6">
               {/* Bot Name */}
               <div>
@@ -168,7 +201,7 @@ const BotCustomization = () => {
                       className={`p-3 rounded-lg text-left transition-colors ${botSettings.personality === option.label
                         ? isDarkMode ? 'bg-blue-900/30 border-blue-500' : 'bg-blue-50 border-blue-500'
                         : isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
-                      } border`}
+                        } border`}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-lg">{option.icon}</span>
@@ -191,7 +224,7 @@ const BotCustomization = () => {
                       className={`flex-1 py-2 rounded-lg font-medium ${botSettings.responseSpeed === speed
                         ? isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'
                         : isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
-                      }`}
+                        }`}
                     >
                       {speed}
                     </button>
@@ -250,8 +283,8 @@ const BotCustomization = () => {
                         <div className="font-medium">{toggle.label}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {toggle.setting === 'notifications' ? 'Receive alerts from bot' :
-                           toggle.setting === 'voiceEnabled' ? 'Enable voice output' :
-                           'Automatically respond to common queries'}
+                            toggle.setting === 'voiceEnabled' ? 'Enable voice output' :
+                              'Automatically respond to common queries'}
                         </div>
                       </div>
                     </div>
@@ -260,7 +293,7 @@ const BotCustomization = () => {
                       className={`w-12 h-6 rounded-full transition-colors ${botSettings[toggle.setting]
                         ? 'bg-blue-600'
                         : isDarkMode ? 'bg-gray-600' : 'bg-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className={`w-4 h-4 rounded-full bg-white transform transition-transform ${botSettings[toggle.setting] ? 'translate-x-7' : 'translate-x-1'}`}></div>
                     </button>
@@ -284,8 +317,17 @@ const BotCustomization = () => {
               </div>
 
               {/* Save Button */}
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors">
-                Save Changes
+              {saveStatus && (
+                <div className={`mb-4 p-3 rounded-lg text-sm ${saveStatus.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {saveStatus}
+                </div>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

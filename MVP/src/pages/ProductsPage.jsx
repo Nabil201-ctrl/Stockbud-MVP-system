@@ -141,14 +141,14 @@ const ProductsPage = () => {
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">Product Management</h1>
             <p className="text-gray-500 dark:text-gray-400">
               Manage your product catalog and inventory
             </p>
           </div>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2">
+          <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2">
             <Package size={20} />
             Add New Product
           </button>
@@ -180,20 +180,20 @@ const ProductsPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Product List */}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold">Product Catalog</h2>
-              <div className="flex items-center gap-4">
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <Search size={18} className="text-gray-400" />
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-lg w-full sm:w-auto ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <Search size={18} className="text-gray-400 flex-shrink-0" />
                   <input
                     type="text"
                     placeholder="Search products..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`bg-transparent outline-none text-sm w-48 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                    className={`bg-transparent outline-none text-sm w-full sm:w-48 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                   />
                 </div>
-                <button className={`flex items-center gap-2 px-4 py-2 rounded-lg ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                <button className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg w-full sm:w-auto ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
                   <Filter size={18} />
                   <span>Filter</span>
                 </button>

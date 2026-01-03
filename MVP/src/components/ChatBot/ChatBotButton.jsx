@@ -38,7 +38,7 @@ const ChatBotButton = () => {
 
   const getBotResponse = (userInput) => {
     const input = userInput.toLowerCase();
-    
+
     if (input.includes('revenue') || input.includes('sales')) {
       return "Your revenue has increased by 2.94% this week, reaching $40,256,92. The highest revenue day was December 8th with $56,000.";
     } else if (input.includes('visitor') || input.includes('traffic')) {
@@ -72,11 +72,10 @@ const ChatBotButton = () => {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 z-50 ${
-          isDarkMode 
-            ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-            : 'bg-blue-600 hover:bg-blue-700 text-white'
-        }`}
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 z-50 ${isDarkMode
+          ? 'bg-blue-600 hover:bg-blue-700 text-white'
+          : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
         aria-label="Open chatbot"
       >
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
@@ -84,19 +83,16 @@ const ChatBotButton = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className={`fixed bottom-24 right-6 w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${
-          isDarkMode 
-            ? 'bg-gray-800 border border-gray-700' 
-            : 'bg-white border border-gray-200'
-        }`}>
-          {/* Header */}
-          <div className={`p-4 rounded-t-2xl flex items-center justify-between ${
-            isDarkMode ? 'bg-gray-900' : 'bg-blue-50'
+        <div className={`fixed bottom-0 right-0 w-full h-[100dvh] sm:h-[600px] sm:w-96 sm:bottom-24 sm:right-6 sm:rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${isDarkMode
+          ? 'bg-gray-800 border-t sm:border border-gray-700'
+          : 'bg-white border-t sm:border border-gray-200'
           }`}>
+          {/* Header */}
+          <div className={`p-4 sm:rounded-t-2xl flex items-center justify-between ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'
+            }`}>
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                isDarkMode ? 'bg-blue-600' : 'bg-blue-600'
-              }`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-blue-600' : 'bg-blue-600'
+                }`}>
                 <Bot size={20} className="text-white" />
               </div>
               <div>
@@ -110,9 +106,8 @@ const ChatBotButton = () => {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className={`p-2 rounded-lg ${
-                isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-              }`}
+              className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                }`}
               aria-label="Close chat"
             >
               <X size={20} />
@@ -127,15 +122,14 @@ const ChatBotButton = () => {
                 className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl p-3 ${
-                    message.isBot
-                      ? isDarkMode
-                        ? 'bg-gray-700 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                      : isDarkMode
+                  className={`max-w-[80%] rounded-2xl p-3 ${message.isBot
+                    ? isDarkMode
+                      ? 'bg-gray-700 text-white'
+                      : 'bg-gray-100 text-gray-900'
+                    : isDarkMode
                       ? 'bg-blue-600 text-white'
                       : 'bg-blue-600 text-white'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     {message.isBot && (
@@ -164,11 +158,10 @@ const ChatBotButton = () => {
                 <button
                   key={index}
                   onClick={() => handleSuggestionClick(question)}
-                  className={`text-xs px-3 py-2 rounded-full transition-colors ${
-                    isDarkMode
-                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
+                  className={`text-xs px-3 py-2 rounded-full transition-colors ${isDarkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
                 >
                   {question}
                 </button>
@@ -184,19 +177,17 @@ const ChatBotButton = () => {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Ask me about your analytics..."
-                className={`flex-1 px-4 py-3 rounded-full text-sm outline-none ${
-                  isDarkMode
-                    ? 'bg-gray-700 text-white placeholder-gray-400'
-                    : 'bg-gray-100 text-gray-900 placeholder-gray-500'
-                }`}
+                className={`flex-1 px-4 py-3 rounded-full text-sm outline-none ${isDarkMode
+                  ? 'bg-gray-700 text-white placeholder-gray-400'
+                  : 'bg-gray-100 text-gray-900 placeholder-gray-500'
+                  }`}
               />
               <button
                 type="submit"
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                  isDarkMode
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isDarkMode
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
                 aria-label="Send message"
               >
                 <Send size={20} />

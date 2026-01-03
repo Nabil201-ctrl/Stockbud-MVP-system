@@ -34,10 +34,41 @@ export class AuthService {
 
     async login(user: any) {
         const payload = { email: user.email, sub: user.id };
+        const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+        const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+        await this.usersService.setRefreshToken(user.id, refreshToken);
+
         return {
-            access_token: this.jwtService.sign(payload),
+            access_token: accessToken,
+            refresh_token: refreshToken,
             user,
         };
+    }
+
+    async refreshTokens(refreshToken: string) {
+        try {
+            const payload = this.jwtService.verify(refreshToken);
+            const user = await this.usersService.findById(payload.sub);
+
+            if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
+                throw new UnauthorizedException('Invalid refresh token');
+            }
+
+            const newPayload = { email: user.email, sub: user.id };
+            const accessToken = this.jwtService.sign(newPayload, { expiresIn: '15m' });
+            const newRefreshToken = this.jwtService.sign(newPayload, { expiresIn: '7d' });
+
+            await this.usersService.setRefreshToken(user.id, newRefreshToken);
+
+            return {
+                access_token: accessToken,
+                refresh_token: newRefreshToken,
+                user,
+            };
+        } catch (e) {
+            throw new UnauthorizedException('Invalid refresh token');
+        }
     }
 
     async changePassword(userId: string, oldPass: string, newPass: string) {

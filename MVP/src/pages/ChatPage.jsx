@@ -1,119 +1,148 @@
-// pages/ChatPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
     MessageSquare, Plus, Send, User, Bot,
     MoreHorizontal, Trash2, Menu, X
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 const ChatPage = () => {
     const { isDarkMode } = useTheme();
+    const { authenticatedFetch } = useAuth(); // Get authenticatedFetch
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef(null);
 
-    // Mock data for chat history
-    const [chats, setChats] = useState([
-        {
-            id: '1',
-            title: 'Revenue Analysis',
-            messages: [
-                { role: 'user', content: 'Show me the revenue for last week' },
-                { role: 'assistant', content: 'Last week\'s revenue was $40,256.92, which is a 2.94% increase from the previous week.' }
-            ]
-        },
-        {
-            id: '2',
-            title: 'Customer Support',
-            messages: [
-                { role: 'user', content: 'How do I customize the bot?' },
-                { role: 'assistant', content: 'You can customize the bot by navigating to the "Bot Customization" page in the sidebar. There you can adjust its tone, name, and response patterns.' }
-            ]
-        }
-    ]);
-
-    const [currentChatId, setCurrentChatId] = useState('1');
-
-    const currentChat = chats.find(c => c.id === currentChatId) || chats[0];
+    // Real data state
+    const [chats, setChats] = useState([]);
+    const [currentChatId, setCurrentChatId] = useState(null);
+    const currentChat = chats.find(c => c.id === currentChatId);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    // Load chats on mount
+    useEffect(() => {
+        loadChats();
+    }, []);
+
     useEffect(() => {
         scrollToBottom();
     }, [currentChat?.messages, isTyping]);
 
-    // Create a new chat
-    const createNewChat = () => {
-        const newChat = {
-            id: Date.now().toString(),
-            title: 'New Chat',
-            messages: []
-        };
-        setChats([newChat, ...chats]);
-        setCurrentChatId(newChat.id);
-        if (window.innerWidth < 768) setSidebarOpen(false);
-    };
-
-    // Delete a chat with e.stopPropagation to prevent triggering the select
-    const deleteChat = (e, id) => {
-        e.stopPropagation();
-        const updatedChats = chats.filter(c => c.id !== id);
-        setChats(updatedChats);
-        if (currentChatId === id && updatedChats.length > 0) {
-            setCurrentChatId(updatedChats[0].id);
-        } else if (updatedChats.length === 0) {
-            createNewChat();
+    const loadChats = async () => {
+        try {
+            const response = await authenticatedFetch('http://localhost:3000/chats');
+            if (response.ok) {
+                const data = await response.json();
+                setChats(data);
+                if (data.length > 0 && !currentChatId) {
+                    setCurrentChatId(data[0].id);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load chats", error);
         }
     };
 
-    // Send a message
+    const createNewChat = async () => {
+        try {
+            const response = await authenticatedFetch('http://localhost:3000/chats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: 'New Chat' })
+            });
+
+            if (response.ok) {
+                const newChat = await response.json();
+                setChats([newChat, ...chats]);
+                setCurrentChatId(newChat.id);
+                if (window.innerWidth < 768) setSidebarOpen(false);
+            }
+        } catch (error) {
+            console.error("Failed to create chat", error);
+        }
+    };
+
+    const deleteChat = async (e, id) => {
+        e.stopPropagation();
+        try {
+            const response = await authenticatedFetch(`http://localhost:3000/chats/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                const updatedChats = chats.filter(c => c.id !== id);
+                setChats(updatedChats);
+                if (currentChatId === id) {
+                    setCurrentChatId(updatedChats.length > 0 ? updatedChats[0].id : null);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to delete chat", error);
+        }
+    };
+
     const handleSend = async (e) => {
         e.preventDefault();
         if (!input.trim()) return;
 
-        const userMessage = { role: 'user', content: input };
-        const updatedChats = chats.map(chat => {
-            if (chat.id === currentChatId) {
-                // If it's the first message, update title
-                const title = chat.messages.length === 0 ? input.slice(0, 30) + (input.length > 30 ? '...' : '') : chat.title;
-                return {
-                    ...chat,
-                    title,
-                    messages: [...chat.messages, userMessage]
-                };
+        // If no chat selected/exists, create one first or handle error. 
+        // Logic: if no currentChatId, create one then send.
+        let targetChatId = currentChatId;
+        if (!targetChatId) {
+            try {
+                const response = await authenticatedFetch('http://localhost:3000/chats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: input.slice(0, 30), firstMessage: input })
+                });
+                if (response.ok) {
+                    const newChat = await response.json();
+                    setChats([newChat, ...chats]);
+                    setCurrentChatId(newChat.id);
+                    setInput('');
+                    return; // The backend creates the chat with the first message, so we are done
+                }
+            } catch (err) {
+                console.error("Error creating initial chat", err);
+                return;
             }
-            return chat;
-        });
+        }
 
-        setChats(updatedChats);
+        const messageContent = input;
         setInput('');
         setIsTyping(true);
 
-        // Simulate AI response delay
-        setTimeout(() => {
-            const responses = [
-                "That's an interesting question about your sales data.",
-                "Based on your recent metrics, I'd suggest focusing on customer retention.",
-                "Your profit margins have improved by 5% this month.",
-                "I can help you analyze that. One moment data is loading...",
-                "The best performing product this week is the Premium Plan.",
-                "You have 12 new users signed up today."
-            ];
-            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        // Optimistically update UI
+        setChats(prev => prev.map(chat => {
+            if (chat.id === targetChatId) {
+                return {
+                    ...chat,
+                    messages: [...chat.messages, { role: 'user', content: messageContent }]
+                };
+            }
+            return chat;
+        }));
 
-            const assistantMessage = { role: 'assistant', content: randomResponse };
+        try {
+            const response = await authenticatedFetch(`http://localhost:3000/chats/${targetChatId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: messageContent })
+            });
 
-            setChats(prevChats => prevChats.map(chat => {
-                if (chat.id === currentChatId) {
-                    return { ...chat, messages: [...chat.messages, assistantMessage] };
-                }
-                return chat;
-            }));
+            if (response.ok) {
+                const updatedChat = await response.json();
+                setChats(prev => prev.map(c => c.id === targetChatId ? updatedChat : c));
+            }
+        } catch (error) {
+            console.error("Failed to send message", error);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
 
     return (

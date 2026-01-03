@@ -48,7 +48,7 @@ const Realtime = () => {
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">Realtime Analytics</h1>
             <p className="text-gray-500 dark:text-gray-400">
@@ -99,12 +99,11 @@ const Realtime = () => {
               {events.map((event) => (
                 <div key={event.id} className={`flex items-center justify-between p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      event.type === 'purchase' ? 'bg-green-100 dark:bg-green-900/30' :
-                      event.type === 'cart' ? 'bg-blue-100 dark:bg-blue-900/30' :
-                      event.type === 'signup' ? 'bg-purple-100 dark:bg-purple-900/30' :
-                      'bg-gray-100 dark:bg-gray-700'
-                    }`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${event.type === 'purchase' ? 'bg-green-100 dark:bg-green-900/30' :
+                        event.type === 'cart' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                          event.type === 'signup' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                            'bg-gray-100 dark:bg-gray-700'
+                      }`}>
                       {event.type === 'purchase' && <span className="text-green-600 dark:text-green-400">💰</span>}
                       {event.type === 'cart' && <span className="text-blue-600 dark:text-blue-400">🛒</span>}
                       {event.type === 'signup' && <span className="text-purple-600 dark:text-purple-400">👤</span>}
@@ -204,10 +203,9 @@ const Realtime = () => {
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        item.status === 'good' ? 'bg-green-500' :
-                        item.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}></div>
+                      <div className={`w-2 h-2 rounded-full ${item.status === 'good' ? 'bg-green-500' :
+                          item.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}></div>
                       <span>{item.label}</span>
                     </div>
                     <span className="font-medium">{item.value}</span>

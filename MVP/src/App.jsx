@@ -28,6 +28,9 @@ import ResetPassword from './pages/auth/ResetPassword';
 import { AuthProvider } from './context/AuthContext';
 import AuthSuccess from './pages/AuthSuccess';
 
+import LandingPage from './pages/LandingPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+
 function App() {
   // Seed IndexedDB from Env vars if available
   React.useEffect(() => {
@@ -57,6 +60,9 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
+            {/* Landing Page */}
+            <Route path="/" element={<LandingPage />} />
+
             {/* Auth Routes */}
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/signup" element={<Signup />} />
@@ -64,15 +70,14 @@ function App() {
             <Route path="/auth/reset-password" element={<ResetPassword />} />
             <Route path="/auth/success" element={<AuthSuccess />} />
 
-            {/* Onboarding Routes - No Layout */}
-            <Route path="/get-started" element={<GetStarted />} />
-            <Route path="/onboarding/notifications" element={<Notifications />} />
-            <Route path="/onboarding/shop-access" element={<ShopAccess />} />
-            <Route path="/onboarding/link-shop" element={<LinkShop />} />
+            {/* Onboarding Routes - Protected but handles incomplete onboarding */}
+            <Route path="/get-started" element={<ProtectedRoute><GetStarted /></ProtectedRoute>} />
+            <Route path="/onboarding/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/onboarding/shop-access" element={<ProtectedRoute><ShopAccess /></ProtectedRoute>} />
+            <Route path="/onboarding/link-shop" element={<ProtectedRoute><LinkShop /></ProtectedRoute>} />
 
-            {/* Main App Routes - Wrapped in Layout */}
-            <Route element={<Layout />}>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Main App Routes - Protected & Requires Onboarding Complete */}
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/bot-customization" element={<BotCustomization />} />
               <Route path="/realtime" element={<Realtime />} />
@@ -81,6 +86,10 @@ function App() {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
+
+            {/* Redirect root to Landing if not logged in (handled by LandingPage component if we want logic there, or just route) 
+                Actually, root is LandingPage now. The previous redirect is removed.
+            */}
           </Routes>
         </Router>
         <ReloadPrompt />
