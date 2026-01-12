@@ -3,9 +3,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
+import { useAuth } from '../context/AuthContext';
 
 const ProductsPage = () => {
   const { isDarkMode } = useTheme();
+  const { authenticatedFetch } = useAuth(); // Import authenticatedFetch
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
 
@@ -31,23 +33,11 @@ const ProductsPage = () => {
           setLoading(false);
         }
 
-        const shop = await storage.get('shopifyShop');
-        const token = await storage.get('shopifyToken');
-
-        if (!shop || !token) {
-          console.log("No Shopify credentials found in storage");
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch('http://localhost:3000/shopify/products', {
-          headers: {
-            'x-shopify-shop': shop,
-            'x-shopify-token': token
-          }
-        });
+        // 2. Fetch from backend using authenticated cookie
+        const response = await authenticatedFetch('http://localhost:3000/shopify/products');
 
         if (!response.ok) {
+          if (response.status === 401) throw new Error('Unauthorized');
           throw new Error('Failed to fetch from backend');
         }
 
@@ -66,7 +56,7 @@ const ProductsPage = () => {
           rating: 5.0
         })).sort((a, b) => b.stock - a.stock);
 
-        // 2. Update state and cache
+        // 3. Update state and cache
         setProducts(transformedProducts);
         await storage.set('products_cache', transformedProducts);
 
@@ -93,7 +83,7 @@ const ProductsPage = () => {
       }
     };
     fetchProducts();
-  }, []);
+  }, [authenticatedFetch]);
 
   // Dynamic Categories calculation
   const categories = useMemo(() => {

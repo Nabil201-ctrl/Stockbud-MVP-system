@@ -1,0 +1,6 @@
+node_modules
+.env
+shopify_app/stock-bud/.env
+shopify_app/stock-bud/.env.example
+shopify_app/stock-bud/shopify.app.toml
+shopify_app/stock-bud/node_modules

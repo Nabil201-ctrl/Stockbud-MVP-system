@@ -9,6 +9,7 @@ import SalesHistory from '../components/Dashboard/SalesHistory';
 import ChartLoading from '../components/layout/ChatLoading';
 import ChatBotButton from '../components/ChatBot/ChatBotButton';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 // Lazy loaded chart components
 const RevenueChart = lazy(() => import('../components/charts/RevenueChart'));
@@ -22,6 +23,7 @@ const Dashboard = () => {
   // New State for Data
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { authenticatedFetch } = useAuth(); // Import authenticatedFetch
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -33,17 +35,13 @@ const Dashboard = () => {
           setLoading(false); // Show content immediately if we have cache
         }
 
-        const shop = await storage.get('shopifyShop');
-        const token = await storage.get('shopifyToken');
+        // 2. Fetch fresh data using authenticated cookie
+        const response = await authenticatedFetch('http://localhost:3000/dashboard/stats');
 
-        // 2. Fetch fresh data
-        const response = await fetch('http://localhost:3000/dashboard/stats', {
-          headers: {
-            'x-shopify-shop': shop,
-            'x-shopify-token': token
-          }
-        });
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) {
+          if (response.status === 401) throw new Error('Unauthorized');
+          throw new Error('Network response was not ok');
+        }
 
         const data = await response.json();
 
@@ -52,7 +50,7 @@ const Dashboard = () => {
         await storage.set('dashboard_stats', data);
 
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
+        console.error('Failed to fetch dashboard stats', error);
         // We rely on the cached data if fetch fails
       } finally {
         setLoading(false);
@@ -60,7 +58,7 @@ const Dashboard = () => {
     };
 
     fetchStats();
-  }, []);
+  }, [authenticatedFetch]);
 
   return (
     <div className={`flex h-screen min-h-screen ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>

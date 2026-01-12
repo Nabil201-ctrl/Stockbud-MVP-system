@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const LinkShop = () => {
     const navigate = useNavigate();
-    const { token, isAuthenticated, completeOnboarding } = useAuth();
+    const { isAuthenticated, completeOnboarding, authenticatedFetch } = useAuth();
     const [connecting, setConnecting] = useState(null);
     const [success, setSuccess] = useState(false);
     const [selectedPlatform, setSelectedPlatform] = useState(null);
@@ -53,12 +53,11 @@ const LinkShop = () => {
         if (platformId === 'shopify') {
             try {
                 // Save to Backend if authenticated
-                if (isAuthenticated && token) {
-                    const response = await fetch('http://localhost:3000/users/shopify-credentials', {
+                if (isAuthenticated) {
+                    const response = await authenticatedFetch('http://localhost:3000/users/shopify-credentials', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
                             shop: shopifyUrl,

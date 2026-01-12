@@ -1,6 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
+import fetch, { Headers, Request, Response } from 'node-fetch';
+
+if (!global.fetch) {
+    (global.fetch as any) = fetch;
+    (global.Headers as any) = Headers;
+    (global.Request as any) = Request;
+    (global.Response as any) = Response;
+}
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);

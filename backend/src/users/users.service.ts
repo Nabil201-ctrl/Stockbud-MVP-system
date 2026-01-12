@@ -135,6 +135,12 @@ export class UsersService implements OnModuleInit {
         return this.updateProfile(userId, { isOnboardingComplete: true });
     }
 
+
+    // New method to expose all users for Cron jobs
+    async getAllUsers(): Promise<User[]> {
+        return Array.from(this.users.values());
+    }
+
     // Keeping the original mock data method for dashboard compatibility if needed, 
     // but ideally we should move away from this.
     // For now, I'll keep it to avoid breaking other parts.
