@@ -155,10 +155,23 @@ export class ChatService implements OnModuleInit {
         if (user.shopifyShop && user.shopifyToken) {
             try {
                 const stats = await this.dashboardService.getStats(user.shopifyShop, user.shopifyToken);
+
+                // Format detailed stats for the AI
+                const recentSales = stats.salesHistory.map(s => `${s.name} ($${s.amount})`).join(', ');
+                const revenueTrend = stats.revenue.chartData.map(d => `${d.date}: $${d.revenue}`).join(', ');
+                const trafficSources = stats.source.map(s => `${s.name}: ${s.value}%`).join(', ');
+
                 storeStats = `
-                    Total Revenue: $${stats.revenue.total}
-                    Revenue Change: ${stats.revenue.change}%
-                    Top Sales Source: ${stats.source[0]?.name || 'N/A'} (${stats.source[0]?.value || 0}%)
+                    Overview:
+                    - Total Revenue (All Time): $${stats.revenue.total}
+                    - Revenue Change: ${stats.revenue.change}%
+
+                    Breakdowns:
+                    - Revenue Trend (Last 7 Days): ${revenueTrend || 'No data'}
+                    - Traffic Sources: ${trafficSources || 'No data'}
+
+                    Recent Activity:
+                    - Last 5 Sales: ${recentSales || 'None'}
                 `;
             } catch (err) {
                 console.error("Error fetching stats for chat context", err);

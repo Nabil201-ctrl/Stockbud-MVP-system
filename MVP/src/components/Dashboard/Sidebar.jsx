@@ -3,10 +3,13 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Sliders, Clock, Users, TrendingUp, Package,
-  RefreshCw, Settings, Bookmark, Calendar, MessageSquare
+  RefreshCw, Settings, Bookmark, Calendar, MessageSquare, LogOut
 } from 'lucide-react';
 
+import { useAuth } from '../../context/AuthContext';
+
 const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, isOpen, onClose }) => {
+  const { logout } = useAuth();
   const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
 
   const navItems = [
@@ -33,8 +36,8 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
         </div>
       </div>
 
-      <nav className="flex-1 p-4 overflow-y-auto">
-        <div className="mb-6">
+      <nav className="flex-1 p-4 overflow-y-auto flex flex-col">
+        <div className="mb-6 flex-1">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -54,6 +57,17 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
               <span className="font-medium">{item.label}</span>
             </NavLink>
           ))}
+
+          <button
+            onClick={logout}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-2 transition-colors ${isDarkMode
+              ? 'text-red-400 hover:bg-red-900/20'
+              : 'text-red-600 hover:bg-red-50'
+              }`}
+          >
+            <LogOut size={18} />
+            <span className="font-medium">Logout</span>
+          </button>
         </div>
 
         {/* Calendar Widget */}
