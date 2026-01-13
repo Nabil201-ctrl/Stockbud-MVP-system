@@ -4,6 +4,7 @@ import { ChatService } from './chat.service';
 
 @Controller('chats')
 @UseGuards(AuthGuard('jwt'))
+// Trigger build update
 export class ChatController {
     constructor(private readonly chatService: ChatService) { }
 
@@ -15,6 +16,11 @@ export class ChatController {
     @Get(':id')
     getChat(@Req() req, @Param('id') id: string) {
         return this.chatService.getChat(req.user.id, id);
+    }
+
+    @Post('quick')
+    quickChat(@Req() req, @Body() body: { content: string, history: { role: 'user' | 'assistant', content: string }[] }) {
+        return this.chatService.quickChat(req.user.id, body.content, body.history);
     }
 
     @Post()

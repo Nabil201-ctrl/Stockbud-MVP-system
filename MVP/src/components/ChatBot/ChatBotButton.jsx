@@ -1,58 +1,91 @@
 // components/ChatBot/ChatBotButton.jsx
-import React, { useState } from 'react';
-import { MessageCircle, X, Send, Bot } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageCircle, X, Send, Bot, Loader2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 const ChatBotButton = () => {
+  const { isDarkMode } = useTheme();
+  const { authenticatedFetch, refreshUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     { id: 1, text: "Hello! I'm your AI assistant. How can I help you today?", isBot: true, time: "Just now" },
     { id: 2, text: "Try asking me about your dashboard metrics or data insights!", isBot: true, time: "Just now" }
   ]);
   const [inputText, setInputText] = useState('');
-  const { isDarkMode } = useTheme();
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const handleSendMessage = (e) => {
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping, isOpen]);
+
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
+    const userMessageText = inputText;
+
     // Add user message
     const userMessage = {
-      id: messages.length + 1,
-      text: inputText,
+      id: Date.now(),
+      text: userMessageText,
       isBot: false,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    // Add bot response
-    const botResponse = {
-      id: messages.length + 2,
-      text: getBotResponse(inputText),
-      isBot: true,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setMessages([...messages, userMessage, botResponse]);
+    setMessages(prev => [...prev, userMessage]);
     setInputText('');
-  };
+    setIsTyping(true);
 
-  const getBotResponse = (userInput) => {
-    const input = userInput.toLowerCase();
+    try {
+      // Prepare history for API
+      const history = messages.map(m => ({
+        role: m.isBot ? 'assistant' : 'user',
+        content: m.text
+      }));
 
-    if (input.includes('revenue') || input.includes('sales')) {
-      return "Your revenue has increased by 2.94% this week, reaching $40,256,92. The highest revenue day was December 8th with $56,000.";
-    } else if (input.includes('visitor') || input.includes('traffic')) {
-      return "Visitor growth increased by 24% this month. Peak traffic occurs around 4 PM with 1,600 visitors.";
-    } else if (input.includes('country') || input.includes('location')) {
-      return "India has the highest traffic with 2,200 visitors, followed by USA with 1,790 visitors.";
-    } else if (input.includes('source') || input.includes('channel')) {
-      return "Social media is your top source of purchases (48%), followed by direct search (38%).";
-    } else if (input.includes('help') || input.includes('support')) {
-      return "I can help you with: Revenue insights, Visitor statistics, Country data, Purchase sources, and general dashboard questions.";
-    } else if (input.includes('hello') || input.includes('hi')) {
-      return "Hello! 👋 How can I assist you with your dashboard analytics today?";
-    } else {
-      return "I understand you're asking about \"" + userInput + "\". For specific analytics insights, try asking about revenue, visitors, countries, or purchase sources.";
+      const response = await authenticatedFetch('http://localhost:3000/chats/quick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: userMessageText, history })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const botResponse = {
+          id: Date.now() + 1,
+          text: data.content,
+          isBot: true,
+          time: new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, botResponse]);
+        await refreshUser();
+      } else {
+        const errorData = await response.json();
+        const botResponse = {
+          id: Date.now() + 1,
+          text: errorData.message || "I'm having trouble connecting right now.",
+          isBot: true,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, botResponse]);
+      }
+    } catch (error) {
+      console.error("Failed to send message", error);
+      const botResponse = {
+        id: Date.now() + 1,
+        text: "Network error. Please try again.",
+        isBot: true,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botResponse]);
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -115,7 +148,7 @@ const ChatBotButton = () => {
           </div>
 
           {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -142,10 +175,24 @@ const ChatBotButton = () => {
                       • {message.time}
                     </span>
                   </div>
-                  <p className="text-sm">{message.text}</p>
+                  <p className="text-sm whitespace-pre-wrap">{message.text}</p>
                 </div>
               </div>
             ))}
+
+            {/* Typing Indicator */}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className={`max-w-[80%] rounded-2xl p-3 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <div className="flex items-center gap-1 h-5">
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Suggested Questions */}
@@ -177,6 +224,7 @@ const ChatBotButton = () => {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Ask me about your analytics..."
+                disabled={isTyping}
                 className={`flex-1 px-4 py-3 rounded-full text-sm outline-none ${isDarkMode
                   ? 'bg-gray-700 text-white placeholder-gray-400'
                   : 'bg-gray-100 text-gray-900 placeholder-gray-500'
@@ -184,13 +232,14 @@ const ChatBotButton = () => {
               />
               <button
                 type="submit"
+                disabled={!inputText.trim() || isTyping}
                 className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isDarkMode
                   ? 'bg-blue-600 hover:bg-blue-700 text-white'
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  }`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 aria-label="Send message"
               >
-                <Send size={20} />
+                {isTyping ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
               </button>
             </form>
             <p className={`text-xs mt-2 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>

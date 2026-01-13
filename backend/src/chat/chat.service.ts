@@ -142,39 +142,83 @@ export class ChatService implements OnModuleInit {
         return chat;
     }
 
+    async quickChat(userId: string, content: string, history: { role: 'user' | 'assistant', content: string }[]) {
+        const fullHistory: Message[] = history.map(h => ({
+            role: h.role,
+            content: h.content,
+            timestamp: Date.now()
+        }));
+
+        const userMsg: Message = {
+            role: 'user',
+            content,
+            timestamp: Date.now()
+        };
+        fullHistory.push(userMsg);
+
+        return this.generateBotResponse(userId, content, fullHistory);
+    }
+
+
     private async generateBotResponse(userId: string, userMessage: string, history: Message[]): Promise<Message> {
         let responseContent = "I'm having trouble connecting to my brain right now.";
 
         const user = await this.usersService.findById(userId);
         const settings = user?.botSettings;
         const personality = settings?.personality || 'Professional';
+
+        // Calculate Token Cost
+        const complexKeywords = ['revenue', 'sales', 'orders', 'profit', 'growth', 'trend', 'analysis', 'report', 'visitors', 'traffic', 'conversion', 'customer', 'product', 'best selling'];
+        const isComplex = complexKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
+        const tokenCost = isComplex ? 50 : 25;
+
+        // Check AI Tokens
+        if ((user.aiTokens ?? 0) < tokenCost) {
+            return {
+                role: 'assistant',
+                content: `You need ${tokenCost} AI tokens for this request, but you only have ${user.aiTokens ?? 0}. Please upgrade your plan.`,
+                timestamp: Date.now()
+            };
+        }
+        // Deduct AI Tokens
+        await this.usersService.updateProfile(userId, { aiTokens: (user.aiTokens ?? 0) - tokenCost });
+
         const name = settings?.name || 'StockBud';
+        const language = settings?.language || 'English';
+        const dataAccess = settings?.dataAccess || 'Limited';
 
         // Fetch Real Stats
         let storeStats = "No store connected.";
         if (user.shopifyShop && user.shopifyToken) {
-            try {
-                const stats = await this.dashboardService.getStats(user.shopifyShop, user.shopifyToken);
+            if (dataAccess === 'Limited') {
+                storeStats = "Access to detailed store data is disabled in Bot Customization settings.";
+            } else {
+                try {
+                    const stats = await this.dashboardService.getStats(user.shopifyShop, user.shopifyToken);
 
-                // Format detailed stats for the AI
-                const recentSales = stats.salesHistory.map(s => `${s.name} ($${s.amount})`).join(', ');
-                const revenueTrend = stats.revenue.chartData.map(d => `${d.date}: $${d.revenue}`).join(', ');
-                const trafficSources = stats.source.map(s => `${s.name}: ${s.value}%`).join(', ');
+                    // Format detailed stats for the AI
+                    const recentSales = stats.salesHistory.map(s => `${s.name} ($${s.amount})`).join(', ');
+                    const revenueTrend = stats.revenue.chartData.map(d => `${d.date}: $${d.revenue}`).join(', ');
+                    const trafficSources = stats.source.map(s => `${s.name}: ${s.value}%`).join(', ');
+                    const topProducts = stats.topProducts ? stats.topProducts.map(p => `${p.name} (${p.count})`).join(', ') : 'No data';
 
-                storeStats = `
-                    Overview:
-                    - Total Revenue (All Time): $${stats.revenue.total}
-                    - Revenue Change: ${stats.revenue.change}%
-
-                    Breakdowns:
-                    - Revenue Trend (Last 7 Days): ${revenueTrend || 'No data'}
-                    - Traffic Sources: ${trafficSources || 'No data'}
-
-                    Recent Activity:
-                    - Last 5 Sales: ${recentSales || 'None'}
-                `;
-            } catch (err) {
-                console.error("Error fetching stats for chat context", err);
+                    storeStats = `
+                        Overview:
+                        - Total Revenue (All Time): $${stats.revenue.total}
+                        - Revenue Change (This Week vs Last): ${stats.revenue.change}%
+                        - Lost Revenue (Cancelled): $${stats.revenue.lost || 0}
+    
+                        Breakdowns:
+                        - Revenue Trend (Last 7 Days): ${revenueTrend || 'No data'}
+                        - Traffic Sources: ${trafficSources || 'No data'}
+                        - Top Selling Products: ${topProducts}
+    
+                        Recent Activity:
+                        - Last 5 Sales: ${recentSales || 'None'}
+                    `;
+                } catch (err) {
+                    console.error("Error fetching stats for chat context", err);
+                }
             }
         }
 
@@ -184,6 +228,9 @@ export class ChatService implements OnModuleInit {
         if (personality === 'Professional') systemInstruction += " Be formal, precise, and business-focused.";
         if (personality === 'Technical') systemInstruction += " Focus on data, metrics, and technical details.";
         if (personality === 'Concise') systemInstruction += " Keep answers very short and directly to the point.";
+
+        systemInstruction += ` Respond in ${language}.`;
+        systemInstruction += " Your primary goal is efficient data analysis. Keep your responses extremely short, punchy, and data-driven. Avoid conversational filler.";
 
         systemInstruction += ` You have access to the user's REAL e-commerce data. Here is the current snapshot: ${storeStats}. Use this data to answer questions accurately. If asked about something not in this snapshot, explains that you only can see high-level metrics right now.`;
 
@@ -239,21 +286,34 @@ export class ChatService implements OnModuleInit {
     // Helper to generate a report for a specific user (can be triggered manually or by cron)
     async generateWeeklyReportForUser(userId: string) {
         const user = await this.usersService.findById(userId);
+
         if (!user || !user.shopifyShop || !user.shopifyToken) return;
+
+        // Check Report Tokens
+        if ((user.reportTokens ?? 0) <= 0) {
+            console.log(`Skipping weekly report for ${userId}: Not enough tokens.`);
+            return;
+        }
+
+        // Deduct 1 Report Token
+        await this.usersService.updateProfile(userId, { reportTokens: (user.reportTokens ?? 0) - 1 });
 
         try {
             const stats = await this.dashboardService.getStats(user.shopifyShop, user.shopifyToken);
             const prompt = `Generate a motivational weekly summary for the shop owner based on these stats: 
                 Total Revenue: $${stats.revenue.total}
+                Revenue Change: ${stats.revenue.change}%
+                Lost Revenue: $${stats.revenue.lost || 0}
+                Top Product: ${stats.topProducts?.[0]?.name || 'N/A'}
                 Top Source: ${stats.source[0]?.name}
-                Keep it short and punchy.`;
+                Keep it short, punchy, and highlight the wins (or opportunities if revenue dropped).`;
 
             let content = "Weekly Report: ";
             if (this.model) {
                 const result = await this.model.generateContent(prompt);
                 content += result.response.text();
             } else {
-                content += `Great week! Revenue is $${stats.revenue.total}.`;
+                content += `Revenue is $${stats.revenue.total} (${stats.revenue.change}%). Top Product: ${stats.topProducts?.[0]?.name || 'N/A'}.`;
             }
 
             // Find or create 'StockBud' chat

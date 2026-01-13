@@ -72,8 +72,11 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
 
         {/* Calendar Widget */}
         {isCalendarOpen && (
-          <div className="bg-blue-600 rounded-lg p-4 text-white">
-            {/* ... calendar widget code ... */}
+          <div className="bg-blue-600 rounded-lg p-3 text-white">
+            <h4 className="text-xs font-medium mb-2 opacity-90">Help us improve</h4>
+            <button className="w-full bg-white text-blue-600 text-xs py-1.5 rounded-md font-medium hover:bg-blue-50 transition-colors shadow-sm">
+              Feedback
+            </button>
           </div>
         )}
       </nav>

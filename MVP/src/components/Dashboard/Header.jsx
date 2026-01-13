@@ -1,11 +1,13 @@
 // components/Dashboard/Header.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Search, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Menu, Search, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon, Zap } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
 
 const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const menuRef = useRef(null);
 
@@ -42,6 +44,18 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
           <div className="flex-1"></div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
+
+          {/* AI Token Display */}
+          <div
+            onClick={() => navigate('/settings', { state: { activeTab: 'usage' } })}
+            className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
+          >
+            <Zap size={14} className="text-yellow-500 fill-yellow-500" />
+            <span className={`text-xs font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+              {user?.aiTokens ?? 500}
+            </span>
+          </div>
+
           <button
             onClick={toggleTheme}
             className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}

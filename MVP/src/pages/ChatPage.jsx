@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 
 const ChatPage = () => {
     const { isDarkMode } = useTheme();
-    const { authenticatedFetch } = useAuth(); // Get authenticatedFetch
+    const { authenticatedFetch, user, refreshUser } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -18,6 +18,23 @@ const ChatPage = () => {
     const [chats, setChats] = useState([]);
     const [currentChatId, setCurrentChatId] = useState(null);
     const currentChat = chats.find(c => c.id === currentChatId);
+
+    const themeColors = {
+        'Blue': 'bg-blue-600',
+        'Purple': 'bg-purple-600',
+        'Green': 'bg-green-600',
+        'Orange': 'bg-orange-600'
+    };
+
+    const getBotColor = () => {
+        if (!user?.botSettings?.theme) return 'bg-blue-600';
+        return themeColors[user.botSettings.theme] || 'bg-blue-600';
+    };
+
+    const getInitials = (name) => {
+        if (!name) return 'U';
+        return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -137,6 +154,7 @@ const ChatPage = () => {
             if (response.ok) {
                 const updatedChat = await response.json();
                 setChats(prev => prev.map(c => c.id === targetChatId ? updatedChat : c));
+                await refreshUser();
             }
         } catch (error) {
             console.error("Failed to send message", error);
@@ -217,10 +235,14 @@ const ChatPage = () => {
 
                 {/* User Profile / Settings at bottom */}
                 <div className="p-3 border-t border-gray-700 flex items-center gap-3 cursor-pointer hover:bg-gray-800 rounded-md m-2">
-                    <div className="w-8 h-8 rounded-sm bg-blue-600 flex items-center justify-center text-white font-bold">
-                        US
-                    </div>
-                    <div className="flex-1 text-sm font-medium">User Account</div>
+                    {user?.picture ? (
+                        <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-sm object-cover" />
+                    ) : (
+                        <div className="w-8 h-8 rounded-sm bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                            {getInitials(user?.name)}
+                        </div>
+                    )}
+                    <div className="flex-1 text-sm font-medium truncate">{user?.name || 'User Account'}</div>
                     <MoreHorizontal size={16} className="text-gray-400" />
                 </div>
             </div>
@@ -240,7 +262,7 @@ const ChatPage = () => {
                             {sidebarOpen ? <div className="hidden md:block"><Menu size={20} /></div> : <Menu size={20} />}
                             {sidebarOpen && <div className="md:hidden"><Menu size={20} /></div>}
                         </button>
-                        <span className="font-semibold text-lg ml-2">StockBud AI 4.0</span>
+                        <span className="font-semibold text-lg ml-2">{user?.botSettings?.name || 'StockBud AI'}</span>
                     </div>
                 </div>
 
@@ -259,7 +281,7 @@ const ChatPage = () => {
                             currentChat?.messages.map((msg, idx) => (
                                 <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     {msg.role === 'assistant' && (
-                                        <div className={`w-8 h-8 rounded-sm flex-shrink-0 flex items-center justify-center ${isDarkMode ? 'bg-blue-600' : 'bg-blue-600'}`}>
+                                        <div className={`w-8 h-8 rounded-sm flex-shrink-0 flex items-center justify-center ${getBotColor()}`}>
                                             <Bot size={18} className="text-white" />
                                         </div>
                                     )}
@@ -284,7 +306,7 @@ const ChatPage = () => {
 
                         {isTyping && (
                             <div className="flex gap-4">
-                                <div className="w-8 h-8 rounded-sm bg-blue-600 flex-shrink-0 flex items-center justify-center">
+                                <div className={`w-8 h-8 rounded-sm flex-shrink-0 flex items-center justify-center ${getBotColor()}`}>
                                     <Bot size={18} className="text-white" />
                                 </div>
                                 <div className="flex items-center gap-1 h-8">

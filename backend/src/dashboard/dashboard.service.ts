@@ -12,16 +12,53 @@ export class DashboardService {
         let sourceData: { name: string; value: number; color: string }[] = [];
         let heatmapData = [];
         let salesHistoryData = [];
+        let topProducts = [];
+        let lostRevenue = 0;
 
         if (shop && token) {
             try {
                 const orders = await this.shopifyService.getOrders(shop, token);
+                // We're not using products for now as order line items differ from product objects
+                // const products = await this.shopifyService.getProducts(shop, token); 
 
-                // 1. Calculate Total Revenue & Change
-                totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_price), 0);
-                revenueChange = 0; // Needs historical comparison logic
+                // 1. Calculate Total Revenue & Lost Revenue
+                orders.forEach(order => {
+                    if (order.financial_status === 'voided' || order.cancelled_at) {
+                        lostRevenue += Number(order.total_price);
+                    } else {
+                        totalRevenue += Number(order.total_price);
+                    }
+                });
 
-                // 2. Prepare Revenue Chart Data (Last 7 Days)
+                // 2. Revenue Change (This Week vs Last Week)
+                const now = new Date();
+                const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+                const thisWeekRevenue = orders
+                    .filter(o => {
+                        const date = new Date(o.created_at);
+                        return date >= oneWeekAgo && !o.cancelled_at;
+                    })
+                    .reduce((sum, o) => sum + Number(o.total_price), 0);
+
+                const lastWeekRevenue = orders
+                    .filter(o => {
+                        const date = new Date(o.created_at);
+                        return date >= twoWeeksAgo && date < oneWeekAgo && !o.cancelled_at;
+                    })
+                    .reduce((sum, o) => sum + Number(o.total_price), 0);
+
+                if (lastWeekRevenue > 0) {
+                    revenueChange = Math.round(((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100);
+                } else if (thisWeekRevenue > 0) {
+                    revenueChange = 100;
+                } else {
+                    revenueChange = 0;
+                }
+
+
+                // 3. Prepare Revenue Chart Data (Last 7 Days)
                 const last7Days = [...Array(7)].map((_, i) => {
                     const d = new Date();
                     d.setDate(d.getDate() - (6 - i));
@@ -30,7 +67,7 @@ export class DashboardService {
 
                 revenueData = last7Days.map(date => {
                     const dayRevenue = orders
-                        .filter(o => o.created_at.startsWith(date))
+                        .filter(o => o.created_at.startsWith(date) && !o.cancelled_at)
                         .reduce((sum, o) => sum + Number(o.total_price), 0);
 
                     const dateObj = new Date(date);
@@ -43,7 +80,7 @@ export class DashboardService {
                     };
                 });
 
-                // 3. Prepare Source Data
+                // 4. Source Data
                 const sources = {};
                 orders.forEach(o => {
                     const source = o.source_name || 'direct';
@@ -57,7 +94,7 @@ export class DashboardService {
                     color: this.getColorForSource(name)
                 }));
 
-                // 4. Prepare Heatmap Data
+                // 5. Heatmap Data
                 const heatMapCounts = {};
                 orders.forEach(o => {
                     const date = o.created_at.split('T')[0];
@@ -70,7 +107,7 @@ export class DashboardService {
                     level: Math.min(4, Math.ceil(Number(count) / 2))
                 }));
 
-                // 5. Prepare Sales History
+                // 6. Sales History
                 salesHistoryData = orders.slice(0, 5).map(o => {
                     const first = o.customer?.first_name || 'Guest';
                     const last = o.customer?.last_name || '';
@@ -84,6 +121,21 @@ export class DashboardService {
                     };
                 });
 
+                // 7. Top Selling Products
+                const productCounts = {};
+                orders.forEach(o => {
+                    if (!o.cancelled_at) {
+                        o.line_items.forEach(item => {
+                            productCounts[item.title] = (productCounts[item.title] || 0) + item.quantity;
+                        });
+                    }
+                });
+
+                topProducts = Object.entries(productCounts)
+                    .sort(([, a], [, b]) => Number(b) - Number(a))
+                    .slice(0, 5)
+                    .map(([name, count]) => ({ name, count }));
+
             } catch (error) {
                 console.error("Failed to fetch shopify orders for stats:", error.message);
             }
@@ -93,11 +145,13 @@ export class DashboardService {
             revenue: {
                 total: totalRevenue,
                 change: revenueChange,
-                chartData: revenueData
+                chartData: revenueData,
+                lost: lostRevenue
             },
             source: sourceData,
             heatmap: heatmapData,
-            salesHistory: salesHistoryData
+            salesHistory: salesHistoryData,
+            topProducts: topProducts
         };
     }
 

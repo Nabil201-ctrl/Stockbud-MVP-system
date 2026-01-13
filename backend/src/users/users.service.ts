@@ -12,6 +12,8 @@ export interface User {
     shopifyToken?: string;
     isOnboardingComplete?: boolean;
     refreshToken?: string;
+    aiTokens?: number;
+    reportTokens?: number;
     botSettings?: {
         name: string;
         personality: string;
@@ -71,6 +73,8 @@ export class UsersService implements OnModuleInit {
                 name: profile.displayName,
                 picture: profile.photos?.[0]?.value,
                 isOnboardingComplete: false,
+                aiTokens: 500,
+                reportTokens: 250,
             };
             this.users.set(user.id, user);
             this.saveUsers();
@@ -88,6 +92,8 @@ export class UsersService implements OnModuleInit {
             name,
             password: passwordHash,
             isOnboardingComplete: false,
+            aiTokens: 500,
+            reportTokens: 250,
         };
         this.users.set(user.id, user);
         this.saveUsers();
@@ -118,6 +124,8 @@ export class UsersService implements OnModuleInit {
             if (data.password) user.password = data.password;
             if (data.isOnboardingComplete !== undefined) user.isOnboardingComplete = data.isOnboardingComplete;
             if (data.refreshToken !== undefined) user.refreshToken = data.refreshToken;
+            if (data.aiTokens !== undefined) user.aiTokens = data.aiTokens;
+            if (data.reportTokens !== undefined) user.reportTokens = data.reportTokens;
             if (data.botSettings !== undefined) user.botSettings = data.botSettings;
 
             this.users.set(userId, user);

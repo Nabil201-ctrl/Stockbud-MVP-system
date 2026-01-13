@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
         try {
             // We use users/me to check if we are logged in (cookie is valid)
-            const response = await authenticatedFetch('http://localhost:3000/users/me');
+            const response = await authenticatedFetch(`http://localhost:3000/users/me?t=${Date.now()}`);
             if (response.ok) {
                 const userData = await response.json();
                 setUser(userData);
@@ -147,7 +147,8 @@ export const AuthProvider = ({ children }) => {
         completeOnboarding,
         isAuthenticated: !!user,
         loading,
-        authenticatedFetch
+        authenticatedFetch,
+        refreshUser: checkAuth
     };
 
     return (

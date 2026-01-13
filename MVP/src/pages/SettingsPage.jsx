@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2, Zap } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +9,8 @@ const SettingsPage = () => {
     const isOnline = useOnlineStatus();
     const { isDarkMode } = useTheme();
     const { user, updateProfile, token } = useAuth();
-    const [activeTab, setActiveTab] = useState('profile');
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile');
 
     const [profileData, setProfileData] = useState({
         name: user?.name || '',
@@ -122,6 +124,16 @@ const SettingsPage = () => {
                         <Lock className="w-4 h-4" />
                         Security
                     </button>
+                    <button
+                        onClick={() => setActiveTab('usage')}
+                        className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === 'usage'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                            }`}
+                    >
+                        <Zap className="w-4 h-4" />
+                        Usage & Limits
+                    </button>
                 </nav>
             </div>
 
@@ -217,6 +229,54 @@ const SettingsPage = () => {
                             Update Password
                         </button>
                     </form>
+                </div>
+            )}
+
+            {/* Usage Tab */}
+            {activeTab === 'usage' && (
+                <div className={`p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                    <h2 className="text-xl font-bold mb-6 dark:text-white">Usage & Limits</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* AI Tokens */}
+                        <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2 font-medium dark:text-gray-200">
+                                    <Zap size={18} className="text-yellow-500" />
+                                    AI Tokens
+                                </div>
+                                <span className="text-sm font-bold dark:text-white">{user?.aiTokens ?? 500} / 500</span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
+                                <div
+                                    className="bg-yellow-500 h-2.5 rounded-full transition-all duration-500"
+                                    style={{ width: `${Math.min(100, ((user?.aiTokens ?? 500) / 500) * 100)}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                Used for generating chat responses and insights.
+                            </p>
+                        </div>
+
+                        {/* Report Tokens */}
+                        <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2 font-medium dark:text-gray-200">
+                                    <CheckCircle2 size={18} className="text-blue-500" />
+                                    Report Tokens
+                                </div>
+                                <span className="text-sm font-bold dark:text-white">{user?.reportTokens ?? 250} / 250</span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
+                                <div
+                                    className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
+                                    style={{ width: `${Math.min(100, ((user?.reportTokens ?? 250) / 250) * 100)}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                Used for generating weekly summary reports.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

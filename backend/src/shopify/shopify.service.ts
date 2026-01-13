@@ -44,7 +44,7 @@ export class ShopifyService {
         if (!shop || !token) throw new HttpException('Missing Shopify credentials', HttpStatus.UNAUTHORIZED);
 
         try {
-            const url = `https://${shop}/admin/api/2024-01/orders.json?status=any&limit=50`;
+            const url = `https://${shop}/admin/api/2024-01/orders.json?status=any&limit=250`;
             const response = await firstValueFrom(
                 this.httpService.get(url, {
                     headers: {
