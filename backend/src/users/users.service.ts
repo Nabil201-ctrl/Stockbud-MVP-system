@@ -1,6 +1,8 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
+import { EncryptionService } from '../common/encryption.service';
 
 export interface User {
     id: string;
@@ -31,6 +33,9 @@ export interface User {
 export class UsersService implements OnModuleInit {
     private users: Map<string, User> = new Map();
     private readonly filePath = path.join(__dirname, '..', '..', 'users.json');
+    constructor(
+        private readonly encryptionService: EncryptionService
+    ) { }
 
     onModuleInit() {
         this.loadUsers();
@@ -108,12 +113,21 @@ export class UsersService implements OnModuleInit {
         const user = this.users.get(userId);
         if (user) {
             user.shopifyShop = shop;
-            user.shopifyToken = token;
+            // Encrypt token before saving
+            user.shopifyToken = this.encryptionService.encrypt(token);
             this.users.set(userId, user);
             this.saveUsers();
             return user;
         }
         throw new Error('User not found');
+    }
+
+    async getDecryptedShopifyToken(userId: string): Promise<string | undefined> {
+        const user = this.users.get(userId);
+        if (user && user.shopifyToken) {
+            return this.encryptionService.decrypt(user.shopifyToken);
+        }
+        return undefined;
     }
 
     async updateProfile(userId: string, data: Partial<User>): Promise<User> {

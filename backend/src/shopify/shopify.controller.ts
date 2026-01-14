@@ -7,7 +7,10 @@ import { ConnectShopDto } from './dto/connect-shop.dto';
 
 @Controller('shopify')
 export class ShopifyController {
-    constructor(private readonly shopifyService: ShopifyService) { }
+    constructor(
+        private readonly shopifyService: ShopifyService,
+        private readonly usersService: UsersService
+    ) { }
 
     @Post('connect')
     @UseGuards(ApiKeyGuard)
@@ -24,6 +27,7 @@ export class ShopifyController {
             throw new HttpException('Shopify credentials not found. Please connect your store in Settings.', HttpStatus.UNAUTHORIZED); // Or BAD_REQUEST
         }
 
-        return await this.shopifyService.getProducts(user.shopifyShop, user.shopifyToken);
+        const decryptedToken = await this.usersService.getDecryptedShopifyToken(user.id);
+        return await this.shopifyService.getProducts(user.shopifyShop, decryptedToken);
     }
 }

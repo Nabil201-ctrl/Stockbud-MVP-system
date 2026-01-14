@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { ShopifyModule } from './shopify/shopify.module';
 import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
+import { CommonModule } from './common/common.module';
 
 @Module({
     imports: [
@@ -19,7 +20,9 @@ import { ChatModule } from './chat/chat.module';
         UsersModule,
         ShopifyModule,
         AuthModule,
+        AuthModule,
         ChatModule,
+        CommonModule,
     ],
 })
 export class AppModule { }
