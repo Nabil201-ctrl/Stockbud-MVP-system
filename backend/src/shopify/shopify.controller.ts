@@ -15,7 +15,11 @@ export class ShopifyController {
     @Post('connect')
     @UseGuards(ApiKeyGuard)
     async connectShop(@Body() dto: ConnectShopDto) {
-        return await this.shopifyService.connectShop(dto);
+        console.log(`[Handshake] Received connection request for shop: ${dto.shop}`);
+        console.log(`[Handshake] Token starts with: ${dto.accessToken?.substring(0, 10)}...`);
+        const result = await this.shopifyService.connectShop(dto);
+        console.log(`[Handshake] Connection result:`, result);
+        return result;
     }
 
     @Get('products')

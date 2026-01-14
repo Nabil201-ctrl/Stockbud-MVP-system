@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2, Zap } from 'lucide-react';
+import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2, Zap, ShoppingBag } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -133,6 +133,16 @@ const SettingsPage = () => {
                     >
                         <Zap className="w-4 h-4" />
                         Usage & Limits
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('integrations')}
+                        className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === 'integrations'
+                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                            }`}
+                    >
+                        <ShoppingBag className="w-4 h-4" />
+                        Integrations
                     </button>
                 </nav>
             </div>
@@ -276,6 +286,46 @@ const SettingsPage = () => {
                                 Used for generating weekly summary reports.
                             </p>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Integrations Tab */}
+            {activeTab === 'integrations' && (
+                <div className={`p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                    <h2 className="text-xl font-bold mb-6 dark:text-white">Connected Platforms</h2>
+
+                    <div className={`flex items-center justify-between p-4 rounded-lg border ${isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-green-100 rounded-full">
+                                <ShoppingBag className="text-green-600" size={24} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-lg dark:text-white">Shopify</h3>
+                                {user?.shopifyShop ? (
+                                    <p className="text-sm text-green-600 font-medium flex items-center gap-1">
+                                        <CheckCircle2 size={14} /> Connected: {user.shopifyShop}
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Not connected</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {user?.shopifyShop ? (
+                            <button disabled className="px-4 py-2 rounded-lg bg-gray-200 text-gray-500 text-sm font-medium cursor-default dark:bg-gray-700 dark:text-gray-400">
+                                Connected
+                            </button>
+                        ) : (
+                            <a
+                                href="https://apps.shopify.com/stock-bud"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+                            >
+                                Connect Store
+                            </a>
+                        )}
                     </div>
                 </div>
             )}

@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useLoaderData } from "react-router";
+import { useEffect, useState } from "react";
+import { useLoaderData, useFetcher } from "react-router";
 import {
   Page,
   Layout,
@@ -13,187 +13,152 @@ import {
   Box,
   Banner,
   Divider,
+  Spinner,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 
+// loader: Only check session and maybe do a quick ping if desired (omitted for speed)
 export const loader = async ({ request }) => {
-  const { session, admin } = await authenticate.admin(request);
-
-  if (!session) {
-    return { status: 'error', message: "No session found" };
-  }
-
-  const { shop, accessToken } = session;
-
-  // 1. Sync to Backend (Keep existing logic)
-  const backendUrl = "http://localhost:3000/shopify/connect";
-  const apiKey = "shared-secret-key-123";
-  let connectionStatus = "connected";
-  let connectionMessage = "";
-
-  try {
-    const response = await fetch(backendUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-internal-api-key": apiKey
-      },
-      body: JSON.stringify({
-        shop,
-        accessToken,
-      })
-    });
-
-    if (!response.ok) {
-      console.error("Backend connect failed", await response.text());
-      connectionStatus = "sync_failed";
-      connectionMessage = "Could not sync credentials to AI backend.";
-    }
-  } catch (error) {
-    console.error("Backend connect error", error);
-    connectionStatus = "error";
-    connectionMessage = error.message;
-  }
-
-  // 2. Fetch Real Shopify Data (Last 7 Days)
-  // Query orders to calculate simple metrics
-  let shopifyStats = {
-    orderCount: 0,
-    totalSales: "0.00",
-    currency: "USD"
-  };
-
-  try {
-    const response = await admin.graphql(
-      `#graphql
-      query getRecentOrders {
-        orders(first: 50, reverse: true) {
-          edges {
-            node {
-              id
-              totalPriceSet {
-                shopMoney {
-                  amount
-                  currencyCode
-                }
-              }
-              createdAt
-            }
-          }
-        }
-        shop {
-          currencyCode
-        }
-      }`
-    );
-
-    const result = await response.json();
-
-    if (result.data && result.data.orders) {
-      const orders = result.data.orders.edges;
-      shopifyStats.orderCount = orders.length; // Just counting last 50 for MVP speed
-      shopifyStats.currency = result.data.shop.currencyCode;
-
-      const total = orders.reduce((acc, edge) => {
-        return acc + parseFloat(edge.node.totalPriceSet?.shopMoney?.amount || 0);
-      }, 0);
-
-      shopifyStats.totalSales = total.toFixed(2);
-    }
-  } catch (err) {
-    console.error("Failed to fetch shopify stats", err);
-  }
-
-  return { status: connectionStatus, message: connectionMessage, shop, shopifyStats };
+  const { session } = await authenticate.admin(request);
+  return { shop: session?.shop };
 };
 
 export const action = async ({ request }) => {
-  return null;
+  const { session } = await authenticate.admin(request);
+  if (!session) return { status: "error", message: "No session" };
+
+  console.log("Syncing with Stockbud Backend...", session.shop);
+  try {
+    const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
+    const apiKey = process.env.INTERNAL_API_KEY;
+
+    const response = await fetch(`${backendUrl}/shopify/connect`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        shop: session.shop,
+        accessToken: session.accessToken,
+      }),
+    });
+
+    if (response.ok) {
+      return { status: "success" };
+    } else {
+      return { status: "error", message: await response.text() };
+    }
+  } catch (error) {
+    return { status: "error", message: error.message };
+  }
 };
 
 export default function Index() {
-  const data = useLoaderData();
-  const isConnected = data?.status === 'connected';
-
-  // Helper to open main app
+  const loaderData = useLoaderData();
+  const fetcher = useFetcher();
+  const [step, setStep] = useState(1); // 1: Init, 2: Syncing, 3: Done
   const openApp = () => window.open("http://localhost:5173", "_blank");
 
+  // Trigger sync on mount
+  useEffect(() => {
+    if (fetcher.state === 'idle' && !fetcher.data) {
+      setStep(2);
+      fetcher.submit({}, { method: "POST" });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (fetcher.data?.status === 'success') {
+      // Small delay for visual effect so user sees the "Syncing" step
+      setTimeout(() => setStep(3), 800);
+    } else if (fetcher.data?.status === 'error') {
+      setStep(-1); // Error state
+    }
+  }, [fetcher.data]);
+
   return (
-    <Page title="StockBud Dashboard" primaryAction={{ content: 'Open Full App', onAction: openApp }}>
+    <Page title="StockBud Connection">
       <Layout>
-
-        {/* Connection Status Banner */}
-        <Layout.Section>
-          {!isConnected && (
-            <Banner title="Connection Issue" tone="critical">
-              <p>We encountered an issue syncing your credentials: {data?.message}</p>
-              <p>Some AI features may be unavailable.</p>
-            </Banner>
-          )}
-          {isConnected && (
-            <Banner title="AI System Active" tone="success" onDismiss={() => { }}>
-              <p>Your store data is properly synced with StockBud AI. You can now use the full analysis platform.</p>
-            </Banner>
-          )}
-        </Layout.Section>
-
-        {/* Quick Stats Grid */}
-        <Layout.Section>
-          <InlineGrid columns={{ xs: 1, sm: 3 }} gap="400">
-            <Card>
-              <BlockStack gap="200">
-                <Text as="h3" variant="headingSm" tone="subdued">Recent Orders (Last 50)</Text>
-                <Text as="h2" variant="headingLg">{data.shopifyStats?.orderCount || 0}</Text>
-              </BlockStack>
-            </Card>
-            <Card>
-              <BlockStack gap="200">
-                <Text as="h3" variant="headingSm" tone="subdued">Recent Revenue</Text>
-                <Text as="h2" variant="headingLg">
-                  {data.shopifyStats?.totalSales || "0.00"} {data.shopifyStats?.currency}
-                </Text>
-              </BlockStack>
-            </Card>
-            <Card>
-              <BlockStack gap="200">
-                <Text as="h3" variant="headingSm" tone="subdued">AI Status</Text>
-                <Text as="h2" variant="headingLg" tone={isConnected ? "success" : "critical"}>
-                  {isConnected ? "Online" : "Offline"}
-                </Text>
-              </BlockStack>
-            </Card>
-          </InlineGrid>
-        </Layout.Section>
-
-        {/* Call to Action */}
         <Layout.Section>
           <Card>
-            <BlockStack gap="500">
-              <BlockStack gap="200">
-                <Text as="h2" variant="headingMd">🚀 Take your insights to the next level</Text>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  The embedded dashboard gives you a quick snapshot. Unlock deep inventory analytics,
-                  predictive forecasting, and the "Ask StockBud" chat assistant in the full platform.
-                </Text>
-              </BlockStack>
-              <InlineGrid columns="auto auto" gap="200">
-                <Button variant="primary" onClick={openApp}>
-                  Launch Full Platform
-                </Button>
-              </InlineGrid>
+            <BlockStack gap="500" align="center">
+
+              <Box paddingBlock="500">
+                <BlockStack gap="400" align="center">
+
+                  {/* Step 1 & 2: Loading State */}
+                  {step < 3 && step !== -1 && (
+                    <div style={{ width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Spinner size="large" accessibilityLabel="Connecting" />
+                    </div>
+                  )}
+
+                  {/* Step 3: Success State */}
+                  {step === 3 && (
+                    <div style={{
+                      width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#E4FCE3',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 6L9 17L4 12" stroke="#12B76A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* Error State */}
+                  {step === -1 && (
+                    <div style={{
+                      width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#FEE2E2',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <span style={{ fontSize: '40px' }}>⚠️</span>
+                    </div>
+                  )}
+
+                  <BlockStack gap="100" align="center">
+                    <Text as="h2" variant="headingLg">
+                      {step === 1 && "Initializing..."}
+                      {step === 2 && "Syncing with StockBud AI..."}
+                      {step === 3 && "System Connected"}
+                      {step === -1 && "Connection Failed"}
+                    </Text>
+                    <Text as="p" tone="subdued">
+                      {step === 3 ? (
+                        <>Your store <b>{loaderData.shop}</b> is successfully synced.</>
+                      ) : (
+                        step === -1 ? "Please check your API Key configuration." : "Establishing secure connection..."
+                      )}
+                    </Text>
+                  </BlockStack>
+                </BlockStack>
+              </Box>
+
+              <Divider />
+
+              {/* Call to Action - Only show when connected */}
+              <Box paddingBlock="400" style={{ opacity: step === 3 ? 1 : 0.5, pointerEvents: step === 3 ? 'auto' : 'none' }}>
+                <BlockStack gap="300" align="center">
+                  <Text as="p" variant="bodyMd" alignment="center">
+                    Manage your inventory, view AI insights, and chat with your assistant on the main dashboard.
+                  </Text>
+                  <Button variant="primary" size="large" onClick={openApp} disabled={step !== 3}>
+                    Go to StockBud Dashboard
+                  </Button>
+                </BlockStack>
+              </Box>
+
             </BlockStack>
           </Card>
         </Layout.Section>
-
-        {/* Footer info */}
+        {/* Footer info remains same */}
         <Layout.Section>
-          <Box paddingBlockStart="400">
+          <Box paddingBlockStart="800">
             <Text as="p" variant="caption" tone="subdued" alignment="center">
-              StockBud MVP System &bull; Built for Shopify
+              StockBud is running in the background. You can close this tab.
             </Text>
           </Box>
         </Layout.Section>
-
       </Layout>
     </Page>
   );
