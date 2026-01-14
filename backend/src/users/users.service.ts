@@ -46,7 +46,12 @@ export class UsersService implements OnModuleInit {
             try {
                 const data = fs.readFileSync(this.filePath, 'utf8');
                 const usersArray = JSON.parse(data);
-                this.users = new Map(usersArray.map((user: User) => [user.id, user]));
+                this.users = new Map(usersArray.map((user: User) => {
+                    // Migration: Ensure new fields exist
+                    if (user.aiTokens === undefined) user.aiTokens = 500;
+                    if (user.reportTokens === undefined) user.reportTokens = 250;
+                    return [user.id, user];
+                }));
                 console.log(`Loaded ${this.users.size} users from ${this.filePath}`);
             } catch (error) {
                 console.error('Error loading users from file:', error);

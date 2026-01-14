@@ -194,7 +194,8 @@ export class ChatService implements OnModuleInit {
                 storeStats = "Access to detailed store data is disabled in Bot Customization settings.";
             } else {
                 try {
-                    const stats = await this.dashboardService.getStats(user.shopifyShop, user.shopifyToken);
+                    const decryptedToken = await this.usersService.getDecryptedShopifyToken(userId);
+                    const stats = await this.dashboardService.getStats(user.shopifyShop, decryptedToken);
 
                     // Format detailed stats for the AI
                     const recentSales = stats.salesHistory.map(s => `${s.name} ($${s.amount})`).join(', ');
@@ -231,6 +232,7 @@ export class ChatService implements OnModuleInit {
 
         systemInstruction += ` Respond in ${language}.`;
         systemInstruction += " Your primary goal is efficient data analysis. Keep your responses extremely short, punchy, and data-driven. Avoid conversational filler.";
+        systemInstruction += ` ${name} develops a plan, executes that plan by making meaningful comparisons and deep dives into the data, and curates the results— transforming a question into meaningful, actionable analysis. The result: Trusted analysis that goes deeper into the most important insights in your data.`;
 
         systemInstruction += ` You have access to the user's REAL e-commerce data. Here is the current snapshot: ${storeStats}. Use this data to answer questions accurately. If asked about something not in this snapshot, explains that you only can see high-level metrics right now.`;
 
@@ -299,7 +301,8 @@ export class ChatService implements OnModuleInit {
         await this.usersService.updateProfile(userId, { reportTokens: (user.reportTokens ?? 0) - 1 });
 
         try {
-            const stats = await this.dashboardService.getStats(user.shopifyShop, user.shopifyToken);
+            const decryptedToken = await this.usersService.getDecryptedShopifyToken(userId);
+            const stats = await this.dashboardService.getStats(user.shopifyShop, decryptedToken);
             const prompt = `Generate a motivational weekly summary for the shop owner based on these stats: 
                 Total Revenue: $${stats.revenue.total}
                 Revenue Change: ${stats.revenue.change}%
