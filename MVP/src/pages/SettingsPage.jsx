@@ -254,12 +254,12 @@ const SettingsPage = () => {
                                     <Zap size={18} className="text-yellow-500" />
                                     AI Tokens
                                 </div>
-                                <span className="text-sm font-bold dark:text-white">{user?.aiTokens ?? 500} / 500</span>
+                                <span className="text-sm font-bold dark:text-white">{user?.aiTokens || 0} / 500</span>
                             </div>
                             <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
                                 <div
                                     className="bg-yellow-500 h-2.5 rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, ((user?.aiTokens ?? 500) / 500) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, ((user?.aiTokens || 0) / 500) * 100)}%` }}
                                 ></div>
                             </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -274,12 +274,12 @@ const SettingsPage = () => {
                                     <CheckCircle2 size={18} className="text-blue-500" />
                                     Report Tokens
                                 </div>
-                                <span className="text-sm font-bold dark:text-white">{user?.reportTokens ?? 250} / 250</span>
+                                <span className="text-sm font-bold dark:text-white">{user?.reportTokens || 0} / 250</span>
                             </div>
                             <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
                                 <div
                                     className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, ((user?.reportTokens ?? 250) / 250) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, ((user?.reportTokens || 0) / 250) * 100)}%` }}
                                 ></div>
                             </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">

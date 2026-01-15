@@ -8,6 +8,7 @@ import { ShopifyModule } from './shopify/shopify.module';
 import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
 import { CommonModule } from './common/common.module';
+import { FeedModule } from './feed/feed.module';
 
 @Module({
     imports: [
@@ -20,9 +21,9 @@ import { CommonModule } from './common/common.module';
         UsersModule,
         ShopifyModule,
         AuthModule,
-        AuthModule,
         ChatModule,
         CommonModule,
+        FeedModule,
     ],
 })
 export class AppModule { }

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Menu, Search, Bell, ChevronDown, Sun, Moon } from 'lucide-react';
 
-const Header = ({ isDarkMode, toggleTheme }) => {
+const Header = ({ isDarkMode, toggleTheme, onOpenFeedback }) => {
   return (
     <div className={`px-6 py-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-10`}>
       <div className="flex items-center justify-between">

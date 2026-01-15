@@ -46,13 +46,14 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
         <div className="flex items-center gap-2 sm:gap-4">
 
           {/* AI Token Display */}
+          {/* AI Token Display */}
           <div
             onClick={() => navigate('/settings', { state: { activeTab: 'usage' } })}
             className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
           >
             <Zap size={14} className="text-yellow-500 fill-yellow-500" />
             <span className={`text-xs font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-              {user?.aiTokens ?? 500}
+              {user?.aiTokens || 0}
             </span>
           </div>
 

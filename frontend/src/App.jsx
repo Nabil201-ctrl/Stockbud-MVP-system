@@ -7,6 +7,7 @@ import BotCustomization from './pages/BotCustomization';
 import Realtime from './pages/Realtime';
 import Users from './pages/Users';
 import ProductsPage from './pages/ProductsPage';
+import Settings from './pages/Settings';
 import Layout from './components/layout/Layout';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
             <Route path="/realtime" element={<Realtime />} />
             <Route path="/users" element={<Users />} />
             <Route path="/products" element={<ProductsPage />} />
+            <Route path="/settings" element={<Settings />} />
 
           </Routes>
         </Layout>

@@ -3,21 +3,15 @@ import { useLoaderData, useFetcher } from "react-router";
 import {
   Page,
   Layout,
-  Text,
   Card,
   Button,
   BlockStack,
-  InlineGrid,
-  Link,
-  List,
+  Text,
   Box,
-  Banner,
   Divider,
-  Spinner,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 
-// loader: Only check session and maybe do a quick ping if desired (omitted for speed)
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   return { shop: session?.shop };
@@ -32,6 +26,7 @@ export const action = async ({ request }) => {
     const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
     const apiKey = process.env.INTERNAL_API_KEY;
 
+    // Simulate backend handshake calls for verification
     const response = await fetch(`${backendUrl}/shopify/connect`, {
       method: "POST",
       headers: {
@@ -54,110 +49,115 @@ export const action = async ({ request }) => {
   }
 };
 
+const PolarisTimeline = ({ currentStep }) => {
+  const steps = [
+    { title: "Initiating Handshake", description: "Secure connection check" },
+    { title: "Verifying Credentials", description: "Validating permissions" },
+    { title: "Syncing Product Catalog", description: "Fetching inventory data" },
+    { title: "Analyzing Data", description: "Processing historical sales" },
+    { title: "Active", description: "System ready" }
+  ];
+
+  return (
+    <div style={{ padding: '20px' }}>
+      {steps.map((step, index) => {
+        const stepNum = index + 1;
+        const isActive = currentStep === stepNum;
+        const isCompleted = currentStep > stepNum;
+        const isPending = currentStep < stepNum;
+
+        let color = '#E4E5E7'; // Gray
+        if (isActive) color = '#2563EB'; // Blue
+        if (isCompleted) color = '#12B76A'; // Green
+
+        return (
+          <div key={index} style={{ display: 'flex', marginBottom: '24px', opacity: isPending ? 0.5 : 1, transition: 'opacity 0.5s' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: '16px' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%', backgroundColor: isCompleted ? '#E4FCE3' : (isActive ? '#EFF6FF' : '#F1F2F4'),
+                border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.5s',
+                color: isCompleted ? '#12B76A' : (isActive ? '#2563EB' : '#6D7175'), fontWeight: 'bold'
+              }}>
+                {isCompleted ? '✓' : stepNum}
+              </div>
+              {index < steps.length - 1 && (
+                <div style={{ width: '2px', height: '100%', backgroundColor: isCompleted ? '#12B76A' : '#E4E5E7', minHeight: '20px', marginTop: '8px', transition: 'all 0.5s' }} />
+              )}
+            </div>
+            <div style={{ paddingTop: '4px' }}>
+              <Text variant="bodyLg" as="p" fontWeight={isActive ? "bold" : "regular"}>{step.title}</Text>
+              <Text variant="bodySm" as="p" tone="subdued">{step.description}</Text>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Index() {
   const loaderData = useLoaderData();
   const fetcher = useFetcher();
-  const [step, setStep] = useState(1); // 1: Init, 2: Syncing, 3: Done
+  const [currentStep, setCurrentStep] = useState(0);
   const openApp = () => window.open("http://localhost:5173", "_blank");
 
-  // Trigger sync on mount
+  // Trigger Sync Animation
   useEffect(() => {
     if (fetcher.state === 'idle' && !fetcher.data) {
-      setStep(2);
+      // Start flow
+      setCurrentStep(1);
+      setTimeout(() => setCurrentStep(2), 1500);
+
+      // Trigger actual backend call during step 2
       fetcher.submit({}, { method: "POST" });
     }
   }, []);
 
   useEffect(() => {
-    if (fetcher.data?.status === 'success') {
-      // Small delay for visual effect so user sees the "Syncing" step
-      setTimeout(() => setStep(3), 800);
-    } else if (fetcher.data?.status === 'error') {
-      setStep(-1); // Error state
+    if (currentStep >= 2) {
+      if (fetcher.data?.status === 'success') {
+        // Continue animation if success
+        if (currentStep === 2) setTimeout(() => setCurrentStep(3), 1000); // Syncing
+        if (currentStep === 3) setTimeout(() => setCurrentStep(4), 2500); // Analyzing
+        if (currentStep === 4) setTimeout(() => setCurrentStep(5), 2000); // Done
+      }
     }
-  }, [fetcher.data]);
+  }, [currentStep, fetcher.data]);
 
   return (
-    <Page title="StockBud Connection">
+    <Page title="Connection Status">
       <Layout>
         <Layout.Section>
           <Card>
-            <BlockStack gap="500" align="center">
-
-              <Box paddingBlock="500">
-                <BlockStack gap="400" align="center">
-
-                  {/* Step 1 & 2: Loading State */}
-                  {step < 3 && step !== -1 && (
-                    <div style={{ width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Spinner size="large" accessibilityLabel="Connecting" />
-                    </div>
-                  )}
-
-                  {/* Step 3: Success State */}
-                  {step === 3 && (
-                    <div style={{
-                      width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#E4FCE3',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 6L9 17L4 12" stroke="#12B76A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-                  )}
-
-                  {/* Error State */}
-                  {step === -1 && (
-                    <div style={{
-                      width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#FEE2E2',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      <span style={{ fontSize: '40px' }}>⚠️</span>
-                    </div>
-                  )}
-
-                  <BlockStack gap="100" align="center">
-                    <Text as="h2" variant="headingLg">
-                      {step === 1 && "Initializing..."}
-                      {step === 2 && "Syncing with StockBud AI..."}
-                      {step === 3 && "System Connected"}
-                      {step === -1 && "Connection Failed"}
-                    </Text>
-                    <Text as="p" tone="subdued">
-                      {step === 3 ? (
-                        <>Your store <b>{loaderData.shop}</b> is successfully synced.</>
-                      ) : (
-                        step === -1 ? "Please check your API Key configuration." : "Establishing secure connection..."
-                      )}
-                    </Text>
-                  </BlockStack>
-                </BlockStack>
+            <BlockStack gap="500">
+              <Box padding="400">
+                <Text variant="headingLg" as="h2" alignment="center">Connecting to Stockbud AI</Text>
+                <Box paddingBlockStart="200">
+                  <Text variant="bodyMd" as="p" tone="subdued" alignment="center">Store: {loaderData.shop}</Text>
+                </Box>
               </Box>
 
               <Divider />
 
-              {/* Call to Action - Only show when connected */}
-              <Box paddingBlock="400" style={{ opacity: step === 3 ? 1 : 0.5, pointerEvents: step === 3 ? 'auto' : 'none' }}>
-                <BlockStack gap="300" align="center">
-                  <Text as="p" variant="bodyMd" alignment="center">
-                    Manage your inventory, view AI insights, and chat with your assistant on the main dashboard.
-                  </Text>
-                  <Button variant="primary" size="large" onClick={openApp} disabled={step !== 3}>
-                    Go to StockBud Dashboard
-                  </Button>
-                </BlockStack>
+              <Box padding="400">
+                <div style={{ maxWidth: '400px', margin: '0 auto' }}>
+                  <PolarisTimeline currentStep={currentStep} />
+                </div>
               </Box>
 
+              {currentStep === 5 && (
+                <Box padding="400" background="bg-surface-secondary">
+                  <BlockStack gap="400" align="center">
+                    <div style={{ fontSize: '48px', textAlign: 'center' }}>🎉</div>
+                    <Text variant="headingMd" as="h3" alignment="center">Setup Complete!</Text>
+                    <Button variant="primary" size="large" onClick={openApp}>
+                      Launch Stockbud Dashboard
+                    </Button>
+                  </BlockStack>
+                </Box>
+              )}
             </BlockStack>
           </Card>
-        </Layout.Section>
-        {/* Footer info remains same */}
-        <Layout.Section>
-          <Box paddingBlockStart="800">
-            <Text as="p" variant="caption" tone="subdued" alignment="center">
-              StockBud is running in the background. You can close this tab.
-            </Text>
-          </Box>
         </Layout.Section>
       </Layout>
     </Page>
