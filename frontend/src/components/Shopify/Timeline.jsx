@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Check, Loader2, Server, ShieldCheck, RefreshCw, Database } from 'lucide-react';
 
-const Timeline = ({ startAnimation }) => {
-    const [currentStep, setCurrentStep] = useState(0);
+const Timeline = ({ startAnimation, currentStepOverride }) => {
+    const [internalStep, setInternalStep] = useState(0);
+
+    // Use override if provided, otherwise fallback to internal automated state
+    const currentStep = currentStepOverride !== undefined ? currentStepOverride : internalStep;
 
     const steps = [
         {
@@ -43,20 +46,21 @@ const Timeline = ({ startAnimation }) => {
     ];
 
     useEffect(() => {
-        if (!startAnimation) return;
+        // Only run internal animation if no override is provided
+        if (!startAnimation || currentStepOverride !== undefined) return;
 
         let totalDelay = 0;
-        setCurrentStep(1); // Start with step 1 immediately
+        setInternalStep(1); // Start with step 1 immediately
 
         steps.forEach((step, index) => {
             if (index < steps.length - 1) {
                 totalDelay += step.duration;
                 setTimeout(() => {
-                    setCurrentStep(index + 2);
+                    setInternalStep(index + 2);
                 }, totalDelay);
             }
         });
-    }, [startAnimation]);
+    }, [startAnimation, currentStepOverride]);
 
     return (
         <div className="relative py-4">

@@ -9,18 +9,28 @@ const AuthSuccess = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+        const loginSuccess = searchParams.get('login_success');
+        const accessToken = searchParams.get('access_token');
+
+        // Handle Popup Communication (for Shopify App)
+        if (window.opener && accessToken) {
+            window.opener.postMessage({
+                type: 'STOCKBUD_AUTH_SUCCESS',
+                token: accessToken
+            }, '*'); // In prod, specify the exact origin of the Shopify App
+            window.close();
+            return;
+        }
+
+        // Normal Flow
         // If we have a user (meaning cookies worked), proceed
         if (!loading && user) {
             navigate('/onboarding/notifications');
         } else if (!loading && !user) {
-            // If loading finished and still no user, something failed.
-            // But wait, check URL param specifically to differentiate from random access
-            const loginSuccess = searchParams.get('login_success');
+            // ... (existing logic)
             if (!loginSuccess) {
                 navigate('/');
             }
-            // If login_success is true but no user, maybe give it a moment or show error?
-            // For now, let's just stay on loader or bounce back to login if it persists.
         }
     }, [user, loading, navigate, searchParams]);
 

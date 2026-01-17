@@ -37,7 +37,7 @@ export class AuthController {
 
         // Use a simple redirect, query params are just for fallback or indication
         const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
-        res.redirect(`${frontendUrl}/auth/success?login_success=true`);
+        res.redirect(`${frontendUrl}/auth/success?login_success=true&access_token=${access_token}`);
     }
 
     @Post('refresh')
@@ -83,7 +83,7 @@ export class AuthController {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        return { user };
+        return { user, access_token, refresh_token };
     }
 
     @Post('logout')

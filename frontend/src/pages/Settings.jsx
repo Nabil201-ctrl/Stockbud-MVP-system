@@ -1,22 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Timeline from '../components/Shopify/Timeline';
 import { ShoppingBag, Key } from 'lucide-react';
+import { io } from 'socket.io-client';
+import axios from 'axios';
 
 const Settings = () => {
     const [shopUrl, setShopUrl] = useState('');
     const [token, setToken] = useState('');
     const [isConnecting, setIsConnecting] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
+    const [currentStep, setCurrentStep] = useState(0);
 
-    const handleConnect = (e) => {
+    // Socket Connection
+    useEffect(() => {
+        if (!shopUrl || !isConnecting) return;
+
+        const socket = io('http://localhost:3000/shopify');
+
+        socket.on('connect', () => {
+            console.log('Connected to Shopify Gateway');
+            socket.emit('join-room', { shop: shopUrl });
+        });
+
+        socket.on('statusUpdate', (data) => {
+            console.log('Received status update:', data);
+            setCurrentStep(data.step);
+            if (data.step === 5) {
+                setIsConnected(true);
+                setIsConnecting(false);
+            }
+        });
+
+        return () => socket.disconnect();
+    }, [isConnecting, shopUrl]);
+
+    const handleConnect = async (e) => {
         e.preventDefault();
         if (!shopUrl || !token) return;
 
         setIsConnecting(true);
-        // Simulate connection delay matching timeline
-        setTimeout(() => {
-            setIsConnected(true);
-        }, 8000); // 1.5 + 2 + 2.5 + 2 = 8 seconds total
+        setCurrentStep(1); // Set initial step
+
+        // Trigger backend process
+        try {
+            await axios.post('http://localhost:3000/shopify/connect', {
+                shop: shopUrl,
+                accessToken: token,
+                email: 'user@example.com' // Mock email for now or get from context
+            }, {
+                headers: { 'x-api-key': 'valid-api-key' } // Assuming this header is needed based on controller
+            });
+        } catch (error) {
+            console.error("Connection failed:", error);
+            setIsConnecting(false);
+            alert("Failed to initiate connection");
+        }
     };
 
     return (
@@ -100,7 +138,7 @@ const Settings = () => {
                     ) : null}
 
                     <h3 className="text-lg font-semibold mb-6 text-gray-900 dark:text-white">Connection Status</h3>
-                    <Timeline startAnimation={isConnecting} />
+                    <Timeline startAnimation={isConnecting} currentStepOverride={currentStep} />
                 </div>
             </div>
         </div>

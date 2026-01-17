@@ -16,7 +16,7 @@ const CountryBarChart = lazy(() => import('../components/charts/CountryBarChart'
 const VisitorAreaChart = lazy(() => import('../components/charts/VisitorAreaChart'));
 
 const Dashboard = () => {
-  const [selectedDate, setSelectedDate] = useState(17);
+  //const [selectedDate, setSelectedDate] = useState(17);
   const [isCalendarOpen, setIsCalendarOpen] = useState(true);
   const { isDarkMode, toggleTheme } = useTheme();
 

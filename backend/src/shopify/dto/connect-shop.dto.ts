@@ -15,4 +15,8 @@ export class ConnectShopDto {
     @IsOptional()
     @IsEmail()
     email?: string;
+
+    @IsOptional()
+    @IsString()
+    name?: string;
 }
