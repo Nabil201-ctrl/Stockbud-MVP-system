@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -18,11 +21,21 @@ export interface Report {
 @Injectable()
 export class ReportsService {
     private reportsFilePath = path.join(__dirname, '../../data/reports.json');
+    private genAI: GoogleGenerativeAI;
+    private model: any;
 
     constructor(
         private readonly dashboardService: DashboardService,
         private readonly usersService: UsersService,
+        private readonly configService: ConfigService,
     ) {
+        const apiKey = this.configService.get<string>('GEMINI_API_KEY');
+        if (apiKey) {
+            this.genAI = new GoogleGenerativeAI(apiKey);
+            this.model = this.genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        } else {
+            console.warn('GEMINI_API_KEY is not set. Reports will use templates.');
+        }
         this.ensureDataFile();
     }
 
@@ -100,32 +113,68 @@ export class ReportsService {
             const stats = await this.dashboardService.getStats(shop, token);
 
             let reportData: any = {};
+            let aiContent = "";
+
+            // Prepare prompt for AI
+            const statsSummary = JSON.stringify(stats, null, 2);
+            const prompt = `
+                You are a professional business analyst. Generate a detailed, professional ${type} report for an e-commerce store owner based on the following data:
+                ${statsSummary}
+
+                The report should be in Markdown format and include the following sections:
+                1. **Executive Summary**: A brief overview of performance.
+                2. **Key Findings**: Bullet points of the most important metrics and trends.
+                3. **Detailed Analysis**: A deeper dive into the numbers (discuss revenue, products, sources etc).
+                4. **Recommendations**: Actionable advice based on the data.
+                
+                Use bolding for emphasis. Use lists where appropriate. Keep the tone professional but encouraging.
+                Do not include any "Here is the report" preamble, start directly with the report content.
+            `;
+
+            if (this.model) {
+                try {
+                    const result = await this.model.generateContent(prompt);
+                    aiContent = result.response.text();
+                } catch (err) {
+                    console.error("AI Generation failed, using fallback", err);
+                    aiContent = "## Report Generation Failed\n\nCould not generate the narrative report at this time. Please review the raw data below.";
+                }
+            } else {
+                aiContent = "## AI Not Configured\n\nPlease configure the GEMINI_API_KEY to enable AI-generated reports.";
+            }
 
             switch (type) {
                 case 'sales':
                     reportData = {
-                        totalRevenue: stats.revenue.total,
-                        revenueChange: stats.revenue.change,
-                        chartData: stats.revenue.chartData,
-                        salesHistory: stats.salesHistory,
-                        topProducts: stats.topProducts,
+                        content: aiContent,
+                        stats: {
+                            totalRevenue: stats.revenue.total,
+                            revenueChange: stats.revenue.change,
+                            topProducts: stats.topProducts
+                        },
+                        raw: stats, // Keep raw stats for charts if needed
                         generatedAt: new Date().toISOString()
                     };
                     break;
                 case 'inventory':
                     reportData = {
-                        topProducts: stats.topProducts,
-                        sourceData: stats.source,
+                        content: aiContent,
+                        stats: {
+                            topProducts: stats.topProducts
+                        },
+                        raw: stats,
                         generatedAt: new Date().toISOString()
                     };
                     break;
                 case 'revenue':
                     reportData = {
-                        totalRevenue: stats.revenue.total,
-                        lostRevenue: stats.revenue.lost,
-                        revenueChange: stats.revenue.change,
-                        chartData: stats.revenue.chartData,
-                        heatmapData: stats.heatmap,
+                        content: aiContent,
+                        stats: {
+                            totalRevenue: stats.revenue.total,
+                            profitMargin: stats.revenue.total * 0.3, // Mock profit margin
+                            growth: stats.revenue.change
+                        },
+                        raw: stats,
                         generatedAt: new Date().toISOString()
                     };
                     break;

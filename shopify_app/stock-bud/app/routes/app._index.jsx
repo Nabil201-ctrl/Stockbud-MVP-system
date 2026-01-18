@@ -91,46 +91,71 @@ export const action = async ({ request }) => {
 
 const PolarisTimeline = ({ currentStep }) => {
   const steps = [
-    { title: "Initiating Handshake", description: "Secure connection check" },
-    { title: "Verifying Credentials", description: "Validating permissions" },
-    { title: "Syncing Product Catalog", description: "Fetching inventory data" },
-    { title: "Analyzing Data", description: "Processing historical sales" },
-    { title: "Active", description: "System ready" }
+    { title: "Handshake", description: "Secure check" },
+    { title: "Credentials", description: "Validating" },
+    { title: "Catalog", description: "Fetching" },
+    { title: "Analysis", description: "Processing" },
+    { title: "Active", description: "Ready" }
   ];
 
   return (
-    <div style={{ padding: '20px' }}>
-      {steps.map((step, index) => {
-        const stepNum = index + 1;
-        const isActive = currentStep === stepNum;
-        const isCompleted = currentStep > stepNum;
-        const isPending = currentStep < stepNum;
+    <div style={{ padding: '20px 0', width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
+        {/* Continuous Line Background */}
+        <div style={{
+          position: 'absolute',
+          top: '16px',
+          left: '0',
+          right: '0',
+          height: '2px',
+          backgroundColor: '#E4E5E7',
+          zIndex: 0
+        }} />
 
-        let color = '#E4E5E7'; // Gray
-        if (isActive) color = '#2563EB'; // Blue
-        if (isCompleted) color = '#12B76A'; // Green
+        {steps.map((step, index) => {
+          const stepNum = index + 1;
+          const isActive = currentStep === stepNum;
+          const isCompleted = currentStep > stepNum;
 
-        return (
-          <div key={index} style={{ display: 'flex', marginBottom: '24px', opacity: isPending ? 0.5 : 1, transition: 'opacity 0.5s' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: '16px' }}>
+          // Calculate progress for the colored line
+          // This is a bit tricky in a mapped flex container, so we'll use individual lines or just color dots.
+          // Simpler approach: The background line is gray. We can add a colored line on top if needed, 
+          // but for now let's just make the dots pop.
+
+          let color = '#E4E5E7'; // Gray
+          if (isActive) color = '#2563EB'; // Blue
+          if (isCompleted) color = '#12B76A'; // Green
+
+          return (
+            <div key={index} style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              flex: 1,
+              position: 'relative',
+              zIndex: 1
+            }}>
               <div style={{
-                width: '32px', height: '32px', borderRadius: '50%', backgroundColor: isCompleted ? '#E4FCE3' : (isActive ? '#EFF6FF' : '#F1F2F4'),
-                border: `2px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.5s',
-                color: isCompleted ? '#12B76A' : (isActive ? '#2563EB' : '#6D7175'), fontWeight: 'bold'
+                width: '32px', height: '32px', borderRadius: '50%',
+                backgroundColor: isCompleted ? '#E4FCE3' : (isActive ? '#EFF6FF' : '#F1F2F4'),
+                border: `2px solid ${color}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.5s',
+                color: isCompleted ? '#12B76A' : (isActive ? '#2563EB' : '#6D7175'),
+                fontWeight: 'bold',
+                marginBottom: '12px'
               }}>
                 {isCompleted ? '✓' : stepNum}
               </div>
-              {index < steps.length - 1 && (
-                <div style={{ width: '2px', height: '100%', backgroundColor: isCompleted ? '#12B76A' : '#E4E5E7', minHeight: '20px', marginTop: '8px', transition: 'all 0.5s' }} />
-              )}
+
+              <div style={{ textAlign: 'center' }}>
+                <Text variant="bodyMd" as="p" fontWeight={isActive ? "bold" : "regular"}>{step.title}</Text>
+                <Text variant="caption" as="p" tone="subdued">{step.description}</Text>
+              </div>
             </div>
-            <div style={{ paddingTop: '4px' }}>
-              <Text variant="bodyLg" as="p" fontWeight={isActive ? "bold" : "regular"}>{step.title}</Text>
-              <Text variant="bodySm" as="p" tone="subdued">{step.description}</Text>
-            </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -63,19 +63,20 @@ const Timeline = ({ startAnimation, currentStepOverride }) => {
     }, [startAnimation, currentStepOverride]);
 
     return (
-        <div className="relative py-4">
-            <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gray-200 dark:bg-gray-700" />
+        <div className="relative w-full py-8 overflow-hidden">
+            {/* Horizontal Line Background */}
+            <div className="absolute top-12 left-0 w-full h-0.5 bg-gray-200 dark:bg-gray-700 -z-10" />
 
-            <div className="space-y-8">
+            <div className="flex justify-between items-start w-full">
                 {steps.map((step, index) => {
                     const isCompleted = currentStep > index + 1;
                     const isActive = currentStep === index + 1;
                     const isPending = currentStep < index + 1;
 
                     return (
-                        <div key={step.id} className={`relative flex items-start gap-4 transition-all duration-500 ${isPending ? 'opacity-40' : 'opacity-100'}`}>
+                        <div key={step.id} className={`flex flex-col items-center flex-1 transition-all duration-500 ${isPending ? 'opacity-40' : 'opacity-100'}`}>
                             <div
-                                className={`relative z-10 flex items-center justify-center w-12 h-12 rounded-full border-4 transition-all duration-500
+                                className={`relative z-10 flex items-center justify-center w-12 h-12 rounded-full border-4 transition-all duration-500 mb-4
                   ${isCompleted || isActive
                                         ? 'border-blue-100 bg-blue-600 text-white dark:border-blue-900/50'
                                         : 'border-gray-100 bg-gray-100 text-gray-400 dark:border-gray-800 dark:bg-gray-800'
@@ -88,23 +89,23 @@ const Timeline = ({ startAnimation, currentStepOverride }) => {
                                 ) : (
                                     step.icon
                                 )}
+
+                                {/* Top Checkmark for completed steps */}
+                                {isCompleted && (
+                                    <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5 text-white border-2 border-white dark:border-gray-900">
+                                        <Check className="w-2.5 h-2.5" />
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="pt-2">
-                                <h3 className={`font-semibold text-lg transition-colors duration-300 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
+                            <div className="text-center px-2">
+                                <h3 className={`font-semibold text-sm md:text-base transition-colors duration-300 mb-1 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
                                     {step.title}
                                 </h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 hidden md:block">
                                     {step.description}
                                 </p>
                             </div>
-
-                            {/* Status Indicator */}
-                            {isCompleted && (
-                                <div className="absolute right-0 top-3 text-green-500 animate-in fade-in slide-in-from-left-2">
-                                    <Check className="w-5 h-5" />
-                                </div>
-                            )}
                         </div>
                     );
                 })}
