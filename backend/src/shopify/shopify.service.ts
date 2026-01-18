@@ -9,12 +9,72 @@ import { ShopifyGateway } from './shopify.gateway';
 
 @Injectable()
 export class ShopifyService {
+    // In-memory pairing code storage: code -> { userId, expiresAt }
+    private pairingCodes = new Map<string, { userId: string; expiresAt: Date }>();
+
     constructor(
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
         private readonly usersService: UsersService,
         private readonly shopifyGateway: ShopifyGateway,
     ) { }
+
+    /**
+     * Generates a short-lived pairing code for a user.
+     * Code expires in 10 minutes.
+     */
+    generatePairingCode(userId: string): string {
+        // Generate a random code like "ABC-123-XYZ"
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
+        const part1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        const part2 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        const part3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        const code = `${part1}-${part2}-${part3}`;
+
+        // Store with 10-minute expiry
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        this.pairingCodes.set(code, { userId, expiresAt });
+
+        console.log(`[Pairing] Generated code ${code} for user ${userId}, expires at ${expiresAt.toISOString()}`);
+        return code;
+    }
+
+    /**
+     * Validates a pairing code and returns the associated userId.
+     * Consumes the code (one-time use).
+     */
+    validateAndConsumePairingCode(code: string): string | null {
+        const entry = this.pairingCodes.get(code);
+        if (!entry) {
+            console.log(`[Pairing] Code ${code} not found`);
+            return null;
+        }
+
+        if (new Date() > entry.expiresAt) {
+            console.log(`[Pairing] Code ${code} expired`);
+            this.pairingCodes.delete(code);
+            return null;
+        }
+
+        // Consume the code
+        this.pairingCodes.delete(code);
+        console.log(`[Pairing] Code ${code} validated for user ${entry.userId}`);
+        return entry.userId;
+    }
+
+    /**
+     * Connects a Shopify store using a pairing code.
+     */
+    async connectWithCode(code: string, shop: string, accessToken: string) {
+        const userId = this.validateAndConsumePairingCode(code);
+        if (!userId) {
+            return { success: false, error: 'Invalid or expired pairing code' };
+        }
+
+        // Use the existing connectShop logic with the resolved userId
+        const dto = { shop, accessToken };
+        return this.connectShop(dto as any, userId);
+    }
 
     private async delay(ms: number) {
         return new Promise(resolve => setTimeout(resolve, ms));

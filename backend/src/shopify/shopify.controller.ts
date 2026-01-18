@@ -36,4 +36,30 @@ export class ShopifyController {
         const decryptedToken = await this.usersService.getDecryptedShopifyToken(user.id);
         return await this.shopifyService.getProducts(user.shopifyShop, decryptedToken);
     }
+
+    /**
+     * Generate a pairing code for the authenticated user.
+     * The user will enter this code in the Shopify App.
+     */
+    @Post('pairing-code')
+    @UseGuards(AuthGuard('jwt'))
+    async generatePairingCode(@Req() req) {
+        const user = req.user;
+        const code = this.shopifyService.generatePairingCode(user.id);
+        return { code, expiresIn: '10 minutes' };
+    }
+
+    /**
+     * Connect a Shopify store using a pairing code.
+     * This endpoint is PUBLIC (no JWT required) because the Shopify App
+     * uses the code to authenticate instead of email/password.
+     */
+    @Post('connect-with-code')
+    async connectWithCode(@Body() dto: { code: string; shop: string; accessToken: string }) {
+        const result = await this.shopifyService.connectWithCode(dto.code, dto.shop, dto.accessToken);
+        if (!result.success) {
+            throw new HttpException(result.error || 'Connection failed', HttpStatus.BAD_REQUEST);
+        }
+        return result;
+    }
 }

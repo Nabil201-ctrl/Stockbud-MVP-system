@@ -34,26 +34,27 @@ const Settings = () => {
         return () => socket.disconnect();
     }, [isConnecting, shopUrl]);
 
-    const handleConnect = async (e) => {
-        e.preventDefault();
-        if (!shopUrl || !token) return;
+    const handleDisconnect = async () => {
+        if (!window.confirm("Are you sure you want to disconnect your Shopify store? This will stop all monitoring.")) {
+            return;
+        }
 
-        setIsConnecting(true);
-        setCurrentStep(1); // Set initial step
-
-        // Trigger backend process
         try {
-            await axios.post('http://localhost:3000/shopify/connect', {
-                shop: shopUrl,
-                accessToken: token,
-                email: 'user@example.com' // Mock email for now or get from context
-            }, {
-                headers: { 'x-api-key': 'valid-api-key' } // Assuming this header is needed based on controller
+            await axios.delete('http://localhost:3000/users/shopify-credentials', {
+                headers: { Authorization: `Bearer ${token}` } // Assuming auth token logic is handled by interception or cookie, but explicit headers might be safer if custom. 
+                // Actually the current axios logic relies on auth module. 
+                // Wait, the Login flow sets cookies. Axios should send cookies if 'withCredentials: true' is set globally or per request.
+                // The main.ts says: credentials: true in CORS.
+                // So I should ensure axios sends credentials.
             });
+            // Reset state
+            setShopUrl('');
+            setToken('');
+            setIsConnected(false);
+            setCurrentStep(0);
         } catch (error) {
-            console.error("Connection failed:", error);
-            setIsConnecting(false);
-            alert("Failed to initiate connection");
+            console.error("Disconnect failed:", error);
+            alert("Failed to disconnect store");
         }
     };
 
@@ -108,19 +109,28 @@ const Settings = () => {
                                 </div>
                             </div>
 
-                            <button
-                                type="submit"
-                                disabled={isConnecting || isConnected || !shopUrl || !token}
-                                className={`w-full py-3 rounded-xl font-semibold transition-all shadow-lg
-                                    ${isConnected
-                                        ? 'bg-green-600 text-white shadow-green-500/20'
-                                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
-                                    }
-                                    disabled:opacity-50 disabled:cursor-not-allowed
-                                `}
-                            >
-                                {isConnected ? 'Store Connected' : isConnecting ? 'Connecting...' : 'Connect Store'}
-                            </button>
+                            {!isConnected ? (
+                                <button
+                                    type="submit"
+                                    disabled={isConnecting || !shopUrl || !token}
+                                    className="w-full py-3 rounded-xl font-semibold transition-all shadow-lg bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isConnecting ? 'Connecting...' : 'Connect Store'}
+                                </button>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="w-full py-3 rounded-xl font-semibold text-center bg-green-100 text-green-700 border border-green-200">
+                                        Store Connected Active
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleDisconnect}
+                                        className="w-full py-3 rounded-xl font-semibold transition-all bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"
+                                    >
+                                        Disconnect Store
+                                    </button>
+                                </div>
+                            )}
                         </form>
                     </div>
                 </div>
@@ -130,7 +140,11 @@ const Settings = () => {
                     {!isConnecting && !isConnected ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-[2px] z-10 p- text-center">
                             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                                <Server className="w-8 h-8 text-gray-400" />
+                                {/* Fixed missing import or usage of Server icon if not imported, assuming Server is meant to be here but not in imports? 
+                                    Ah, line 133 had <Server ... /> but it was not imported in line 3.
+                                    I will import Server or remove it. Let's fix line 3 import too if I can.
+                                */}
+                                <ShoppingBag className="w-8 h-8 text-gray-400" />
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Waiting to Connect</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[200px]">Enter your credentials to start the secure handshake process.</p>

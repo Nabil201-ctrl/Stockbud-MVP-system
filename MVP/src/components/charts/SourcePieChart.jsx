@@ -77,7 +77,7 @@ const SourcePieChart = ({ data }) => {
             layout="vertical"
             verticalAlign="middle"
             align="right"
-            wrapperStyle={{ fontSize: '12px' }}
+            wrapperStyle={{ fontSize: '12px', color: isDarkMode ? '#9CA3AF' : '#4B5563' }}
           />
         </PieChart>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">

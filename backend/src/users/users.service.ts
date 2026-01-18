@@ -4,14 +4,26 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { EncryptionService } from '../common/encryption.service';
 
+export interface ShopifyStore {
+    id: string;           // Unique ID for this store connection
+    shop: string;         // e.g., "my-store.myshopify.com"
+    token: string;        // Encrypted access token
+    name?: string;        // Display name (optional)
+    addedAt: string;      // ISO timestamp
+}
+
 export interface User {
     id: string;
     email: string;
     name: string;
     password?: string; // Hashed password
     picture?: string;
+    // Legacy fields (kept for migration, will be removed eventually)
     shopifyShop?: string;
     shopifyToken?: string;
+    // New multi-shop fields
+    shopifyStores?: ShopifyStore[];
+    activeShopId?: string;
     createdAt?: string;
     isOnboardingComplete?: boolean;
     refreshToken?: string;
@@ -51,9 +63,29 @@ export class UsersService implements OnModuleInit {
                     // Migration: Ensure new fields exist
                     if (user.aiTokens === undefined) user.aiTokens = 500;
                     if (user.reportTokens === undefined) user.reportTokens = 250;
+
+                    // Migration: Convert legacy single-shop to multi-shop format
+                    if (user.shopifyShop && user.shopifyToken && !user.shopifyStores) {
+                        const storeId = crypto.randomBytes(4).toString('hex');
+                        user.shopifyStores = [{
+                            id: storeId,
+                            shop: user.shopifyShop,
+                            token: user.shopifyToken,
+                            addedAt: user.createdAt || new Date().toISOString(),
+                        }];
+                        user.activeShopId = storeId;
+                        console.log(`[Migration] Converted single-shop user ${user.id} to multi-shop format`);
+                    }
+
+                    // Initialize empty array if no stores
+                    if (!user.shopifyStores) {
+                        user.shopifyStores = [];
+                    }
+
                     return [user.id, user];
                 }));
                 console.log(`Loaded ${this.users.size} users from ${this.filePath}`);
+                this.saveUsers(); // Save migrated data
             } catch (error) {
                 console.error('Error loading users from file:', error);
             }
@@ -118,11 +150,98 @@ export class UsersService implements OnModuleInit {
     }
 
     async updateShopifyCredentials(userId: string, shop: string, token: string): Promise<User> {
+        // Redirect to addShopifyStore for backward compatibility
+        return this.addShopifyStore(userId, shop, token);
+    }
+
+    /**
+     * Add a new Shopify store to the user's account.
+     * Recalculates tokens based on shop count.
+     */
+    async addShopifyStore(userId: string, shop: string, token: string, name?: string): Promise<User> {
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+
+        // Check if shop already exists
+        if (!user.shopifyStores) user.shopifyStores = [];
+        const existingStore = user.shopifyStores.find(s => s.shop === shop);
+        if (existingStore) {
+            // Update existing store's token
+            existingStore.token = this.encryptionService.encrypt(token);
+            this.users.set(userId, user);
+            this.saveUsers();
+            return user;
+        }
+
+        // Add new store
+        const storeId = crypto.randomBytes(4).toString('hex');
+        user.shopifyStores.push({
+            id: storeId,
+            shop,
+            token: this.encryptionService.encrypt(token),
+            name: name || shop.replace('.myshopify.com', ''),
+            addedAt: new Date().toISOString(),
+        });
+
+        // Set as active if it's the first store
+        if (!user.activeShopId) {
+            user.activeShopId = storeId;
+        }
+
+        // Update legacy fields for backward compatibility
+        user.shopifyShop = shop;
+        user.shopifyToken = this.encryptionService.encrypt(token);
+
+        // Token scaling: 2+ shops = double tokens
+        this.recalculateTokens(user);
+
+        this.users.set(userId, user);
+        this.saveUsers();
+        console.log(`[MultiShop] Added store ${shop} for user ${userId}. Total stores: ${user.shopifyStores.length}`);
+        return user;
+    }
+
+    /**
+     * Remove a Shopify store from the user's account.
+     */
+    async removeShopifyStore(userId: string, storeId: string): Promise<User> {
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+
+        if (!user.shopifyStores) user.shopifyStores = [];
+        user.shopifyStores = user.shopifyStores.filter(s => s.id !== storeId);
+
+        // If removed store was active, switch to first remaining or clear
+        if (user.activeShopId === storeId) {
+            user.activeShopId = user.shopifyStores[0]?.id;
+        }
+
+        // Update legacy fields
+        const activeStore = this.getActiveStoreSync(user);
+        user.shopifyShop = activeStore?.shop;
+        user.shopifyToken = activeStore?.token;
+
+        // Recalculate tokens
+        this.recalculateTokens(user);
+
+        this.users.set(userId, user);
+        this.saveUsers();
+        console.log(`[MultiShop] Removed store ${storeId} for user ${userId}. Total stores: ${user.shopifyStores.length}`);
+        return user;
+    }
+
+    async removeShopifyCredentials(userId: string): Promise<User> {
         const user = this.users.get(userId);
         if (user) {
-            user.shopifyShop = shop;
-            // Encrypt token before saving
-            user.shopifyToken = this.encryptionService.encrypt(token);
+            // Remove active store or all stores
+            if (user.activeShopId) {
+                return this.removeShopifyStore(userId, user.activeShopId);
+            }
+            user.shopifyShop = undefined;
+            user.shopifyToken = undefined;
+            user.shopifyStores = [];
+            user.activeShopId = undefined;
+            this.recalculateTokens(user);
             this.users.set(userId, user);
             this.saveUsers();
             return user;
@@ -130,16 +249,59 @@ export class UsersService implements OnModuleInit {
         throw new Error('User not found');
     }
 
-    async removeShopifyCredentials(userId: string): Promise<User> {
+    /**
+     * Set the active shop for a user.
+     */
+    async setActiveShop(userId: string, storeId: string): Promise<User> {
         const user = this.users.get(userId);
-        if (user) {
-            user.shopifyShop = undefined;
-            user.shopifyToken = undefined;
-            this.users.set(userId, user);
-            this.saveUsers();
-            return user;
+        if (!user) throw new Error('User not found');
+
+        const store = user.shopifyStores?.find(s => s.id === storeId);
+        if (!store) throw new Error('Store not found');
+
+        user.activeShopId = storeId;
+
+        // Update legacy fields for backward compatibility
+        user.shopifyShop = store.shop;
+        user.shopifyToken = store.token;
+
+        this.users.set(userId, user);
+        this.saveUsers();
+        console.log(`[MultiShop] Set active shop to ${store.shop} for user ${userId}`);
+        return user;
+    }
+
+    /**
+     * Get the active store for a user.
+     */
+    async getActiveShop(userId: string): Promise<ShopifyStore | undefined> {
+        const user = this.users.get(userId);
+        if (!user) return undefined;
+        return this.getActiveStoreSync(user);
+    }
+
+    private getActiveStoreSync(user: User): ShopifyStore | undefined {
+        if (!user.shopifyStores || user.shopifyStores.length === 0) return undefined;
+        if (user.activeShopId) {
+            return user.shopifyStores.find(s => s.id === user.activeShopId);
         }
-        throw new Error('User not found');
+        return user.shopifyStores[0];
+    }
+
+    /**
+     * Recalculate tokens based on shop count.
+     * 1 shop = base tokens, 2+ shops = double tokens
+     */
+    private recalculateTokens(user: User) {
+        const shopCount = user.shopifyStores?.length || 0;
+        if (shopCount >= 2) {
+            user.aiTokens = 1000;
+            user.reportTokens = 500;
+        } else {
+            user.aiTokens = 500;
+            user.reportTokens = 250;
+        }
+        console.log(`[Tokens] User ${user.id} now has ${shopCount} shops, tokens: AI=${user.aiTokens}, Report=${user.reportTokens}`);
     }
 
     async getDecryptedShopifyToken(userId: string): Promise<string | undefined> {

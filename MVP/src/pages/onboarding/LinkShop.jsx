@@ -12,10 +12,10 @@ const LinkShop = () => {
     const [success, setSuccess] = useState(false);
     const [selectedPlatform, setSelectedPlatform] = useState(null);
 
-    // Shopify Form State
-    const [shopifyUrl, setShopifyUrl] = useState('');
-    const [shopifyToken, setShopifyToken] = useState('');
-    const [errors, setErrors] = useState({});
+    // Pairing Code State
+    const [pairingCode, setPairingCode] = useState(null);
+    const [codeLoading, setCodeLoading] = useState(false);
+    const [codeError, setCodeError] = useState(null);
 
     const platforms = [
         { id: 'shopify', name: 'Shopify', icon: ShoppingBag, color: 'bg-green-100 text-green-600 dark:bg-green-900/30' },
@@ -23,82 +23,53 @@ const LinkShop = () => {
         { id: 'api', name: 'Custom API', icon: Code, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300' },
     ];
 
-    const validateShopifyForm = () => {
-        const newErrors = {};
-        if (!shopifyUrl) newErrors.url = 'Shop URL is required';
-        else if (!shopifyUrl.includes('myshopify.com') && !shopifyUrl.includes('.')) newErrors.url = 'Please enter a valid shop URL';
-
-        if (!shopifyToken) newErrors.token = 'Admin API Access Token is required';
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+    const handleGeneratePairingCode = async () => {
+        setCodeLoading(true);
+        setCodeError(null);
+        try {
+            const response = await authenticatedFetch('http://localhost:3000/shopify/pairing-code', {
+                method: 'POST',
+            });
+            if (!response.ok) {
+                throw new Error('Failed to generate code');
+            }
+            const data = await response.json();
+            setPairingCode(data.code);
+        } catch (error) {
+            console.error('Failed to generate pairing code:', error);
+            setCodeError('Failed to generate code. Please try again.');
+        } finally {
+            setCodeLoading(false);
+        }
     };
 
     const handlePlatformSelect = (platformId) => {
         if (platformId === 'shopify') {
             setSelectedPlatform('shopify');
+            // Generate code immediately when Shopify is selected
+            handleGeneratePairingCode();
         } else {
-            // For other platforms, just simulate connection for now
+            // For other platforms, simulate connection
             handleConnect(platformId);
         }
     };
 
     const handleConnect = async (platformId) => {
-        if (platformId === 'shopify' && !validateShopifyForm()) {
-            return;
-        }
-
         setConnecting(platformId);
-
-        if (platformId === 'shopify') {
-            try {
-                // Save to Backend if authenticated
-                if (isAuthenticated) {
-                    const response = await authenticatedFetch('http://localhost:3000/users/shopify-credentials', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            shop: shopifyUrl,
-                            token: shopifyToken
-                        })
-                    });
-                    if (!response.ok) {
-                        throw new Error('Failed to save to backend');
-                    }
-                    console.log('Credentials saved to Backend');
-                }
-
-                // Also save to IndexedDB as fallback/cache
-                await storage.set('shopifyShop', shopifyUrl);
-                await storage.set('shopifyToken', shopifyToken);
-                console.log('Credentials saved to IndexedDB');
-
-                // Complete Onboarding
-                await completeOnboarding();
-
-                setSuccess(true);
-                setTimeout(() => {
-                    navigate('/dashboard');
-                }, 1000);
-
-            } catch (error) {
-                console.error('Failed to connect store:', error);
-                setErrors({ ...errors, submit: 'Failed to connect store. Please try again.' });
-            } finally {
-                setConnecting(null);
-            }
-        } else {
-            // Simulate connection for other platforms
-            setTimeout(async () => {
-                await completeOnboarding(); // Mark as complete for other platforms too
-                setSuccess(true);
-                setTimeout(() => {
-                    navigate('/dashboard');
-                }, 1000);
+        // Simulate connection for non-Shopify platforms
+        setTimeout(async () => {
+            await completeOnboarding();
+            setSuccess(true);
+            setTimeout(() => {
+                navigate('/dashboard');
             }, 1000);
-        }
+        }, 1000);
+    };
+
+    const handleSkipOrComplete = async () => {
+        // User can skip if they want to connect later
+        await completeOnboarding();
+        navigate('/dashboard');
     };
 
     const renderPlatformList = () => (
@@ -151,71 +122,56 @@ const LinkShop = () => {
                     <div className="p-1.5 rounded bg-green-100 dark:bg-green-900/30 text-green-600">
                         <ShoppingBag className="w-4 h-4" />
                     </div>
-                    <span className="font-semibold dark:text-white">Shopify Setup</span>
+                    <span className="font-semibold dark:text-white">Connect Shopify</span>
                 </div>
-                <div className="w-9"></div> {/* Spacer for centering */}
+                <div className="w-9"></div>
             </div>
 
-            <div className="w-full space-y-5">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ml-1">
-                        Shop URL
-                    </label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <LinkIcon className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                            type="text"
-                            value={shopifyUrl}
-                            onChange={(e) => setShopifyUrl(e.target.value)}
-                            placeholder="your-shop.myshopify.com"
-                            className={`w-full pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-gray-900/50 border ${errors.url ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500'} focus:outline-none focus:ring-2 transition-all dark:text-white`}
-                        />
-                    </div>
-                    {errors.url && <p className="mt-1 text-sm text-red-500 ml-1">{errors.url}</p>}
-                </div>
+            <div className="w-full space-y-5 text-center">
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    Enter this code in your <strong>Shopify App</strong> to connect your store.
+                </p>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 ml-1">
-                        Admin API Access Token
-                    </label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Key className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                            type="password"
-                            value={shopifyToken}
-                            onChange={(e) => setShopifyToken(e.target.value)}
-                            placeholder="shpat_..."
-                            className={`w-full pl-10 pr-4 py-3 rounded-xl bg-white dark:bg-gray-900/50 border ${errors.token ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500'} focus:outline-none focus:ring-2 transition-all dark:text-white`}
-                        />
+                {codeLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                     </div>
-                    {errors.token && <p className="mt-1 text-sm text-red-500 ml-1">{errors.token}</p>}
-                    <p className="mt-2 text-xs text-gray-400 ml-1">
-                        Found in Shopify Admin &gt; Settings &gt; Apps and sales channels &gt; Develop apps.
-                    </p>
-                </div>
+                ) : codeError ? (
+                    <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                        <p>{codeError}</p>
+                        <button
+                            onClick={handleGeneratePairingCode}
+                            className="mt-2 text-sm underline"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                ) : pairingCode ? (
+                    <div className="py-6">
+                        <div className="text-4xl font-mono font-bold tracking-widest text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 py-4 px-6 rounded-xl select-all">
+                            {pairingCode}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-3">
+                            Code expires in 10 minutes
+                        </p>
+                    </div>
+                ) : null}
 
-                {errors.submit && <p className="text-sm text-red-500 text-center">{errors.submit}</p>}
+                <div className="text-sm text-gray-500 dark:text-gray-400 space-y-2 text-left bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
+                    <p className="font-medium dark:text-gray-300">How to connect:</p>
+                    <ol className="list-decimal ml-5 space-y-1">
+                        <li>Install the <strong>Stock Bud</strong> app from the Shopify App Store</li>
+                        <li>Open the app in your Shopify Admin</li>
+                        <li>Enter the code shown above</li>
+                        <li>Your store will be connected automatically!</li>
+                    </ol>
+                </div>
 
                 <button
-                    onClick={() => handleConnect('shopify')}
-                    disabled={connecting !== null}
-                    className="w-full mt-4 py-3.5 px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 disabled:opacity-70 disabled:cursor-not-allowed"
+                    onClick={handleSkipOrComplete}
+                    className="w-full mt-4 py-3 px-4 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium transition-all duration-200"
                 >
-                    {connecting === 'shopify' ? (
-                        <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Connecting...
-                        </>
-                    ) : (
-                        <>
-                            Connect Store
-                            <ArrowRight className="w-5 h-5" />
-                        </>
-                    )}
+                    I'll connect later
                 </button>
             </div>
         </div>

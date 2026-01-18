@@ -40,4 +40,36 @@ export class UsersController {
     async completeOnboarding(@Req() req) {
         return this.usersService.completeOnboarding(req.user.id);
     }
+
+    /**
+     * Get all connected Shopify stores for the user.
+     */
+    @Get('shopify-stores')
+    @UseGuards(AuthGuard('jwt'))
+    async getShopifyStores(@Req() req) {
+        const user = await this.usersService.findById(req.user.id);
+        return {
+            stores: user?.shopifyStores || [],
+            activeShopId: user?.activeShopId,
+        };
+    }
+
+    /**
+     * Remove a specific Shopify store by ID.
+     */
+    @Delete('shopify-stores/:storeId')
+    @UseGuards(AuthGuard('jwt'))
+    async removeShopifyStore(@Req() req) {
+        const storeId = req.params.storeId;
+        return this.usersService.removeShopifyStore(req.user.id, storeId);
+    }
+
+    /**
+     * Set the active Shopify store.
+     */
+    @Post('shopify-stores/active')
+    @UseGuards(AuthGuard('jwt'))
+    async setActiveShop(@Req() req, @Body() body: { storeId: string }) {
+        return this.usersService.setActiveShop(req.user.id, body.storeId);
+    }
 }

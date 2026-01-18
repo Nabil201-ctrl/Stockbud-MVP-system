@@ -13,7 +13,7 @@ import {
   FormLayout,
   Banner,
 } from "@shopify/polaris";
-import { authenticate } from "../shopify.server";
+import shopify, { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -24,7 +24,13 @@ export const action = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   if (!session) return { status: "error", message: "No session" };
 
+  // Fetch Offline Session for Background Jobs
+  const offlineId = shopify.session.getOfflineId(session.shop);
+  const offlineSession = await shopify.sessionStorage.loadSession(offlineId);
+  const offlineToken = offlineSession?.accessToken;
+
   const formData = await request.formData();
+  const pairingCode = formData.get("pairingCode");
   const stockbudToken = formData.get("stockbudToken");
   const name = formData.get("name");
 
@@ -32,30 +38,51 @@ export const action = async ({ request }) => {
   try {
     const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
 
-    // Call backend with Bearer token
-    const headers = {
-      "Content-Type": "application/json",
-    };
-    if (stockbudToken) {
-      headers["Authorization"] = `Bearer ${stockbudToken}`;
-    }
+    // Determine which endpoint to call based on what we have
+    if (pairingCode) {
+      // New flow: Use pairing code
+      const response = await fetch(`${backendUrl}/shopify/connect-with-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: pairingCode,
+          shop: session.shop,
+          accessToken: offlineToken || session.accessToken,
+        }),
+      });
 
-    // Simulate backend handshake calls for verification
-    const response = await fetch(`${backendUrl}/shopify/connect`, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify({
-        shop: session.shop,
-        accessToken: session.accessToken,
-        name: name,
-      }),
-    });
+      if (response.ok) {
+        const data = await response.json();
+        return { status: "success", userId: data.userId, usedCode: true };
+      } else {
+        const errorText = await response.text();
+        return { status: "error", message: errorText || "Invalid pairing code" };
+      }
+    } else if (stockbudToken) {
+      // Legacy flow: Use Bearer token (for backward compatibility if needed)
+      const headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${stockbudToken}`,
+      };
 
-    if (response.ok) {
-      const data = await response.json();
-      return { status: "success", userId: data.userId };
+      const response = await fetch(`${backendUrl}/shopify/connect`, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({
+          shop: session.shop,
+          accessToken: offlineToken || session.accessToken,
+          name: name,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { status: "success", userId: data.userId };
+      } else {
+        return { status: "error", message: await response.text() };
+      }
     } else {
-      return { status: "error", message: await response.text() };
+      return { status: "error", message: "No pairing code or token provided" };
     }
   } catch (error) {
     return { status: "error", message: error.message };
@@ -127,23 +154,21 @@ export default function Index() {
     setIsLoading(true);
     setLoginError("");
     try {
-      const backendUrl = "http://localhost:3000"; // Assuming standard proxy or handling
-      const response = await fetch(`${backendUrl}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: email, password }), // NestJS Local Strategy typically uses 'username'
-      });
+      const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.access_token) {
-          setToken(data.access_token);
-        } else {
-          setLoginError("Login failed: No access token received");
-        }
-      } else {
-        setLoginError("Invalid credentials");
-      }
+      // Get the offline token from the session (from loader)
+      const offlineId = shopify.session.getOfflineId(loaderData.shop);
+      // Note: We can't access offlineSession here in the component.
+      // We'll send the code and let the action handle token retrieval.
+
+      // For now, we'll use a form submission approach
+      // The code is in 'email' state (reused variable)
+      const formData = new FormData();
+      formData.append("pairingCode", email); // email state holds the pairing code
+      fetcher.submit(formData, { method: "POST" });
+
+      // Token will be set after fetcher completes successfully
+      // We'll check for a special response to signal success
     } catch (err) {
       setLoginError("Connection error: " + err.message);
       setIsLoading(false);
@@ -173,18 +198,30 @@ export default function Index() {
     window.addEventListener("message", listener);
   };
 
-  // Trigger Sync Animation once logged in (or automatically if we want)
+  // Trigger Sync Animation once code is validated or token is received
   useEffect(() => {
-    if (token && fetcher.state === 'idle' && !fetcher.data && currentStep === 0) {
-      // Start flow only when token is present
+    // Check if fetcher returned success for pairing code flow
+    if (fetcher.data?.status === 'success' && fetcher.data?.usedCode && !token && currentStep === 0) {
+      // Pairing code was valid, start the animation
+      setToken('paired'); // Set token to trigger UI change
+      setIsLoading(false);
+      setCurrentStep(1);
+      setTimeout(() => setCurrentStep(2), 1500);
+    } else if (token && fetcher.state === 'idle' && !fetcher.data && currentStep === 0) {
+      // Legacy Bearer token flow
       setCurrentStep(1);
       setTimeout(() => setCurrentStep(2), 1500);
 
-      // Trigger actual backend call during step 2
       const formData = new FormData();
       formData.append("stockbudToken", token);
       formData.append("name", name);
       fetcher.submit(formData, { method: "POST" });
+    }
+
+    // Handle error from pairing code
+    if (fetcher.data?.status === 'error' && fetcher.data?.message) {
+      setLoginError(fetcher.data.message);
+      setIsLoading(false);
     }
   }, [token, fetcher.state, fetcher.data, currentStep]);
 
@@ -222,7 +259,7 @@ export default function Index() {
                   <div style={{ maxWidth: '400px', margin: '0 auto' }}>
                     <BlockStack gap="400">
                       <Text variant="bodyMd" as="p" alignment="center">
-                        Please login to your Stockbud account to link this store.
+                        Enter the pairing code from your Stockbud account to link this store.
                       </Text>
                       {loginError && (
                         <Banner tone="critical">
@@ -231,29 +268,26 @@ export default function Index() {
                       )}
                       <FormLayout>
                         <TextField
-                          label="Email"
+                          label="Pairing Code"
                           value={email}
                           onChange={setEmail}
-                          autoComplete="email"
-                          type="email"
-                        />
-                        <TextField
-                          label="Password"
-                          value={password}
-                          onChange={setPassword}
-                          autoComplete="current-password"
-                          type="password"
+                          placeholder="ABC-123-XYZ"
+                          autoComplete="off"
+                          monospaced
                         />
                         <Button
                           variant="primary"
                           fullWidth
                           onClick={handleLogin}
                           loading={isLoading}
-                          disabled={!email || !password}
+                          disabled={!email}
                         >
-                          Login & Connect
+                          Connect Store
                         </Button>
                       </FormLayout>
+                      <Text variant="bodySm" as="p" tone="subdued" alignment="center">
+                        Get your code from the Stockbud settings page.
+                      </Text>
                     </BlockStack>
                   </div>
                 ) : (
