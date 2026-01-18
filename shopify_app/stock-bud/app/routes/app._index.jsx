@@ -13,7 +13,7 @@ import {
   FormLayout,
   Banner,
 } from "@shopify/polaris";
-import shopify, { authenticate } from "../shopify.server";
+import shopify, { authenticate, getOfflineId } from "../shopify.server";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -25,7 +25,7 @@ export const action = async ({ request }) => {
   if (!session) return { status: "error", message: "No session" };
 
   // Fetch Offline Session for Background Jobs
-  const offlineId = shopify.session.getOfflineId(session.shop);
+  const offlineId = getOfflineId(session.shop);
   const offlineSession = await shopify.sessionStorage.loadSession(offlineId);
   const offlineToken = offlineSession?.accessToken;
 
@@ -154,10 +154,9 @@ export default function Index() {
     setIsLoading(true);
     setLoginError("");
     try {
-      const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
+
 
       // Get the offline token from the session (from loader)
-      const offlineId = shopify.session.getOfflineId(loaderData.shop);
       // Note: We can't access offlineSession here in the component.
       // We'll send the code and let the action handle token retrieval.
 
@@ -273,14 +272,12 @@ export default function Index() {
                           onChange={setEmail}
                           placeholder="ABC-123-XYZ"
                           autoComplete="off"
-                          monospaced
                         />
                         <Button
                           variant="primary"
                           fullWidth
                           onClick={handleLogin}
-                          loading={isLoading}
-                          disabled={!email}
+                          loading={isLoading || fetcher.state === 'submitting'}
                         >
                           Connect Store
                         </Button>

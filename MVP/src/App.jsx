@@ -11,6 +11,7 @@ import Users from './pages/Users';
 import ProductsPage from './pages/ProductsPage';
 import ChatPage from './pages/ChatPage';
 import SettingsPage from './pages/SettingsPage';
+import ReportsPage from './pages/ReportsPage';
 import Layout from './components/layout/Layout';
 // Onboarding Pages
 import GetStarted from './pages/onboarding/GetStarted';
@@ -85,6 +86,7 @@ function App() {
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
             </Route>
 
             {/* Redirect root to Landing if not logged in (handled by LandingPage component if we want logic there, or just route) 

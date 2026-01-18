@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Sliders, Clock, Users, TrendingUp, Package,
-  RefreshCw, Settings, Bookmark, Calendar, MessageSquare, LogOut
+  RefreshCw, Settings, FileText, Calendar, MessageSquare, LogOut
 } from 'lucide-react';
 import FeedbackModal from './FeedbackModal';
 
@@ -20,7 +20,7 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
     { to: '/bot-customization', icon: <Sliders size={18} />, label: 'Bot Customization' },
     { to: '/products', icon: <Package size={18} />, label: 'Products' },
     { to: '/settings', icon: <Settings size={18} />, label: 'Settings' },
-    { to: '/bookmarks', icon: <Bookmark size={18} />, label: 'Bookmarks' },
+    { to: '/reports', icon: <FileText size={18} />, label: 'Reports' },
   ];
 
   return (

@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2, Zap, ShoppingBag, Languages } from 'lucide-react';
+import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2, Zap, ShoppingBag, Languages, Copy, Key } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import Timeline from '../components/Shopify/Timeline';
 
 const SettingsPage = () => {
     const isOnline = useOnlineStatus();
     const { isDarkMode } = useTheme();
-    const { user, updateProfile, token } = useAuth();
+    const { user, updateProfile, authenticatedFetch } = useAuth();
+    const { t, language, changeLanguage, availableLanguages } = useLanguage();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile');
 
@@ -27,6 +29,11 @@ const SettingsPage = () => {
     });
     const [passwordLoading, setPasswordLoading] = useState(false);
     const [passwordMessage, setPasswordMessage] = useState(null);
+
+    // Pairing code state
+    const [pairingCode, setPairingCode] = useState(null);
+    const [pairingLoading, setPairingLoading] = useState(false);
+    const [codeCopied, setCodeCopied] = useState(false);
 
 
     const handleProfileUpdate = async (e) => {
@@ -54,11 +61,10 @@ const SettingsPage = () => {
         setPasswordMessage(null);
 
         try {
-            const response = await fetch('http://localhost:3000/auth/change-password', {
+            const response = await authenticatedFetch('http://localhost:3000/auth/change-password', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     oldPassword: passwordData.oldPassword,
@@ -85,11 +91,8 @@ const SettingsPage = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:3000/users/shopify-credentials', {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const response = await authenticatedFetch('http://localhost:3000/users/shopify-credentials', {
+                method: 'DELETE'
             });
 
             if (response.ok) {
@@ -107,11 +110,10 @@ const SettingsPage = () => {
 
     const handleSetActiveShop = async (storeId) => {
         try {
-            const response = await fetch('http://localhost:3000/users/shopify-stores/active', {
+            const response = await authenticatedFetch('http://localhost:3000/users/shopify-stores/active', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ storeId })
             });
@@ -133,11 +135,8 @@ const SettingsPage = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:3000/users/shopify-stores/${storeId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const response = await authenticatedFetch(`http://localhost:3000/users/shopify-stores/${storeId}`, {
+                method: 'DELETE'
             });
 
             if (response.ok) {
@@ -148,6 +147,40 @@ const SettingsPage = () => {
             }
         } catch (error) {
             alert(`Error: ${error.message}`);
+        }
+    };
+
+    const handleGeneratePairingCode = async () => {
+        setPairingLoading(true);
+        try {
+            const response = await authenticatedFetch('http://localhost:3000/shopify/pairing-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setPairingCode(data.code);
+                setCodeCopied(false);
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Pairing code error:', response.status, errorData);
+                alert(`Failed to generate pairing code: ${errorData.message || response.statusText}`);
+            }
+        } catch (error) {
+            console.error('Pairing code fetch error:', error);
+            alert(`Error: ${error.message}`);
+        }
+        setPairingLoading(false);
+    };
+
+    const handleCopyCode = () => {
+        if (pairingCode) {
+            navigator.clipboard.writeText(pairingCode);
+            setCodeCopied(true);
+            setTimeout(() => setCodeCopied(false), 2000);
         }
     };
 
@@ -387,16 +420,45 @@ const SettingsPage = () => {
                 <div className={`p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-xl font-bold dark:text-white">Connected Stores</h2>
-                        <a
-                            href="https://apps.shopify.com/stock-bud"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors flex items-center gap-2"
-                        >
-                            <ShoppingBag size={16} />
-                            Add Store
-                        </a>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleGeneratePairingCode}
+                                disabled={pairingLoading}
+                                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-70"
+                            >
+                                {pairingLoading ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
+                                Generate Code
+                            </button>
+                            <a
+                                href="https://apps.shopify.com/stock-bud"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                            >
+                                <ShoppingBag size={16} />
+                                Add Store
+                            </a>
+                        </div>
                     </div>
+
+                    {/* Pairing Code Display */}
+                    {pairingCode && (
+                        <div className={`mb-6 p-4 rounded-lg border ${isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-200'}`}>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Enter this code in your Shopify app:</p>
+                                    <p className="text-2xl font-mono font-bold tracking-widest text-blue-600 dark:text-blue-400">{pairingCode}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Expires in 10 minutes</p>
+                                </div>
+                                <button
+                                    onClick={handleCopyCode}
+                                    className={`p-3 rounded-lg transition-colors ${codeCopied ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                                >
+                                    {codeCopied ? <CheckCircle2 size={20} /> : <Copy size={20} />}
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Store List */}
                     {user?.shopifyStores && user.shopifyStores.length > 0 ? (
@@ -458,6 +520,14 @@ const SettingsPage = () => {
                             <span className="text-sm text-yellow-700 dark:text-yellow-300">
                                 <strong>Bonus:</strong> You have 2+ stores connected! Your tokens have been doubled.
                             </span>
+                        </div>
+                    )}
+
+                    {/* Connection Timeline */}
+                    {user?.shopifyStores && user.shopifyStores.length > 0 && (
+                        <div className={`mt-6 p-6 rounded-lg border ${isDarkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                            <h3 className="font-semibold text-lg dark:text-white mb-4">Connection Status</h3>
+                            <Timeline currentStepOverride={5} />
                         </div>
                     )}
                 </div>

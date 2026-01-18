@@ -30,7 +30,7 @@ export class ShopifyController {
         const user = req.user;
 
         if (!user || !user.shopifyShop || !user.shopifyToken) {
-            throw new HttpException('Shopify credentials not found. Please connect your store in Settings.', HttpStatus.UNAUTHORIZED); // Or BAD_REQUEST
+            throw new HttpException('Shopify credentials not found. Please connect your store in Settings.', HttpStatus.BAD_REQUEST);
         }
 
         const decryptedToken = await this.usersService.getDecryptedShopifyToken(user.id);
@@ -58,7 +58,8 @@ export class ShopifyController {
     async connectWithCode(@Body() dto: { code: string; shop: string; accessToken: string }) {
         const result = await this.shopifyService.connectWithCode(dto.code, dto.shop, dto.accessToken);
         if (!result.success) {
-            throw new HttpException(result.error || 'Connection failed', HttpStatus.BAD_REQUEST);
+            const errorMessage = 'error' in result ? result.error : 'Connection failed';
+            throw new HttpException(errorMessage, HttpStatus.BAD_REQUEST);
         }
         return result;
     }

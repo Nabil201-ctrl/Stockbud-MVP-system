@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const ChatPage = () => {
     const { isDarkMode } = useTheme();
@@ -292,7 +293,11 @@ const ChatPage = () => {
                                             ? (isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900')
                                             : (isDarkMode ? 'text-gray-100' : 'text-gray-900')}
                     `}>
-                                        {msg.content}
+                                        {msg.role === 'assistant' ? (
+                                            <MarkdownRenderer content={msg.content} isDarkMode={isDarkMode} />
+                                        ) : (
+                                            msg.content
+                                        )}
                                     </div>
 
                                     {msg.role === 'user' && (

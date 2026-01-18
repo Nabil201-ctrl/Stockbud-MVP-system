@@ -1,0 +1,25 @@
+[
+  {
+    "id": "113831482632022329688",
+    "email": "abubakar.nabil.210@gmail.com",
+    "name": "Nabil Abubakar",
+    "picture": "https://lh3.googleusercontent.com/a/ACg8ocK8zLzSyT5BSvtF6abQftu5TNOc-SiQkA9WDZE_SLS2MYxZfvg=s96-c",
+    "isOnboardingComplete": true,
+    "aiTokens": 500,
+    "reportTokens": 250,
+    "createdAt": "2026-01-18T07:31:13.145Z",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3Njg3MjgxMDEsImV4cCI6MTc3MTMyMDEwMX0.6BzznvrOyj2_F0GfO6nEDf6AYO7Pw92_nPSrItJqpWw",
+    "shopifyStores": [
+      {
+        "id": "66e1dbbe",
+        "shop": "stockbud-test.myshopify.com",
+        "token": "38db52a9d6dcee3a81844411c74c059c:ef807627c699a12948cd0ed253a42b1cf6275322ba5f75abe0e75dfa7b25fc94ff8e4ddb04dd17a10b90edc76b7c9a38",
+        "name": "stockbud-test",
+        "addedAt": "2026-01-18T09:25:07.837Z"
+      }
+    ],
+    "activeShopId": "66e1dbbe",
+    "shopifyShop": "stockbud-test.myshopify.com",
+    "shopifyToken": "4024dfed54cf6db7d312a662a10a103a:ad25831fb2460938ce59c4e519eeff34b573b8aed65d9145cd900b99d9b958652017db789c2c02608011f0f29fdf9d34"
+  }
+]

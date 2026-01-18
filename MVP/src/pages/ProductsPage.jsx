@@ -1,6 +1,7 @@
 // components/pages/Products.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical, Store, AlertCircle } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
@@ -22,13 +23,15 @@ const ProductsPage = () => {
     avgRating: 0
   });
   const [loading, setLoading] = useState(true);
+  const [shopifyNotConnected, setShopifyNotConnected] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         // 1. Load from cache first
         const cachedProducts = await storage.get('products_cache');
-        if (cachedProducts) {
+        if (cachedProducts && cachedProducts.length > 0) {
           setProducts(cachedProducts);
           setLoading(false);
         }
@@ -37,11 +40,30 @@ const ProductsPage = () => {
         const response = await authenticatedFetch('http://localhost:3000/shopify/products');
 
         if (!response.ok) {
-          if (response.status === 401) throw new Error('Unauthorized');
-          throw new Error('Failed to fetch from backend');
+          const errorData = await response.json().catch(() => ({}));
+
+          if (response.status === 401) {
+            // Authentication issue - token expired or invalid
+            setError('Session expired. Please log in again.');
+            return;
+          }
+
+          if (response.status === 400) {
+            // Shopify not connected
+            setShopifyNotConnected(true);
+            setProducts([]);
+            await storage.remove('products_cache');
+            return;
+          }
+
+          throw new Error(errorData.message || 'Failed to fetch from backend');
         }
 
         const data = await response.json();
+
+        // Successfully connected, reset any error states
+        setShopifyNotConnected(false);
+        setError(null);
 
         // Transform data
         const transformedProducts = data.map(p => ({
@@ -76,8 +98,9 @@ const ProductsPage = () => {
           avgRating: 5.0
         });
 
-      } catch (error) {
-        console.error('Failed to fetch products:', error);
+      } catch (err) {
+        console.error('Failed to fetch products:', err);
+        setError(err.message || 'Failed to load products');
       } finally {
         setLoading(false);
       }
@@ -123,6 +146,53 @@ const ProductsPage = () => {
     return (
       <div className={`p-6 min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Show Shopify not connected state
+  if (shopifyNotConnected) {
+    return (
+      <div className={`p-6 min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className={`max-w-md text-center p-8 rounded-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-xl`}>
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <Store size={32} className="text-blue-600" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3">Connect Your Store</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            To view and manage your products, please connect your Shopify store first.
+          </p>
+          <Link
+            to="/settings"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+          >
+            <Store size={20} />
+            Go to Settings
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className={`p-6 min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className={`max-w-md text-center p-8 rounded-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-xl`}>
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <AlertCircle size={32} className="text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3">Something Went Wrong</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            {error}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
