@@ -64,6 +64,20 @@ export class AuthController {
         return { user };
     }
 
+    @Post('admin/login')
+    async adminLogin(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+        const { access_token, user } = await this.authService.adminLogin(body.email, body.password);
+
+        res.cookie('access_token', access_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
+
+        return { user, access_token };
+    }
+
     @UseGuards(AuthGuard('local'))
     @Post('login')
     async login(@Req() req, @Res({ passthrough: true }) res: Response) {

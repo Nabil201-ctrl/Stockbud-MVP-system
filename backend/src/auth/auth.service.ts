@@ -27,6 +27,38 @@ export class AuthService {
         return null;
     }
 
+    async adminLogin(email: string, pass: string) {
+        const adminEmail = process.env.ADMIN_EMAIL;
+        const adminPass = process.env.ADMIN_PASSWORD;
+
+        console.log('--- Admin Login Debug ---');
+        console.log(`Received: [${email}] / [${pass}]`);
+        console.log(`Expected: [${adminEmail}] / [${adminPass}]`);
+        console.log(`Match Email: ${email === adminEmail}`);
+        console.log(`Match Pass: ${pass === adminPass}`);
+
+        if (email === adminEmail && pass === adminPass) {
+            const user = {
+                id: 'admin',
+                email: adminEmail,
+                name: 'Administrator',
+                role: 'admin'
+            };
+            const payload = {
+                email: adminEmail,
+                sub: 'admin', // Subject is standard for ID
+                role: 'admin',
+                name: 'Administrator'
+            };
+            const accessToken = this.jwtService.sign(payload, { expiresIn: '24h' });
+            return {
+                access_token: accessToken,
+                user
+            };
+        }
+        throw new UnauthorizedException('Invalid admin credentials');
+    }
+
     async register(email: string, pass: string, name: string) {
         const hashedPassword = await bcrypt.hash(pass, 10);
         return this.usersService.createUser(email, name, hashedPassword);

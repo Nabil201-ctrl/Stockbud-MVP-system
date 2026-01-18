@@ -12,6 +12,7 @@ export interface User {
     picture?: string;
     shopifyShop?: string;
     shopifyToken?: string;
+    createdAt?: string;
     isOnboardingComplete?: boolean;
     refreshToken?: string;
     aiTokens?: number;
@@ -32,7 +33,7 @@ export interface User {
 @Injectable()
 export class UsersService implements OnModuleInit {
     private users: Map<string, User> = new Map();
-    private readonly filePath = path.join(__dirname, '..', '..', 'users.json');
+    private readonly filePath = path.join(process.cwd(), 'users.json');
     constructor(
         private readonly encryptionService: EncryptionService
     ) { }
@@ -85,6 +86,7 @@ export class UsersService implements OnModuleInit {
                 isOnboardingComplete: false,
                 aiTokens: 500,
                 reportTokens: 250,
+                createdAt: new Date().toISOString(),
             };
             this.users.set(user.id, user);
             this.saveUsers();
@@ -104,6 +106,7 @@ export class UsersService implements OnModuleInit {
             isOnboardingComplete: false,
             aiTokens: 500,
             reportTokens: 250,
+            createdAt: new Date().toISOString(),
         };
         this.users.set(user.id, user);
         this.saveUsers();
@@ -120,6 +123,18 @@ export class UsersService implements OnModuleInit {
             user.shopifyShop = shop;
             // Encrypt token before saving
             user.shopifyToken = this.encryptionService.encrypt(token);
+            this.users.set(userId, user);
+            this.saveUsers();
+            return user;
+        }
+        throw new Error('User not found');
+    }
+
+    async removeShopifyCredentials(userId: string): Promise<User> {
+        const user = this.users.get(userId);
+        if (user) {
+            user.shopifyShop = undefined;
+            user.shopifyToken = undefined;
             this.users.set(userId, user);
             this.saveUsers();
             return user;

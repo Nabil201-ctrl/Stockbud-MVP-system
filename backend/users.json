@@ -5,6 +5,21 @@
     "name": "Nabil Abubakar",
     "picture": "https://lh3.googleusercontent.com/a/ACg8ocK8zLzSyT5BSvtF6abQftu5TNOc-SiQkA9WDZE_SLS2MYxZfvg=s96-c",
     "isOnboardingComplete": true,
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3Njc0NTY0NzUsImV4cCI6MTc2ODA2MTI3NX0.ap7soo1N4K0Bx2Ghh7igdCo7z8J1b3NWE-tsa2ea1GQ"
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3Njg2NzY2MDksImV4cCI6MTc3MTI2ODYwOX0.PAkKc-s8eWmyyCHto8Zc4TvZnPYoosGkrah3mtiO0oc",
+    "shopifyShop": "stockbud-test.myshopify.com",
+    "shopifyToken": "5d21451f4dc88809a1d22bf434aa4c2c:42dfad1211f76e8d8ddea118bef66ce1551d533a01fdfd26cabfa3c10387194ba862b4b01c0b0cd3ee5188dac23dc4d4",
+    "botSettings": {
+      "name": "Analytics Assistant",
+      "personality": "Professional",
+      "responseSpeed": "Medium",
+      "theme": "Purple",
+      "language": "English",
+      "notifications": true,
+      "voiceEnabled": false,
+      "dataAccess": "Limited",
+      "autoRespond": true
+    },
+    "aiTokens": 350,
+    "reportTokens": 248
   }
 ]

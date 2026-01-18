@@ -26,7 +26,7 @@ export class ChatService implements OnModuleInit {
     private chats: Map<string, Chat> = new Map();
     private genAI: GoogleGenerativeAI;
     private model: any;
-    private readonly filePath = path.join(__dirname, '..', '..', 'chats.json');
+    private readonly filePath = path.join(process.cwd(), 'chats.json');
 
     constructor(
         private readonly usersService: UsersService,
@@ -42,7 +42,7 @@ export class ChatService implements OnModuleInit {
         }
     }
 
-    onModuleInit() {
+    async onModuleInit() {
         this.loadChats();
     }
 

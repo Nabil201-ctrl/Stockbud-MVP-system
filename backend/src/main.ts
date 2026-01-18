@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
+import * as fs from 'fs';
+import * as path from 'path';
 import fetch, { Headers, Request, Response } from 'node-fetch';
 
 if (!global.fetch) {
@@ -35,6 +37,16 @@ async function bootstrap() {
     });
 
     app.use(cookieParser());
+
+    // DEBUG LOGGING MIDDLEWARE
+    app.use((req, res, next) => {
+        const logLine = `\n[${new Date().toISOString()}] ${req.method} ${req.url}
+Headers: ${JSON.stringify(req.headers)}
+Cookies: ${JSON.stringify(req.cookies)}
+------------------------------------------------`;
+        fs.appendFileSync(path.join(__dirname, '..', 'debug_auth.log'), logLine);
+        next();
+    });
 
     await app.listen(3000);
     console.log('Backend is running on http://localhost:3000');

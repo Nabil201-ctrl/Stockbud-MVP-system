@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, UseGuards, Req } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 
@@ -8,7 +8,7 @@ export class UsersController {
 
     @Get()
     findAll() {
-        return this.usersService.findAll();
+        return this.usersService.getAllUsers();
     }
 
     @Get('me')
@@ -27,6 +27,12 @@ export class UsersController {
     @UseGuards(AuthGuard('jwt'))
     async updateShopifyCredentials(@Req() req, @Body() body: { shop: string; token: string }) {
         return this.usersService.updateShopifyCredentials(req.user.id, body.shop, body.token);
+    }
+
+    @Delete('shopify-credentials')
+    @UseGuards(AuthGuard('jwt'))
+    async removeShopifyCredentials(@Req() req) {
+        return this.usersService.removeShopifyCredentials(req.user.id);
     }
 
     @Post('onboarding/complete')
