@@ -17,7 +17,9 @@
         "products": "Products",
         "chat": "Chat",
         "settings": "Settings",
-        "logout": "Logout"
+        "logout": "Logout",
+        "login": "Log in",
+        "getStarted": "Get Started"
     },
     "dashboard": {
         "title": "Dashboard",
@@ -78,5 +80,22 @@
     "chat": {
         "placeholder": "Ask me anything about your store...",
         "send": "Send"
+    },
+    "landing": {
+        "newFeature": "New: AI-Powered Analytics",
+        "heroTitle1": "Your Personal AI",
+        "heroTitle2": "Stock Assistant",
+        "heroSubtitle": "Track, analyze, and optimize your inventory with the power of artificial intelligence. Smart insights for modern businesses.",
+        "startFreeTrial": "Start Free Trial",
+        "viewDemo": "View Demo",
+        "features": {
+            "analyticsTitle": "Real-time Analytics",
+            "analyticsDesc": "Get instant insights into your stock levels and sales performance.",
+            "predictionsTitle": "AI Predictions",
+            "predictionsDesc": "Smart algorithms predict demand helping you prevent stockouts.",
+            "securityTitle": "Secure & Reliable",
+            "securityDesc": "Enterprise-grade security keeps your business data safe."
+        },
+        "footer": "© 2026 Stockbud. All rights reserved."
     }
 }

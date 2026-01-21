@@ -5,21 +5,21 @@
     "name": "Nabil Abubakar",
     "picture": "https://lh3.googleusercontent.com/a/ACg8ocK8zLzSyT5BSvtF6abQftu5TNOc-SiQkA9WDZE_SLS2MYxZfvg=s96-c",
     "isOnboardingComplete": true,
-    "aiTokens": 500,
+    "aiTokens": 200,
     "reportTokens": 250,
     "createdAt": "2026-01-18T07:31:13.145Z",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3Njg3MzYzNjIsImV4cCI6MTc3MTMyODM2Mn0.fJj8lciS_cHESpcNyv3u5gR9t1EoQLnmTcOsidVGC2M",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3NjkwMTcyNjAsImV4cCI6MTc3MTYwOTI2MH0.qwI6mSsmMc4QdKJa847_HxTlcSK3ykin1zec7ovcBmE",
     "shopifyStores": [
       {
-        "id": "74c238dc",
+        "id": "bdaf3f42",
         "shop": "stockbud-test.myshopify.com",
-        "token": "49b00a8ea3f8aff8d9076ce710328e1b:de535fec605b061ea55b6e63312c03a35f9c5282ddb0b70c2534a6fd700f43a7708fdc04d7c59d93a385543a0e6748b0",
+        "token": "7aaa3e988ffbccf57d0479bebb1d280c:b08fd2fe6f8b9974ee6001a511b4d18ecacad515574c8974286bf65f4e6ad71ef969ba25b064a03ae0739785885b5564",
         "name": "stockbud-test",
-        "addedAt": "2026-01-18T09:49:35.827Z"
+        "addedAt": "2026-01-21T17:23:59.405Z"
       }
     ],
-    "activeShopId": "74c238dc",
+    "activeShopId": "bdaf3f42",
     "shopifyShop": "stockbud-test.myshopify.com",
-    "shopifyToken": "2322175758760b02a87ce0a486d0a96e:20a71c4aa45f52dbe08e658ce024aa42ac850772a7fc34168f4c51d3826619c8422facb7022c96977546eb78c00b031c"
+    "shopifyToken": "e55987237681e01eb4c6c68e28dfb48b:b3c88b839201173068a09a49e255484b9494562480dbe6d7e65195e96abe9c7706eaccf4c0ade9093985fa67b6588df2"
   }
 ]

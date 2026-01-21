@@ -17,7 +17,9 @@
         "products": "Produits",
         "chat": "Discussion",
         "settings": "Paramètres",
-        "logout": "Déconnexion"
+        "logout": "Déconnexion",
+        "login": "Connexion",
+        "getStarted": "Commencer"
     },
     "dashboard": {
         "title": "Tableau de bord",
@@ -78,5 +80,22 @@
     "chat": {
         "placeholder": "Posez-moi une question sur votre boutique...",
         "send": "Envoyer"
+    },
+    "landing": {
+        "newFeature": "Nouveau : Analyses alimentées par l'IA",
+        "heroTitle1": "Votre Assistant de Stock",
+        "heroTitle2": "Personnel par IA",
+        "heroSubtitle": "Suivez, analysez et optimisez votre inventaire grâce à la puissance de l'intelligence artificielle. Des informations intelligentes pour les entreprises modernes.",
+        "startFreeTrial": "Essai gratuit",
+        "viewDemo": "Voir la démo",
+        "features": {
+            "analyticsTitle": "Analyses en temps réel",
+            "analyticsDesc": "Obtenez un aperçu instantané de vos niveaux de stock et de vos performances de vente.",
+            "predictionsTitle": "Prédictions IA",
+            "predictionsDesc": "Des algorithmes intelligents prédisent la demande pour vous aider à éviter les ruptures de stock.",
+            "securityTitle": "Sécurisé et fiable",
+            "securityDesc": "Une sécurité de niveau entreprise protège les données de votre entreprise."
+        },
+        "footer": "© 2026 Stockbud. Tous droits réservés."
     }
 }

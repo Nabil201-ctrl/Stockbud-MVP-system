@@ -29,7 +29,7 @@ async function bootstrap() {
             if (origin.includes('ngrok-free.app')) return callback(null, true);
 
             // Standard Frontends
-            if (origin === 'http://localhost:5173') return callback(null, true);
+            if (origin === 'http://localhost:5173' || origin === 'http://localhost:5174') return callback(null, true);
 
             callback(null, true); // Permissive for MVP/Dev - Locking down would be better for Prod
         },

@@ -10,6 +10,7 @@ import { ChatModule } from './chat/chat.module';
 import { CommonModule } from './common/common.module';
 import { FeedModule } from './feed/feed.module';
 import { ReportsModule } from './reports/reports.module';
+import { NotificationsModule } from './notifications/notifications.module';
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -25,6 +26,7 @@ import { ReportsModule } from './reports/reports.module';
         CommonModule,
         FeedModule,
         ReportsModule,
+        NotificationsModule,
     ],
 })
 export class AppModule { }
