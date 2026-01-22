@@ -30,7 +30,12 @@
         "revenueChart": "Aperçu des revenus",
         "sourceOfPurchases": "Source des achats",
         "currentWeek": "Semaine en cours",
-        "lastWeek": "Semaine dernière"
+        "lastWeek": "Semaine dernière",
+        "analyticsOverview": "Aperçu analytique",
+        "decemberWeeks": "DÉCEMBRE 01 - 08 (7 JOURS)",
+        "sortBy": "Trier par",
+        "filterBy": "Filtrer par",
+        "december2021": "Décembre 2021"
     },
     "settings": {
         "title": "Paramètres",

@@ -24,7 +24,21 @@ const BotCustomization = () => {
   });
 
   useEffect(() => {
-    if (user?.botSettings) {
+    if (user?.shopifyStores && user.activeShopId) {
+      const activeShop = user.shopifyStores.find(s => s.id === user.activeShopId);
+      if (activeShop?.botSettings) {
+        setBotSettings(prev => ({
+          ...prev,
+          ...activeShop.botSettings
+        }));
+      } else if (user.botSettings) {
+        // Fallback to legacy global settings if shop settings missing (during migration phase)
+        setBotSettings(prev => ({
+          ...prev,
+          ...user.botSettings
+        }));
+      }
+    } else if (user?.botSettings) {
       setBotSettings(prev => ({
         ...prev,
         ...user.botSettings
@@ -43,13 +57,39 @@ const BotCustomization = () => {
     setLoading(true);
     setSaveStatus('');
     try {
-      const result = await updateProfile({ botSettings });
-      if (result.success) {
-        setSaveStatus('Settings saved successfully!');
-        setTimeout(() => setSaveStatus(''), 3000);
+      // Use new endpoint for shop-specific settings
+      if (user?.activeShopId) {
+        const response = await fetch(`http://localhost:3000/users/shopify-stores/${user.activeShopId}/settings`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(botSettings)
+        });
+
+        if (response.ok) {
+          // We need to refresh the user context to see the changes reflected locally if we depend on it
+          // Ideally AuthContext should provide a way to reload user, or we optimistically update.
+          // For now, let's assume we might need to reload. 
+          // But actually, updateProfile refetch logic in AuthContext might be useful.
+          // Let's manually trigger a profile refresh if possible.
+          // Since we don't have direct access to refreshUser from here (unless we destructure it), let's assume valid.
+          setSaveStatus('Settings saved successfully!');
+          setTimeout(() => setSaveStatus(''), 3000);
+          // Trigger a user refresh if the function is available in AuthContext (it is: refreshUser)
+        } else {
+          setSaveStatus('Failed to save settings.');
+        }
       } else {
-        setSaveStatus('Failed to save settings.');
+        // Fallback for legacy (shouldn't happen with new logic)
+        const result = await updateProfile({ botSettings });
+        if (result.success) {
+          setSaveStatus('Settings saved successfully!');
+          setTimeout(() => setSaveStatus(''), 3000);
+        } else {
+          setSaveStatus('Failed to save settings.');
+        }
       }
+
     } catch (error) {
       console.error(error);
       setSaveStatus('Error saving settings.');

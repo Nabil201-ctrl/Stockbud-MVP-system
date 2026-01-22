@@ -10,6 +10,7 @@ import ChartLoading from '../components/layout/ChatLoading';
 import ChatBotButton from '../components/ChatBot/ChatBotButton';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // Lazy loaded chart components
 const RevenueChart = lazy(() => import('../components/charts/RevenueChart'));
@@ -19,23 +20,34 @@ const Dashboard = () => {
   const [selectedDate, setSelectedDate] = useState(17);
   const [isCalendarOpen, setIsCalendarOpen] = useState(true);
   const { isDarkMode, toggleTheme } = useTheme();
+  const { t } = useLanguage();
 
   // New State for Data
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { authenticatedFetch } = useAuth(); // Import authenticatedFetch
+  const { authenticatedFetch, user } = useAuth(); // Import authenticatedFetch and user
 
   useEffect(() => {
     const fetchStats = async () => {
+      // If no active shop, stop
+      if (!user?.activeShopId) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      const cacheKey = `dashboard_stats_${user.activeShopId}`;
+
       try {
         // 1. Try to load from cache first for instant load
-        const cachedStats = await storage.get('dashboard_stats');
+        const cachedStats = await storage.get(cacheKey);
         if (cachedStats) {
           setStats(cachedStats);
           setLoading(false); // Show content immediately if we have cache
         }
 
         // 2. Fetch fresh data using authenticated cookie
+        // The backend knows the active shop from the user session/state
         const response = await authenticatedFetch('http://localhost:3000/dashboard/stats');
 
         if (!response.ok) {
@@ -47,7 +59,7 @@ const Dashboard = () => {
 
         // 3. Update state and cache
         setStats(data);
-        await storage.set('dashboard_stats', data);
+        await storage.set(cacheKey, data);
 
       } catch (error) {
         console.error('Failed to fetch dashboard stats', error);
@@ -57,11 +69,13 @@ const Dashboard = () => {
       }
     };
 
-    fetchStats();
-  }, [authenticatedFetch]);
+    if (user) {
+      fetchStats();
+    }
+  }, [authenticatedFetch, user?.activeShopId]);
 
   return (
-    <div className={`flex h-screen min-h-screen ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`flex h-screen min-h-screen ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
 
       <ChatBotButton />
 
@@ -80,7 +94,7 @@ const Dashboard = () => {
               <div className="lg:col-span-2 rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                   <div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Revenue</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dashboard.totalRevenue')}</div>
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold">
                         {stats?.revenue ? `$ ${stats.revenue.total.toLocaleString()}` : '$ 0.00'}
@@ -93,11 +107,11 @@ const Dashboard = () => {
                   <div className="flex gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                      <span className="text-gray-500 dark:text-gray-400">Current Week</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('dashboard.currentWeek')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
-                      <span className="text-gray-500 dark:text-gray-400">Last Week</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('dashboard.lastWeek')}</span>
                     </div>
                   </div>
                 </div>
@@ -111,7 +125,7 @@ const Dashboard = () => {
               {/* Source of Purchases - Pie Chart */}
               <div className="rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="font-semibold">Source of Purchases</span>
+                  <span className="font-semibold">{t('dashboard.sourceOfPurchases')}</span>
                   <div className="text-gray-400">
                     <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="8" cy="8" r="1.5" />

@@ -28,7 +28,7 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
       <div className={`
         fixed inset-y-0 left-0 z-30 transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        w-64 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-r flex flex-col flex-shrink-0
+        w-64 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-slate-50 border-gray-200'} border-r flex flex-col flex-shrink-0
       `}>
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">

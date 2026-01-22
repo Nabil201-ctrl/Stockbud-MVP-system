@@ -10,7 +10,7 @@ import Timeline from '../components/Shopify/Timeline';
 const SettingsPage = () => {
     const isOnline = useOnlineStatus();
     const { isDarkMode } = useTheme();
-    const { user, updateProfile, authenticatedFetch } = useAuth();
+    const { user, updateProfile, authenticatedFetch, refreshUser } = useAuth();
     const { t, language, changeLanguage, availableLanguages } = useLanguage();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile');
@@ -119,8 +119,7 @@ const SettingsPage = () => {
             });
 
             if (response.ok) {
-                const updatedUser = await response.json();
-                await updateProfile(updatedUser);
+                await refreshUser();
             } else {
                 alert('Failed to set active shop');
             }
@@ -140,8 +139,7 @@ const SettingsPage = () => {
             });
 
             if (response.ok) {
-                const updatedUser = await response.json();
-                await updateProfile(updatedUser);
+                await refreshUser();
             } else {
                 alert('Failed to remove store');
             }

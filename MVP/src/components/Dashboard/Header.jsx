@@ -6,32 +6,34 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
-  const { user, logout, authenticatedFetch } = useAuth();
+  const { user, logout, authenticatedFetch, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { language, changeLanguage } = useLanguage();
-  
+
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showShopMenu, setShowShopMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   const menuRef = useRef(null);
+  const shopMenuRef = useRef(null);
   const notificationRef = useRef(null);
 
   const fetchNotifications = async () => {
     try {
-        const response = await authenticatedFetch('http://localhost:3000/notifications');
-        if (response.ok) {
-            const data = await response.json();
-            setNotifications(data);
-        }
+      const response = await authenticatedFetch('http://localhost:3000/notifications');
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data);
+      }
     } catch (error) {
-        console.error("Failed to fetch notifications", error);
+      console.error("Failed to fetch notifications", error);
     }
   };
 
   useEffect(() => {
     if (user) {
-        fetchNotifications();
+      fetchNotifications();
     }
   }, [user]);
 
@@ -39,6 +41,9 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setShowProfileMenu(false);
+      }
+      if (shopMenuRef.current && !shopMenuRef.current.contains(event.target)) {
+        setShowShopMenu(false);
       }
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
@@ -67,32 +72,53 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
 
   const markAllAsRead = async () => {
     try {
-        const response = await authenticatedFetch('http://localhost:3000/notifications/read-all', {
-            method: 'PATCH'
-        });
-        if (response.ok) {
-            setNotifications(notifications.map(n => ({ ...n, read: true })));
-        }
+      const response = await authenticatedFetch('http://localhost:3000/notifications/read-all', {
+        method: 'PATCH'
+      });
+      if (response.ok) {
+        setNotifications(notifications.map(n => ({ ...n, read: true })));
+      }
     } catch (error) {
-        console.error("Failed to mark all as read", error);
+      console.error("Failed to mark all as read", error);
     }
   };
-  
+
   const markAsRead = async (id, e) => {
-      e.stopPropagation();
-      try {
-        const response = await authenticatedFetch(`http://localhost:3000/notifications/${id}/read`, {
-            method: 'PATCH'
-        });
-        if (response.ok) {
-            setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
-        }
-      } catch (error) {
-        console.error("Failed to mark notification as read", error);
+    e.stopPropagation();
+    try {
+      const response = await authenticatedFetch(`http://localhost:3000/notifications/${id}/read`, {
+        method: 'PATCH'
+      });
+      if (response.ok) {
+        setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
       }
+    } catch (error) {
+      console.error("Failed to mark notification as read", error);
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleShopSwitch = async (storeId) => {
+    if (storeId === user.activeShopId) return;
+    try {
+      const response = await authenticatedFetch('http://localhost:3000/users/shopify-stores/active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId })
+      });
+      if (response.ok) {
+        await refreshUser(); // Reload user to get new active shop and settings
+        setShowShopMenu(false);
+        // reload the page to refresh all data if needed, or rely on context
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to switch shop", error);
+    }
+  };
+
+  const activeShop = user?.shopifyStores?.find(s => s.id === user?.activeShopId);
 
   return (
     <div className={`px-6 py-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} border-b sticky top-0 z-10`}>
@@ -101,6 +127,68 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
           <button className="lg:hidden" onClick={toggleSidebar}>
             <Menu size={24} />
           </button>
+          <div className="hidden md:flex items-center relative" ref={shopMenuRef}>
+            {activeShop ? (
+              <>
+                <button
+                  onClick={() => setShowShopMenu(!showShopMenu)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                >
+                  <div className={`p-1 rounded-md ${isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-600'}`}>
+                    <ShoppingBag size={16} />
+                  </div>
+                  <span className={`text-sm font-medium max-w-[150px] truncate ${isDarkMode ? 'text-gray-200' : 'text-slate-700'}`}>
+                    {activeShop.name || activeShop.shop.replace('.myshopify.com', '')}
+                  </span>
+                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${showShopMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showShopMenu && (
+                  <div className={`absolute top-full left-0 mt-2 w-64 rounded-xl shadow-xl border overflow-hidden z-50 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
+                    <div className={`px-4 py-2 border-b text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'border-gray-700 text-gray-400' : 'border-slate-100 text-slate-500'}`}>
+                      Select Shop
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto">
+                      {user?.shopifyStores?.map(store => (
+                        <button
+                          key={store.id}
+                          onClick={() => handleShopSwitch(store.id)}
+                          className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${user.activeShopId === store.id
+                              ? (isDarkMode ? 'bg-green-900/10 text-green-400' : 'bg-green-50 text-green-700')
+                              : (isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-slate-50 text-slate-700')
+                            }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${user.activeShopId === store.id
+                                ? 'bg-green-500 text-white'
+                                : (isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-slate-200 text-slate-500')
+                              }`}>
+                              {(store.name || store.shop).substring(0, 2).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{store.name || store.shop.replace('.myshopify.com', '')}</div>
+                              <div className="text-xs opacity-70 truncate">{store.shop}</div>
+                            </div>
+                          </div>
+                          {user.activeShopId === store.id && <Check size={16} className="text-green-500" />}
+                        </button>
+                      ))}
+                    </div>
+                    <div className={`p-2 border-t ${isDarkMode ? 'border-gray-700 bg-gray-900/30' : 'border-slate-100 bg-slate-50'}`}>
+                      <button
+                        onClick={() => navigate('/settings')}
+                        className="w-full py-2 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <ShoppingBag size={14} /> Add New Shop
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-sm text-gray-500 italic">No Shop Selected</div>
+            )}
+          </div>
           <div className="flex-1"></div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
@@ -170,13 +258,13 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
                         key={notification.id}
                         onClick={(e) => !notification.read && markAsRead(notification.id, e)}
                         className={`p-4 border-b last:border-b-0 hover:bg-opacity-50 transition-colors cursor-pointer flex gap-3 ${isDarkMode
-                            ? 'border-gray-700 hover:bg-gray-700'
-                            : 'border-slate-100 hover:bg-slate-50'
+                          ? 'border-gray-700 hover:bg-gray-700'
+                          : 'border-slate-100 hover:bg-slate-50'
                           } ${!notification.read ? (isDarkMode ? 'bg-gray-700/30' : 'bg-blue-50/50') : ''}`}
                       >
                         <div className={`mt-1 min-w-[32px] w-8 h-8 rounded-full flex items-center justify-center ${notification.type === 'error' ? 'bg-red-100 text-red-600' :
-                            notification.type === 'success' ? 'bg-green-100 text-green-600' :
-                              'bg-blue-100 text-blue-600'
+                          notification.type === 'success' ? 'bg-green-100 text-green-600' :
+                            'bg-blue-100 text-blue-600'
                           }`}>
                           {notification.type === 'error' ? <AlertTriangle size={14} /> :
                             notification.type === 'success' ? <CheckCircle size={14} /> :

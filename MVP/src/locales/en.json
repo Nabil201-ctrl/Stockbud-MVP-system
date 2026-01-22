@@ -30,7 +30,12 @@
         "revenueChart": "Revenue Overview",
         "sourceOfPurchases": "Source of Purchases",
         "currentWeek": "Current Week",
-        "lastWeek": "Last Week"
+        "lastWeek": "Last Week",
+        "analyticsOverview": "Analytics Overview",
+        "decemberWeeks": "DECEMBER 01 - 08 (7 DAYS)",
+        "sortBy": "Sort By",
+        "filterBy": "Filter By",
+        "december2021": "December 2021"
     },
     "settings": {
         "title": "Settings",

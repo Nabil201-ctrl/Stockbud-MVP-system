@@ -116,9 +116,9 @@ const ChatBotButton = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className={`fixed bottom-0 right-0 w-full h-[100dvh] sm:h-[600px] sm:w-96 sm:bottom-24 sm:right-6 sm:rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${isDarkMode
+        <div className={`fixed bottom-0 right-0 w-full h-[100dvh] sm:h-[700px] sm:w-[500px] sm:bottom-24 sm:right-6 sm:rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${isDarkMode
           ? 'bg-gray-800 border-t sm:border border-gray-700'
-          : 'bg-white border-t sm:border border-gray-200'
+          : 'bg-slate-50 border-t sm:border border-gray-200'
           }`}>
           {/* Header */}
           <div className={`p-4 sm:rounded-t-2xl flex items-center justify-between ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'
@@ -158,10 +158,10 @@ const ChatBotButton = () => {
                   className={`max-w-[80%] rounded-2xl p-3 ${message.isBot
                     ? isDarkMode
                       ? 'bg-gray-700 text-white'
-                      : 'bg-gray-100 text-gray-900'
+                      : 'bg-white text-gray-900 border border-gray-200 shadow-sm'
                     : isDarkMode
                       ? 'bg-blue-600 text-white'
-                      : 'bg-blue-600 text-white'
+                      : 'bg-blue-100 text-blue-900'
                     }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -175,7 +175,7 @@ const ChatBotButton = () => {
                       • {message.time}
                     </span>
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                  <p className="text-base whitespace-pre-wrap">{message.text}</p>
                 </div>
               </div>
             ))}
@@ -225,7 +225,7 @@ const ChatBotButton = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Ask me about your analytics..."
                 disabled={isTyping}
-                className={`flex-1 px-4 py-3 rounded-full text-sm outline-none ${isDarkMode
+                className={`flex-1 px-4 py-3 rounded-full text-base outline-none ${isDarkMode
                   ? 'bg-gray-700 text-white placeholder-gray-400'
                   : 'bg-gray-100 text-gray-900 placeholder-gray-500'
                   }`}

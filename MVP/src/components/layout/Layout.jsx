@@ -17,7 +17,7 @@ const Layout = ({ children }) => {
   const closeMobileSidebar = () => setIsMobileSidebarOpen(false);
 
   return (
-    <div className={`flex h-screen min-h-screen ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-slate-50 text-slate-800'}`}>
+    <div className={`flex h-screen min-h-screen ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-slate-800'}`}>
       <OfflineBanner />
       <Sidebar
         selectedDate={selectedDate}

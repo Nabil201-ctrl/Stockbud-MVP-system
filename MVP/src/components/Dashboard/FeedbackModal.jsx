@@ -10,21 +10,38 @@ const FeedbackModal = ({ isOpen, onClose, isDarkMode }) => {
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        // Simulate API call
-        setTimeout(() => {
-            setIsSubmitting(false);
+        try {
+            await fetch('http://localhost:3000/feed/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    rating: rating === 'good' ? 5 : 1,
+                    category: 'general',
+                    message: feedback,
+                    email: email
+                }),
+            });
+
             setSubmitted(true);
             setTimeout(() => {
                 setSubmitted(false);
                 setFeedback('');
                 setRating(null);
+                setEmail('');
                 onClose();
             }, 2000);
-        }, 1000);
+        } catch (error) {
+            console.error('Failed to submit feedback:', error);
+            // Optionally handle error state here
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const bgClass = isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900';
