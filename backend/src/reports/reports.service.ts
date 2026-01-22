@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { NotificationsService } from '../notifications/notifications.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -27,6 +28,7 @@ export class ReportsService {
     constructor(
         private readonly dashboardService: DashboardService,
         private readonly usersService: UsersService,
+        private readonly notificationsService: NotificationsService,
         private readonly configService: ConfigService,
     ) {
         const apiKey = this.configService.get<string>('GEMINI_API_KEY');
@@ -187,6 +189,14 @@ export class ReportsService {
                 reports[idx].status = 'ready';
                 reports[idx].data = reportData;
                 this.saveReports(reports);
+
+                // Notify User
+                await this.notificationsService.create(
+                    reportData.raw.userId || reports[idx].userId, // Fallback to report userId if raw missing
+                    'Report Ready',
+                    `Your ${type} report "${reports[idx].title}" has been successfully generated.`,
+                    'success'
+                );
             }
         } catch (error) {
             console.error('Report generation failed:', error);
@@ -195,6 +205,14 @@ export class ReportsService {
             if (idx !== -1) {
                 reports[idx].status = 'failed';
                 this.saveReports(reports);
+
+                // Notify User of Failure
+                await this.notificationsService.create(
+                    reports[idx].userId,
+                    'Report Failed',
+                    `Your ${type} report "${reports[idx].title}" failed to generate. Please try again.`,
+                    'error'
+                );
             }
         }
     }

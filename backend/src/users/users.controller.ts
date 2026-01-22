@@ -67,9 +67,22 @@ export class UsersController {
     /**
      * Set the active Shopify store.
      */
-    @Post('shopify-stores/active')
-    @UseGuards(AuthGuard('jwt'))
     async setActiveShop(@Req() req, @Body() body: { storeId: string }) {
         return this.usersService.setActiveShop(req.user.id, body.storeId);
+    }
+
+    /**
+     * Update bot settings for a specific shop.
+     */
+    @Put('shopify-stores/:storeId/settings')
+    @UseGuards(AuthGuard('jwt'))
+    async updateShopSettings(@Req() req, @Body() body: any) {
+        const storeId = req.params.storeId;
+        return this.usersService.updateShopSettings(req.user.id, storeId, body);
+    }
+    @Post('top-up')
+    @UseGuards(AuthGuard('jwt'))
+    async topUpTokens(@Req() req, @Body() body: { amount: number }) {
+        return this.usersService.topUpTokens(req.user.id, body.amount);
     }
 }

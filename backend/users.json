@@ -8,7 +8,7 @@
     "aiTokens": 200,
     "reportTokens": 250,
     "createdAt": "2026-01-18T07:31:13.145Z",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3NjkwMTcyNjAsImV4cCI6MTc3MTYwOTI2MH0.qwI6mSsmMc4QdKJa847_HxTlcSK3ykin1zec7ovcBmE",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3NjkwMzM1MjMsImV4cCI6MTc3MTYyNTUyM30.r38OUI1KlKp15JhkgSPAGRtH88pd7wycjY5nGy92JJs",
     "shopifyStores": [
       {
         "id": "bdaf3f42",
@@ -20,6 +20,18 @@
     ],
     "activeShopId": "bdaf3f42",
     "shopifyShop": "stockbud-test.myshopify.com",
-    "shopifyToken": "e55987237681e01eb4c6c68e28dfb48b:b3c88b839201173068a09a49e255484b9494562480dbe6d7e65195e96abe9c7706eaccf4c0ade9093985fa67b6588df2"
+    "shopifyToken": "e55987237681e01eb4c6c68e28dfb48b:b3c88b839201173068a09a49e255484b9494562480dbe6d7e65195e96abe9c7706eaccf4c0ade9093985fa67b6588df2",
+    "lastTokenReset": 1768721473145
+  },
+  {
+    "id": "onubcrblr",
+    "email": "test-test_user_bg6x2@example.com",
+    "name": "Test User",
+    "password": "hash",
+    "isOnboardingComplete": false,
+    "aiTokens": 700,
+    "reportTokens": 250,
+    "createdAt": "2026-01-21T22:19:47.487Z",
+    "lastTokenReset": 1769033987493
   }
 ]

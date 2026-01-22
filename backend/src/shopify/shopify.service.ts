@@ -144,8 +144,7 @@ export class ShopifyService {
     async getOrders(shop: string, token: string) {
         if (!shop || !token) throw new HttpException('Missing Shopify credentials', HttpStatus.UNAUTHORIZED);
 
-            const email = dto.email || `shop+${dto.shop}@stockbud.com`;
-            const name = dto.shop.replace('
+
         const query = `
         {
           orders(first: 50, reverse: true) {

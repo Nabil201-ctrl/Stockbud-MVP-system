@@ -4,12 +4,25 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { EncryptionService } from '../common/encryption.service';
 
+export interface BotSettings {
+    name: string;
+    personality: string;
+    responseSpeed: string;
+    theme: string;
+    language: string;
+    notifications: boolean;
+    voiceEnabled: boolean;
+    dataAccess: string;
+    autoRespond: boolean;
+}
+
 export interface ShopifyStore {
     id: string;           // Unique ID for this store connection
     shop: string;         // e.g., "my-store.myshopify.com"
     token: string;        // Encrypted access token
     name?: string;        // Display name (optional)
     addedAt: string;      // ISO timestamp
+    botSettings?: BotSettings; // Shop-specific bot settings
 }
 
 export interface User {
@@ -29,17 +42,8 @@ export interface User {
     refreshToken?: string;
     aiTokens?: number;
     reportTokens?: number;
-    botSettings?: {
-        name: string;
-        personality: string;
-        responseSpeed: string;
-        theme: string;
-        language: string;
-        notifications: boolean;
-        voiceEnabled: boolean;
-        dataAccess: string;
-        autoRespond: boolean;
-    };
+    botSettings?: BotSettings; // Legacy global settings (migration source)
+    lastTokenReset?: number;
 }
 
 @Injectable()
@@ -63,6 +67,7 @@ export class UsersService implements OnModuleInit {
                     // Migration: Ensure new fields exist
                     if (user.aiTokens === undefined) user.aiTokens = 500;
                     if (user.reportTokens === undefined) user.reportTokens = 250;
+                    if (user.lastTokenReset === undefined) user.lastTokenReset = user.createdAt ? new Date(user.createdAt).getTime() : Date.now();
 
                     // Migration: Convert legacy single-shop to multi-shop format
                     if (user.shopifyShop && user.shopifyToken && !user.shopifyStores) {
@@ -72,9 +77,22 @@ export class UsersService implements OnModuleInit {
                             shop: user.shopifyShop,
                             token: user.shopifyToken,
                             addedAt: user.createdAt || new Date().toISOString(),
+                            botSettings: user.botSettings // Move global settings to first shop
                         }];
                         user.activeShopId = storeId;
                         console.log(`[Migration] Converted single-shop user ${user.id} to multi-shop format`);
+                    }
+
+                    // Migration: Move global botSettings to shop-specific if they exist and shops exist but no shop settings
+                    if (user.botSettings && user.shopifyStores && user.shopifyStores.length > 0) {
+                        user.shopifyStores.forEach(store => {
+                            if (!store.botSettings) {
+                                store.botSettings = { ...user.botSettings };
+                                console.log(`[Migration] Moved botSettings to shop ${store.shop} for user ${user.id}`);
+                            }
+                        });
+                        // We can delete user.botSettings but keeping it for safety for now is okay, 
+                        // or we can remove it to verify migration is done. Let's keep it optional.
                     }
 
                     // Initialize empty array if no stores
@@ -366,5 +384,74 @@ export class UsersService implements OnModuleInit {
                 growth: 12.4
             }
         };
+    }
+
+    async checkAndReplenishTokens() {
+        console.log('[Tokens] Checking for monthly replenishment...');
+        const now = Date.now();
+        const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+        let updatedCount = 0;
+
+        for (const user of this.users.values()) {
+            const lastReset = user.lastTokenReset || 0; // Default to 0 (epoch) if missing so it resets immediately
+
+            // If it's been more than 30 days since last reset
+            if (now - lastReset >= THIRTY_DAYS_MS) {
+                // Determine base tokens based on shop count
+                const shopCount = user.shopifyStores?.length || 0;
+                const baseAiTokens = shopCount >= 2 ? 1000 : 500;
+
+                // Only reset if they have fewer than base tokens
+                user.aiTokens = baseAiTokens;
+                user.reportTokens = shopCount >= 2 ? 500 : 250;
+                user.lastTokenReset = now;
+
+                this.users.set(user.id, user);
+                updatedCount++;
+                console.log(`[Tokens] Replenished tokens for user ${user.id}`);
+            }
+        }
+
+        if (updatedCount > 0) {
+            this.saveUsers();
+            console.log(`[Tokens] Replenished tokens for ${updatedCount} users.`);
+        }
+    }
+
+    async topUpTokens(userId: string, amount: number) {
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+
+        user.aiTokens = (user.aiTokens || 0) + amount;
+        this.users.set(userId, user);
+        this.saveUsers();
+        return { success: true, newBalance: user.aiTokens };
+    }
+
+    async updateShopSettings(userId: string, storeId: string, settings: Partial<BotSettings>): Promise<ShopifyStore> {
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+
+        const store = user.shopifyStores?.find(s => s.id === storeId);
+        if (!store) throw new Error('Store not found');
+
+        store.botSettings = {
+            ...(store.botSettings || {
+                name: 'Analytics Assistant',
+                personality: 'Professional',
+                responseSpeed: 'Medium',
+                theme: 'Blue',
+                language: 'English',
+                notifications: true,
+                voiceEnabled: false,
+                dataAccess: 'Limited',
+                autoRespond: true
+            }),
+            ...settings
+        };
+
+        this.users.set(userId, user);
+        this.saveUsers();
+        return store;
     }
 }

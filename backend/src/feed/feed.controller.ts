@@ -9,7 +9,7 @@ export class FeedController {
 
     @Post('feedback')
     // @UseGuards(AuthGuard('jwt'))
-    async submitFeedback(@Req() req, @Body() body: { rating: number; category: string; message: string }) {
+    async submitFeedback(@Req() req, @Body() body: { rating: number; category: string; message: string; email?: string }) {
         const userId = req.user?.id || 'anonymous';
         const userName = req.user?.name || 'Anonymous User';
 
@@ -19,6 +19,7 @@ export class FeedController {
             rating: body.rating,
             category: body.category,
             message: body.message,
+            email: body.email,
         });
     }
 

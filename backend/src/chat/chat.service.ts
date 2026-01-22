@@ -231,8 +231,8 @@ export class ChatService implements OnModuleInit {
         if (personality === 'Concise') systemInstruction += " Keep answers very short and directly to the point.";
 
         systemInstruction += ` Respond in ${language}.`;
-        systemInstruction += " Your primary goal is efficient data analysis. Keep your responses extremely short, punchy, and data-driven. Avoid conversational filler.";
-        systemInstruction += ` ${name} develops a plan, executes that plan by making meaningful comparisons and deep dives into the data, and curates the results— transforming a question into meaningful, actionable analysis. The result: Trusted analysis that goes deeper into the most important insights in your data.`;
+        systemInstruction += ` ${name} answers specific questions about the data and provides clarifications.`;
+        systemInstruction += " CRITICAL: You are NOT allowed to generate reports. If the user asks for a report, explain that you can only provide information and answer questions about the system. You can clarify data points but cannot compile full reports. Keep your responses extremely short, punchy, and data-driven. Avoid conversational filler.";
 
         systemInstruction += ` You have access to the user's REAL e-commerce data. Here is the current snapshot: ${storeStats}. Use this data to answer questions accurately. If asked about something not in this snapshot, explains that you only can see high-level metrics right now.`;
 
@@ -269,6 +269,12 @@ export class ChatService implements OnModuleInit {
             content: responseContent,
             timestamp: Date.now()
         };
+    }
+
+    // Daily Token Replenishment Check - Runs every midnight
+    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+    async handleTokenReplenishment() {
+        await this.usersService.checkAndReplenishTokens();
     }
 
     // Weekly Report Cron Job - Runs every Monday at 9:00 AM
