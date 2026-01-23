@@ -84,7 +84,13 @@
     },
     "chat": {
         "placeholder": "Ask me anything about your store...",
-        "send": "Send"
+        "send": "Send",
+        "initialMessage1": "Hello! I'm your AI assistant. How can I help you today?",
+        "initialMessage2": "Try asking me about your dashboard metrics or data insights!",
+        "suggestion1": "How's my revenue?",
+        "suggestion2": "Tell me about visitors",
+        "suggestion3": "Top countries?",
+        "suggestion4": "Purchase sources?"
     },
     "landing": {
         "newFeature": "New: AI-Powered Analytics",

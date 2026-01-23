@@ -3,15 +3,32 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, Loader2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ChatBotButton = () => {
   const { isDarkMode } = useTheme();
   const { authenticatedFetch, refreshUser } = useAuth();
+  const { language, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Initialize messages with translation (use effect to update when language changes if needed, 
+  // but for now simple init is fine for MVP, or better yet, translate on render for static ones if they weren't state)
+  // Since they are state, we might want to reset them or just let them be. 
+  // For MVP, we will initialize them with the current language t() calls.
+  // However, t() might not be available immediately if context loads async, but context is synchronous provider.
   const [messages, setMessages] = useState([
-    { id: 1, text: "Hello! I'm your AI assistant. How can I help you today?", isBot: true, time: "Just now" },
-    { id: 2, text: "Try asking me about your dashboard metrics or data insights!", isBot: true, time: "Just now" }
+    { id: 1, text: t('chat.initialMessage1', {}, "Hello! I'm your AI assistant. How can I help you today?"), isBot: true, time: "Just now" },
+    { id: 2, text: t('chat.initialMessage2', {}, "Try asking me about your dashboard metrics or data insights!"), isBot: true, time: "Just now" }
   ]);
+
+  // Reset messages when language changes (Optional, but good for "internalize" goal)
+  useEffect(() => {
+    setMessages([
+      { id: 1, text: t('chat.initialMessage1', {}, "Hello! I'm your AI assistant. How can I help you today?"), isBot: true, time: "Just now" },
+      { id: 2, text: t('chat.initialMessage2', {}, "Try asking me about your dashboard metrics or data insights!"), isBot: true, time: "Just now" }
+    ]);
+  }, [language]); // Depend on language to refresh initial greeting
+
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
@@ -52,7 +69,7 @@ const ChatBotButton = () => {
       const response = await authenticatedFetch('http://localhost:3000/chats/quick', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: userMessageText, history })
+        body: JSON.stringify({ content: userMessageText, history, language }) // Pass language
       });
 
       if (response.ok) {
@@ -69,7 +86,7 @@ const ChatBotButton = () => {
         const errorData = await response.json();
         const botResponse = {
           id: Date.now() + 1,
-          text: errorData.message || "I'm having trouble connecting right now.",
+          text: errorData.message || t('common.error'),
           isBot: true,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -79,7 +96,7 @@ const ChatBotButton = () => {
       console.error("Failed to send message", error);
       const botResponse = {
         id: Date.now() + 1,
-        text: "Network error. Please try again.",
+        text: t('common.error'),
         isBot: true,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
@@ -90,10 +107,10 @@ const ChatBotButton = () => {
   };
 
   const suggestedQuestions = [
-    "How's my revenue?",
-    "Tell me about visitors",
-    "Top countries?",
-    "Purchase sources?"
+    t('chat.suggestion1', {}, "How's my revenue?"),
+    t('chat.suggestion2', {}, "Tell me about visitors"),
+    t('chat.suggestion3', {}, "Top countries?"),
+    t('chat.suggestion4', {}, "Purchase sources?")
   ];
 
   const handleSuggestionClick = (question) => {

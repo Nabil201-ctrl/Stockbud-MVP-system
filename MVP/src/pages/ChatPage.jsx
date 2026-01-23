@@ -5,11 +5,13 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const ChatPage = () => {
     const { isDarkMode } = useTheme();
     const { authenticatedFetch, user, refreshUser } = useAuth();
+    const { language } = useLanguage();
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -115,7 +117,7 @@ const ChatPage = () => {
                 const response = await authenticatedFetch('http://localhost:3000/chats', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: input.slice(0, 30), firstMessage: input })
+                    body: JSON.stringify({ title: input.slice(0, 30), firstMessage: input, language }) // Pass language
                 });
                 if (response.ok) {
                     const newChat = await response.json();
@@ -149,7 +151,7 @@ const ChatPage = () => {
             const response = await authenticatedFetch(`http://localhost:3000/chats/${targetChatId}/messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: messageContent })
+                body: JSON.stringify({ content: messageContent, language }) // Pass language
             });
 
             if (response.ok) {

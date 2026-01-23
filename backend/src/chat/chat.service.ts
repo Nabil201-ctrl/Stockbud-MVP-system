@@ -82,7 +82,7 @@ export class ChatService implements OnModuleInit {
         return chat;
     }
 
-    async createChat(userId: string, title: string = 'New Chat', firstMessage?: string) {
+    async createChat(userId: string, title: string = 'New Chat', firstMessage?: string, language?: string) {
         const id = Math.random().toString(36).substr(2, 9);
         const chat: Chat = {
             id,
@@ -96,7 +96,7 @@ export class ChatService implements OnModuleInit {
         this.saveChats();
 
         if (firstMessage) {
-            await this.addMessage(userId, id, firstMessage);
+            await this.addMessage(userId, id, firstMessage, language);
         }
 
         return chat;
@@ -112,7 +112,7 @@ export class ChatService implements OnModuleInit {
         throw new NotFoundException('Chat not found');
     }
 
-    async addMessage(userId: string, chatId: string, content: string) {
+    async addMessage(userId: string, chatId: string, content: string, language?: string) {
         const chat = this.chats.get(chatId);
         if (!chat || chat.userId !== userId) {
             throw new NotFoundException('Chat not found');
@@ -135,14 +135,14 @@ export class ChatService implements OnModuleInit {
         this.saveChats();
 
         // Generate Bot Response
-        const botResponse = await this.generateBotResponse(userId, content, chat.messages);
+        const botResponse = await this.generateBotResponse(userId, content, chat.messages, language);
         chat.messages.push(botResponse);
         this.saveChats();
 
         return chat;
     }
 
-    async quickChat(userId: string, content: string, history: { role: 'user' | 'assistant', content: string }[]) {
+    async quickChat(userId: string, content: string, history: { role: 'user' | 'assistant', content: string }[], language?: string) {
         const fullHistory: Message[] = history.map(h => ({
             role: h.role,
             content: h.content,
@@ -156,11 +156,11 @@ export class ChatService implements OnModuleInit {
         };
         fullHistory.push(userMsg);
 
-        return this.generateBotResponse(userId, content, fullHistory);
+        return this.generateBotResponse(userId, content, fullHistory, language);
     }
 
 
-    private async generateBotResponse(userId: string, userMessage: string, history: Message[]): Promise<Message> {
+    private async generateBotResponse(userId: string, userMessage: string, history: Message[], languageOverride?: string): Promise<Message> {
         let responseContent = "I'm having trouble connecting to my brain right now.";
 
         const user = await this.usersService.findById(userId);
@@ -184,7 +184,7 @@ export class ChatService implements OnModuleInit {
         await this.usersService.updateProfile(userId, { aiTokens: (user.aiTokens ?? 0) - tokenCost });
 
         const name = settings?.name || 'StockBud';
-        const language = settings?.language || 'English';
+        const language = languageOverride || settings?.language || 'English';
         const dataAccess = settings?.dataAccess || 'Limited';
 
         // Fetch Real Stats

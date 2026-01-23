@@ -84,7 +84,13 @@
     },
     "chat": {
         "placeholder": "Posez-moi une question sur votre boutique...",
-        "send": "Envoyer"
+        "send": "Envoyer",
+        "initialMessage1": "Bonjour ! Je suis votre assistant IA. Comment puis-je vous aider aujourd'hui ?",
+        "initialMessage2": "Essayez de me demander des informations sur vos métriques de tableau de bord ou des analyses de données !",
+        "suggestion1": "Comment sont mes revenus ?",
+        "suggestion2": "Parlez-moi des visiteurs",
+        "suggestion3": "Meilleurs pays ?",
+        "suggestion4": "Sources d'achat ?"
     },
     "landing": {
         "newFeature": "Nouveau : Analyses alimentées par l'IA",
