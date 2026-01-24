@@ -81,6 +81,10 @@ export class ShopifyService {
     }
 
     async connectShop(dto: ConnectShopDto, userId?: string) {
+        // Security: Log formatted token prefix to debug connection issues without exposing secrets
+        const tokenPrefix = dto.accessToken ? dto.accessToken.substring(0, 10) + '...' : 'MISSING';
+        console.log(`[Connect] Connecting shop: ${dto.shop}, Token Prefix: ${tokenPrefix}`);
+
         let user;
 
         if (userId) {
@@ -218,13 +222,94 @@ export class ShopifyService {
             });
 
         } catch (error) {
-            console.error('Error fetching orders via GraphQL:', error.response?.data || error.message);
+            console.error('Error fetching orders via GraphQL:', {
+                message: error.message,
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data
+            });
             return [];
         }
     }
 
     async getProducts(shop: string, token: string) {
-        // Simplified product fetch if needed later
-        return [];
+        if (!shop || !token) {
+            console.error('getProducts: Missing credentials', { shop, token: token ? 'PRESENT' : 'MISSING' });
+            throw new HttpException('Missing Shopify credentials', HttpStatus.UNAUTHORIZED);
+        }
+
+        console.log(`[ShopifyService] Fetching products for shop: ${shop}`);
+
+        const query = `
+        {
+          products(first: 50) {
+            edges {
+              node {
+                id
+                title
+                productType
+                status
+                images(first: 1) {
+                  edges {
+                    node {
+                      url
+                    }
+                  }
+                }
+                variants(first: 10) {
+                  edges {
+                    node {
+                      price
+                      inventoryQuantity
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }`;
+
+        try {
+            const url = `https://${shop}/admin/api/2024-01/graphql.json`;
+            const response = await firstValueFrom(
+                this.httpService.post(url, { query }, {
+                    headers: {
+                        'X-Shopify-Access-Token': token,
+                        'Content-Type': 'application/json',
+                    },
+                }),
+            );
+
+            if (response.data.errors) {
+                console.error("GraphQL Errors:", JSON.stringify(response.data.errors));
+                return [];
+            }
+
+            // Transform GraphQL structure
+            return response.data.data.products.edges.map(edge => {
+                const node = edge.node;
+                return {
+                    id: node.id,
+                    title: node.title,
+                    product_type: node.productType,
+                    status: node.status.toLowerCase(),
+                    images: node.images.edges.map(img => ({ src: img.node.url })), // Map url to src for frontend compatibility
+                    variants: node.variants.edges.map(v => ({
+                        price: v.node.price,
+                        inventory_quantity: v.node.inventoryQuantity
+                    }))
+                };
+            });
+
+        } catch (error) {
+            console.error('[ShopifyService] Error fetching products:', {
+                message: error.message,
+                code: error.code,
+                responseStatus: error.response?.status,
+                reponseData: JSON.stringify(error.response?.data)
+            });
+            // Return empty array to prevent crashing reports
+            return [];
+        }
     }
 }

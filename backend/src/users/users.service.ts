@@ -454,4 +454,8 @@ export class UsersService implements OnModuleInit {
         this.saveUsers();
         return store;
     }
+    async getAiTokens(userId: string): Promise<number> {
+        const user = this.users.get(userId);
+        return user?.aiTokens || 0;
+    }
 }

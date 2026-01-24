@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DashboardService } from '../dashboard/dashboard.service';
+import { ShopifyService } from '../shopify/shopify.service';
 import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -28,6 +29,7 @@ export class ReportsService {
     constructor(
         private readonly dashboardService: DashboardService,
         private readonly usersService: UsersService,
+        private readonly shopifyService: ShopifyService,
         private readonly notificationsService: NotificationsService,
         private readonly configService: ConfigService,
     ) {
@@ -159,11 +161,51 @@ export class ReportsService {
                     };
                     break;
                 case 'inventory':
+                    let inventoryStats: any = stats.topProducts;
+                    let inventorySummary = aiContent;
+
+                    try {
+                        const products = await this.shopifyService.getProducts(shop, token);
+                        if (products && products.length > 0) {
+                            const totalStock = products.reduce((sum, p) => sum + (p.variants?.reduce((vSum, v) => vSum + (v.inventory_quantity || 0), 0) || 0), 0);
+                            const lowStockProducts = products.filter(p => p.variants?.some(v => v.inventory_quantity < 10)).map(p => p.title);
+                            const outOfStockProducts = products.filter(p => p.variants?.every(v => v.inventory_quantity === 0)).map(p => p.title);
+
+                            inventoryStats = {
+                                totalProducts: products.length,
+                                totalStockItems: totalStock,
+                                lowStockCount: lowStockProducts.length,
+                                outOfStockCount: outOfStockProducts.length,
+                                topProducts: stats.topProducts // Keep sales-based top products as well
+                            };
+
+                            // Regenerate AI content with REAL inventory data if we have it
+                            if (this.model) {
+                                const inventoryPrompt = `
+                                    You are a professional business analyst. Generate a detailed Inventory Report based on the following REAL inventory data from Shopify:
+                                    - Total Products: ${products.length}
+                                    - Total Stock Items: ${totalStock}
+                                    - Low Stock Products (${lowStockProducts.length}): ${lowStockProducts.join(', ') || 'None'}
+                                    - Out of Stock Products (${outOfStockProducts.length}): ${outOfStockProducts.join(', ') || 'None'}
+                                    
+                                    Also consider this sales context: ${JSON.stringify(stats.topProducts)}
+
+                                    Structure the report with:
+                                    1. **Inventory Overview**: High-level summary.
+                                    2. **Stock Health**: Analysis of stock levels.
+                                    3. **Restock Recommendations**: Specific advice based on low/out of stock items.
+                                `;
+                                const result = await this.model.generateContent(inventoryPrompt);
+                                inventorySummary = result.response.text();
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Failed to fetch real inventory data for report', err);
+                    }
+
                     reportData = {
-                        content: aiContent,
-                        stats: {
-                            topProducts: stats.topProducts
-                        },
+                        content: inventorySummary,
+                        stats: inventoryStats,
                         raw: stats,
                         generatedAt: new Date().toISOString()
                     };

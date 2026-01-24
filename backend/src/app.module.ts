@@ -11,6 +11,8 @@ import { CommonModule } from './common/common.module';
 import { FeedModule } from './feed/feed.module';
 import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PaymentsModule } from './payments/payments.module';
+
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -27,6 +29,7 @@ import { NotificationsModule } from './notifications/notifications.module';
         FeedModule,
         ReportsModule,
         NotificationsModule,
+        PaymentsModule,
     ],
 })
 export class AppModule { }

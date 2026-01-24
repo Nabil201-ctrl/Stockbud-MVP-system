@@ -36,6 +36,70 @@ const SettingsPage = () => {
     const [codeCopied, setCodeCopied] = useState(false);
 
 
+
+    // Payment State
+    const [purchaseAmount, setPurchaseAmount] = useState(100);
+    const [purchaseLoading, setPurchaseLoading] = useState(false);
+
+    // Verify Payment Callback
+    React.useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        const reference = queryParams.get('reference');
+
+        if (reference) {
+            const verifyPayment = async () => {
+                try {
+                    const response = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        alert(`Success! ${data.message}. New Balance: ${data.newBalance}`);
+                        await refreshUser();
+                        // Clean URL
+                        window.history.replaceState({}, document.title, location.pathname);
+                    } else {
+                        alert('Payment verification failed.');
+                    }
+                } catch (error) {
+                    console.error('Verification error:', error);
+                    alert('Error verifying payment.');
+                }
+            };
+            verifyPayment();
+        }
+    }, [location.search, authenticatedFetch, refreshUser]);
+
+    const handlePurchase = async () => {
+        setPurchaseLoading(true);
+        try {
+            const price = (purchaseAmount / 100) * 1.50;
+            const response = await authenticatedFetch('http://localhost:3000/payments/initialize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: price,
+                    tokenCount: purchaseAmount,
+                    callbackUrl: window.location.href // Redirect back to settings page
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.authorization_url) {
+                    window.location.href = data.authorization_url; // Redirect to Paystack
+                } else {
+                    alert('Failed to initialize payment');
+                }
+            } else {
+                alert('Failed to contact payment server');
+            }
+        } catch (error) {
+            console.error('Purchase error:', error);
+            alert('Something went wrong');
+        }
+        setPurchaseLoading(false);
+    };
+
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
         setProfileLoading(true);
@@ -369,6 +433,64 @@ const SettingsPage = () => {
             {activeTab === 'usage' && (
                 <div className={`p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <h2 className="text-xl font-bold mb-6 dark:text-white">Usage & Limits</h2>
+
+                    {/* Token Purchase Section */}
+                    <div className={`mb-8 p-6 rounded-xl border ${isDarkMode ? 'bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-blue-800' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100'}`}>
+                        <div className="flex items-start justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                                    <Zap size={20} className="fill-current" />
+                                    Get More AI Tokens
+                                </h3>
+                                <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Running low? Purchase additional tokens to keep the conversation going.
+                                </p>
+                            </div>
+                            <div className="bg-white dark:bg-gray-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
+                                $1.50 / 100 Tokens
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <div className="flex justify-between text-sm font-medium mb-2">
+                                    <span className={isDarkMode ? 'text-white' : 'text-gray-700'}>Select Amount</span>
+                                    <span className="text-blue-600 dark:text-blue-400 font-bold">{purchaseAmount} Tokens</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="100"
+                                    max="500"
+                                    step="100"
+                                    value={purchaseAmount}
+                                    onChange={(e) => setPurchaseAmount(Number(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
+                                />
+                                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>100</span>
+                                    <span>500</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <div>
+                                    <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Price</span>
+                                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                                        ${((purchaseAmount / 100) * 1.50).toFixed(2)}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handlePurchase}
+                                    disabled={purchaseLoading}
+                                    className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-lg shadow-blue-500/30 transition-all transform active:scale-95 disabled:opacity-70 disabled:active:scale-100 flex items-center gap-2"
+                                >
+                                    {purchaseLoading ? <Loader2 size={18} className="animate-spin" /> : <ShoppingBag size={18} />}
+                                    Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* AI Tokens */}
                         <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
@@ -377,12 +499,12 @@ const SettingsPage = () => {
                                     <Zap size={18} className="text-yellow-500" />
                                     AI Tokens
                                 </div>
-                                <span className="text-sm font-bold dark:text-white">{user?.aiTokens || 0} / 500</span>
+                                <span className="text-sm font-bold dark:text-white">{user?.aiTokens || 0}</span>
                             </div>
                             <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
                                 <div
                                     className="bg-yellow-500 h-2.5 rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, ((user?.aiTokens || 0) / 500) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, ((user?.aiTokens || 0) / 1000) * 100)}%` }}
                                 ></div>
                             </div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">

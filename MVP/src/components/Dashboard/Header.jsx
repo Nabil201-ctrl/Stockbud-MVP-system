@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Search, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon, Zap, Globe, Check, Info, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Menu, Search, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon, Zap, Globe, Check, Info, AlertTriangle, CheckCircle, ShoppingBag } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -154,14 +154,14 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
                           key={store.id}
                           onClick={() => handleShopSwitch(store.id)}
                           className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${user.activeShopId === store.id
-                              ? (isDarkMode ? 'bg-green-900/10 text-green-400' : 'bg-green-50 text-green-700')
-                              : (isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-slate-50 text-slate-700')
+                            ? (isDarkMode ? 'bg-green-900/10 text-green-400' : 'bg-green-50 text-green-700')
+                            : (isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-slate-50 text-slate-700')
                             }`}
                         >
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${user.activeShopId === store.id
-                                ? 'bg-green-500 text-white'
-                                : (isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-slate-200 text-slate-500')
+                              ? 'bg-green-500 text-white'
+                              : (isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-slate-200 text-slate-500')
                               }`}>
                               {(store.name || store.shop).substring(0, 2).toUpperCase()}
                             </div>

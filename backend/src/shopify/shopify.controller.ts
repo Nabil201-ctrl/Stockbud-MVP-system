@@ -56,6 +56,11 @@ export class ShopifyController {
      */
     @Post('connect-with-code')
     async connectWithCode(@Body() dto: { code: string; shop: string; accessToken: string }) {
+        // Validate Token Format (Offline Access Token)
+        if (!dto.accessToken || !dto.accessToken.startsWith('shpat_')) {
+            throw new HttpException('Invalid Shopify Access Token. Must be an Offline Access Token starting with "shpat_".', HttpStatus.BAD_REQUEST);
+        }
+
         const result = await this.shopifyService.connectWithCode(dto.code, dto.shop, dto.accessToken);
         if (!result.success) {
             const errorMessage = 'error' in result ? result.error : 'Connection failed';
