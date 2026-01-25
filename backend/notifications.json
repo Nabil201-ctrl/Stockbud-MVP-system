@@ -5,7 +5,16 @@
     "title": "Report Ready",
     "message": "Your inventory report \"Inventory Status Report\" has been successfully generated.",
     "type": "success",
-    "read": false,
+    "read": true,
     "createdAt": "2026-01-24T07:06:13.378Z"
+  },
+  {
+    "id": "3h3uzfqm4",
+    "userId": "113831482632022329688",
+    "title": "Report Ready",
+    "message": "Your inventory report \"Inventory Status Report\" has been successfully generated.",
+    "type": "success",
+    "read": true,
+    "createdAt": "2026-01-24T07:21:26.850Z"
   }
 ]

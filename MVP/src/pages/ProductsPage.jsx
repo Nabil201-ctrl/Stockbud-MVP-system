@@ -74,8 +74,7 @@ const ProductsPage = () => {
           stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || 0,
           status: p.status === 'active' ? 'active' : 'archived',
           image: p.image?.src || p.images?.[0]?.src || '📦',
-          revenue: 0,
-          rating: 5.0
+          image: p.image?.src || p.images?.[0]?.src || '📦',
         })).sort((a, b) => b.stock - a.stock);
 
         // 3. Update state and cache
@@ -94,8 +93,8 @@ const ProductsPage = () => {
           active,
           outOfStock,
           lowStock,
-          totalRevenue: revenue,
-          avgRating: 5.0
+          outOfStock,
+          lowStock
         });
 
       } catch (err) {
@@ -268,8 +267,7 @@ const ProductsPage = () => {
                     <th className="text-left py-3 px-4 font-medium">Category</th>
                     <th className="text-left py-3 px-4 font-medium">Price</th>
                     <th className="text-left py-3 px-4 font-medium">Stock</th>
-                    <th className="text-left py-3 px-4 font-medium">Revenue</th>
-                    <th className="text-left py-3 px-4 font-medium">Rating</th>
+
                     <th className="text-left py-3 px-4 font-medium"></th>
                   </tr>
                 </thead>
@@ -315,18 +313,6 @@ const ProductsPage = () => {
                             ></div>
                           </div>
                           <span>{product.stock}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                          <DollarSign size={14} />
-                          <span>${product.revenue.toLocaleString()}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <Star size={14} className="text-yellow-500" />
-                          <span>{product.rating}</span>
                         </div>
                       </td>
                       <td className="py-4 px-4">

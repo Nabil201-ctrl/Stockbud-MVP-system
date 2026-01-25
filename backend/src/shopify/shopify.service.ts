@@ -151,7 +151,7 @@ export class ShopifyService {
 
         const query = `
         {
-          orders(first: 50, reverse: true) {
+          orders(first: 20, reverse: true) {
             edges {
               node {
                 id
@@ -174,6 +174,11 @@ export class ShopifyService {
                     }
                   }
                 }
+                customer {
+                  firstName
+                  lastName
+                  email
+                }
               }
             }
           }
@@ -187,6 +192,7 @@ export class ShopifyService {
                         'X-Shopify-Access-Token': token,
                         'Content-Type': 'application/json',
                     },
+                    timeout: 60000, // 60 seconds timeout
                 }),
             );
 
@@ -213,11 +219,12 @@ export class ShopifyService {
                         title: li.node.title,
                         quantity: li.node.quantity
                     })),
-                    // Mock customer to avoid errors in dashboard service
-                    customer: {
-                        first_name: "Guest",
-                        last_name: "User"
-                    }
+                    // Map customer data if available, otherwise null
+                    customer: node.customer ? {
+                        first_name: node.customer.firstName || "Unknown",
+                        last_name: node.customer.lastName || "",
+                        email: node.customer.email
+                    } : null
                 };
             });
 
@@ -242,7 +249,7 @@ export class ShopifyService {
 
         const query = `
         {
-          products(first: 50) {
+          products(first: 20) {
             edges {
               node {
                 id
@@ -277,6 +284,7 @@ export class ShopifyService {
                         'X-Shopify-Access-Token': token,
                         'Content-Type': 'application/json',
                     },
+                    timeout: 60000, // 60 seconds timeout
                 }),
             );
 
@@ -306,7 +314,7 @@ export class ShopifyService {
                 message: error.message,
                 code: error.code,
                 responseStatus: error.response?.status,
-                reponseData: JSON.stringify(error.response?.data)
+                responseData: JSON.stringify(error.response?.data)
             });
             // Return empty array to prevent crashing reports
             return [];
