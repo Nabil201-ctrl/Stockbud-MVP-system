@@ -16,7 +16,7 @@ const CountryBarChart = lazy(() => import('../components/charts/CountryBarChart'
 const VisitorAreaChart = lazy(() => import('../components/charts/VisitorAreaChart'));
 
 const Dashboard = () => {
-  const [selectedDate, setSelectedDate] = useState(17);
+  //const [selectedDate, setSelectedDate] = useState(17);
   const [isCalendarOpen, setIsCalendarOpen] = useState(true);
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -37,7 +37,7 @@ const Dashboard = () => {
                 <div>
                   <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Revenue</div>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">$ 40,256,92.00</span>
+                    <span className="text-2xl font-bold">$ 40,256,920.00</span>
                     <span className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs px-2 py-1 rounded">+2.94%</span>
                   </div>
                 </div>

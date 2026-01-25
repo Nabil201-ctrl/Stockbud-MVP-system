@@ -1,9 +1,9 @@
 // components/Dashboard/Sidebar.jsx
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, Sliders, Clock, Users, TrendingUp, Package, 
-  RefreshCw, Settings, Bookmark, Calendar 
+import {
+  LayoutDashboard, Sliders, Clock, Users, TrendingUp, Package,
+  RefreshCw, Settings, Bookmark, Calendar
 } from 'lucide-react';
 
 const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode }) => {
@@ -28,7 +28,7 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode }) 
           <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
             <span className="text-white font-bold text-sm">a</span>
           </div>
-          <span className="font-bold text-xl">atlass.</span>
+          <span className="font-bold text-xl">stockbud.</span>
         </div>
       </div>
 
@@ -38,15 +38,14 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode }) 
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) => 
-                `flex items-center gap-3 px-3 py-2 rounded-lg mb-2 transition-colors ${
-                  isActive
-                    ? isDarkMode 
-                      ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30' 
-                      : 'bg-blue-50 text-blue-600 border border-blue-200'
-                    : isDarkMode 
-                      ? 'text-gray-300 hover:bg-gray-700' 
-                      : 'text-gray-600 hover:bg-gray-50'
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg mb-2 transition-colors ${isActive
+                  ? isDarkMode
+                    ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30'
+                    : 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : isDarkMode
+                    ? 'text-gray-300 hover:bg-gray-700'
+                    : 'text-gray-600 hover:bg-gray-50'
                 }`
               }
             >
@@ -62,15 +61,14 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode }) 
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) => 
-                `flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors ${
-                  isActive
-                    ? isDarkMode 
-                      ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30' 
-                      : 'bg-blue-50 text-blue-600 border border-blue-200'
-                    : isDarkMode 
-                      ? 'text-gray-300 hover:bg-gray-700' 
-                      : 'text-gray-600 hover:bg-gray-50'
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors ${isActive
+                  ? isDarkMode
+                    ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30'
+                    : 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : isDarkMode
+                    ? 'text-gray-300 hover:bg-gray-700'
+                    : 'text-gray-600 hover:bg-gray-50'
                 }`
               }
             >
@@ -86,15 +84,14 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode }) 
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) => 
-                `flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors ${
-                  isActive
-                    ? isDarkMode 
-                      ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30' 
-                      : 'bg-blue-50 text-blue-600 border border-blue-200'
-                    : isDarkMode 
-                      ? 'text-gray-300 hover:bg-gray-700' 
-                      : 'text-gray-600 hover:bg-gray-50'
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors ${isActive
+                  ? isDarkMode
+                    ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30'
+                    : 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : isDarkMode
+                    ? 'text-gray-300 hover:bg-gray-700'
+                    : 'text-gray-600 hover:bg-gray-50'
                 }`
               }
             >
