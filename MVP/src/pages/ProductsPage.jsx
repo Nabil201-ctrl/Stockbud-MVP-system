@@ -5,10 +5,12 @@ import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, 
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const ProductsPage = () => {
   const { isDarkMode } = useTheme();
   const { authenticatedFetch } = useAuth(); // Import authenticatedFetch
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
 
@@ -126,7 +128,7 @@ const ProductsPage = () => {
     });
 
     return Object.entries(cats).map(([name, count]) => ({
-      name: name === 'all' ? 'All Products' : name.charAt(0).toUpperCase() + name.slice(1),
+      name: name === 'all' ? t('products.allProducts') : name.charAt(0).toUpperCase() + name.slice(1),
       id: name,
       count
     })).sort((a, b) => {
@@ -134,7 +136,7 @@ const ProductsPage = () => {
       if (b.id === 'all') return 1;
       return b.count - a.count;
     });
-  }, [products]);
+  }, [products, t]);
 
   // Max Stock for bar scaling
   const maxStock = useMemo(() => {
@@ -211,24 +213,24 @@ const ProductsPage = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Product Management</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('products.title')}</h1>
             <p className="text-gray-500 dark:text-gray-400">
-              Manage your product catalog and inventory
+              {t('products.subtitle')}
             </p>
           </div>
           <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2">
             <Package size={20} />
-            Add New Product
+            {t('products.addNew')}
           </button>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
-            { icon: <Package size={24} />, label: 'Total Products', value: productStats.total, change: '+12%', color: 'bg-blue-500' },
-            { icon: <DollarSign size={24} />, label: 'Total Revenue', value: `$${productStats.totalRevenue.toLocaleString()}`, change: '+8.5%', color: 'bg-green-500' },
-            { icon: <ShoppingCart size={24} />, label: 'Active Products', value: productStats.active, change: '+3.2%', color: 'bg-purple-500' },
-            { icon: <Star size={24} />, label: 'Avg Rating', value: productStats.avgRating, change: '+0.2', color: 'bg-orange-500' }
+            { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total, change: '+12%', color: 'bg-blue-500' },
+            { icon: <DollarSign size={24} />, label: t('products.revenue'), value: `$${productStats.totalRevenue.toLocaleString()}`, change: '+8.5%', color: 'bg-green-500' },
+            { icon: <ShoppingCart size={24} />, label: t('products.activeProducts'), value: productStats.active, change: '+3.2%', color: 'bg-purple-500' },
+            { icon: <Star size={24} />, label: t('products.avgRating'), value: productStats.avgRating, change: '+0.2', color: 'bg-orange-500' }
           ].map((stat, idx) => (
             <div key={idx} className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center justify-between mb-4">
@@ -249,13 +251,13 @@ const ProductsPage = () => {
           {/* Left Column - Product List */}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-              <h2 className="text-xl font-bold">Product Catalog</h2>
+              <h2 className="text-xl font-bold">{t('products.catalog')}</h2>
               <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
                 <div className={`flex items-center gap-2 px-4 py-2 rounded-lg w-full sm:w-auto ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                   <Search size={18} className="text-gray-400 flex-shrink-0" />
                   <input
                     type="text"
-                    placeholder="Search products..."
+                    placeholder={t('products.search')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className={`bg-transparent outline-none text-sm w-full sm:w-48 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
@@ -263,7 +265,7 @@ const ProductsPage = () => {
                 </div>
                 <button className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg w-full sm:w-auto ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
                   <Filter size={18} />
-                  <span>Filter</span>
+                  <span>{t('products.filter')}</span>
                 </button>
               </div>
             </div>
@@ -272,10 +274,10 @@ const ProductsPage = () => {
               <table className="w-full">
                 <thead>
                   <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <th className="text-left py-3 px-4 font-medium">Product</th>
-                    <th className="text-left py-3 px-4 font-medium">Category</th>
-                    <th className="text-left py-3 px-4 font-medium">Price</th>
-                    <th className="text-left py-3 px-4 font-medium">Stock</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('products.product')}</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('products.category')}</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('products.price')}</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('products.stock')}</th>
 
                     <th className="text-left py-3 px-4 font-medium"></th>
                   </tr>
@@ -298,7 +300,7 @@ const ProductsPage = () => {
                               product.status === 'low' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                                 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                               }`}>
-                              {product.status === 'active' ? 'In Stock' : product.status === 'low' ? 'Low Stock' : 'Out of Stock'}
+                              {product.status === 'active' ? t('products.inStock') : product.status === 'low' ? t('products.lowStock') : t('products.outOfStock')}
                             </div>
                           </div>
                         </div>
@@ -340,7 +342,7 @@ const ProductsPage = () => {
           <div className="space-y-6">
             {/* Categories */}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-4">Categories</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('products.categories')}</h3>
               <div className="space-y-3">
                 {categories.map((cat) => (
                   <button
@@ -363,12 +365,12 @@ const ProductsPage = () => {
 
             {/* Stock Status */}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-4">Stock Status</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('products.stockStatus')}</h3>
               <div className="space-y-4">
                 {[
-                  { status: 'In Stock', count: productStats.active, color: 'bg-green-500' },
-                  { status: 'Low Stock', count: productStats.lowStock, color: 'bg-yellow-500' },
-                  { status: 'Out of Stock', count: productStats.outOfStock, color: 'bg-red-500' }
+                  { status: t('products.inStock'), count: productStats.active, color: 'bg-green-500' },
+                  { status: t('products.lowStock'), count: productStats.lowStock, color: 'bg-yellow-500' },
+                  { status: t('products.outOfStock'), count: productStats.outOfStock, color: 'bg-red-500' }
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -391,7 +393,7 @@ const ProductsPage = () => {
 
             {/* Top Performing */}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-4">Top Performing</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('products.topPerforming')}</h3>
               <div className="space-y-4">
                 {products.slice(0, 3).map((product, idx) => (
                   <div key={product.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">

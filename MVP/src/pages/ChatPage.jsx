@@ -11,7 +11,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 const ChatPage = () => {
     const { isDarkMode } = useTheme();
     const { authenticatedFetch, user, refreshUser } = useAuth();
-    const { language } = useLanguage();
+    const { language, t } = useLanguage();
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -193,13 +193,13 @@ const ChatPage = () => {
             `}
                     >
                         <Plus size={16} />
-                        <span>New chat</span>
+                        <span>{t('chat.newChat')}</span>
                     </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-2 pb-2 scrollbar-thin scrollbar-thumb-gray-600">
                     <div className="flex flex-col gap-2">
-                        <div className="text-xs font-semibold text-gray-500 px-3 py-2">Recent</div>
+                        <div className="text-xs font-semibold text-gray-500 px-3 py-2">{t('chat.recent')}</div>
                         {chats.map(chat => (
                             <div
                                 key={chat.id}
@@ -278,8 +278,8 @@ const ChatPage = () => {
                                 <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
                                     <Bot size={32} className="text-white" />
                                 </div>
-                                <h2 className="text-2xl font-bold mb-2">How can I help you today?</h2>
-                                <p className="text-sm">Ask about your sales, users, or products.</p>
+                                <h2 className="text-2xl font-bold mb-2">{t('chat.welcomeTitle')}</h2>
+                                <p className="text-sm">{t('chat.welcomeSubtitle')}</p>
                             </div>
                         ) : (
                             currentChat?.messages.map((msg, idx) => (
@@ -339,7 +339,7 @@ const ChatPage = () => {
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Message StockBud..."
+                                placeholder={t('chat.placeholder')}
                                 className={`
                   w-full px-4 py-4 pr-12 rounded-xl shadow-lg focus:outline-none border
                   ${isDarkMode
@@ -362,7 +362,7 @@ const ChatPage = () => {
                         </form>
                         <div className="text-center mt-2">
                             <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                                StockBud AI can make mistakes. Consider checking important information.
+                                {t('chat.disclaimer')}
                             </span>
                         </div>
                     </div>

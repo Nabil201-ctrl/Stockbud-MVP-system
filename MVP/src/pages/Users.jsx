@@ -2,9 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, UserCheck, UserX, TrendingUp, Calendar, Filter, Search, MoreVertical, Mail, Phone, Globe, Award } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const UsersPage = () => {
   const { isDarkMode } = useTheme();
+  const { t } = useLanguage();
   const [timeframe, setTimeframe] = useState('30d');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -56,24 +58,24 @@ const UsersPage = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">User Management</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('users.title')}</h1>
             <p className="text-gray-500 dark:text-gray-400">
-              Manage and analyze your user base
+              {t('users.subtitle')}
             </p>
           </div>
           <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2">
             <UserPlus size={20} />
-            Add New User
+            {t('users.addNew')}
           </button>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
-            { icon: <Users size={24} />, label: 'Total Users', value: userStats.total.toLocaleString(), change: `+${userStats.growth}%`, color: 'bg-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
-            { icon: <UserCheck size={24} />, label: 'Active Users', value: userStats.active.toLocaleString(), change: '+8.2%', color: 'bg-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
-            { icon: <UserPlus size={24} />, label: 'New Users', value: userStats.new.toLocaleString(), change: '+15.3%', color: 'bg-purple-500', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
-            { icon: <UserX size={24} />, label: 'Inactive Users', value: userStats.inactive.toLocaleString(), change: '-2.1%', color: 'bg-red-500', bgColor: 'bg-red-100 dark:bg-red-900/30' }
+            { icon: <Users size={24} />, label: t('users.totalUsers'), value: userStats.total.toLocaleString(), change: `+${userStats.growth}%`, color: 'bg-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
+            { icon: <UserCheck size={24} />, label: t('users.activeUsers'), value: userStats.active.toLocaleString(), change: '+8.2%', color: 'bg-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+            { icon: <UserPlus size={24} />, label: t('users.newUsers'), value: userStats.new.toLocaleString(), change: '+15.3%', color: 'bg-purple-500', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
+            { icon: <UserX size={24} />, label: t('users.inactiveUsers'), value: userStats.inactive.toLocaleString(), change: '-2.1%', color: 'bg-red-500', bgColor: 'bg-red-100 dark:bg-red-900/30' }
           ].map((stat, idx) => (
             <div key={idx} className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center justify-between mb-4">
@@ -96,13 +98,13 @@ const UsersPage = () => {
           {/* Left Column - User Table */}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-              <h2 className="text-xl font-bold">User List</h2>
+              <h2 className="text-xl font-bold">{t('users.listTitle')}</h2>
               <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
                 <div className={`flex items-center gap-2 px-4 py-2 rounded-lg w-full sm:w-auto ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                   <Search size={18} className="text-gray-400 flex-shrink-0" />
                   <input
                     type="text"
-                    placeholder="Search users..."
+                    placeholder={t('users.search')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className={`bg-transparent outline-none text-sm w-full sm:w-48 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
@@ -110,7 +112,7 @@ const UsersPage = () => {
                 </div>
                 <button className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg w-full sm:w-auto ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
                   <Filter size={18} />
-                  <span>Filter</span>
+                  <span>{t('users.filter')}</span>
                 </button>
               </div>
             </div>
@@ -119,11 +121,11 @@ const UsersPage = () => {
               <table className="w-full">
                 <thead>
                   <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <th className="text-left py-3 px-4 font-medium">User</th>
-                    <th className="text-left py-3 px-4 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 font-medium">Plan</th>
-                    <th className="text-left py-3 px-4 font-medium">Location</th>
-                    <th className="text-left py-3 px-4 font-medium">Last Active</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('users.user')}</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('users.status')}</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('users.plan')}</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('users.location')}</th>
+                    <th className="text-left py-3 px-4 font-medium">{t('users.lastActive')}</th>
                     <th className="text-left py-3 px-4 font-medium"></th>
                   </tr>
                 </thead>
@@ -210,7 +212,7 @@ const UsersPage = () => {
           <div className="space-y-6">
             {/* Plan Distribution */}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-4">Plan Distribution</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('users.planDistribution')}</h3>
               <div className="space-y-4">
                 {planDistribution.map((plan) => (
                   <div key={plan.plan} className="space-y-2">
@@ -232,7 +234,7 @@ const UsersPage = () => {
             {/* User Growth Chart */}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                <h3 className="text-lg font-semibold">User Growth</h3>
+                <h3 className="text-lg font-semibold">{t('users.userGrowth')}</h3>
                 <div className="flex gap-2 w-full sm:w-auto">
                   {['7d', '30d', '90d'].map((period) => (
                     <button
@@ -263,7 +265,7 @@ const UsersPage = () => {
 
             {/* Quick Actions */}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('users.quickActions')}</h3>
               <div className="space-y-3">
                 {[
                   { icon: <Mail size={18} />, label: 'Send Email Campaign', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
@@ -284,7 +286,7 @@ const UsersPage = () => {
 
             {/* User Segments */}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-4">User Segments</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('users.userSegments')}</h3>
               <div className="space-y-3">
                 {[
                   { label: 'Power Users', count: 2450, color: 'bg-green-500' },

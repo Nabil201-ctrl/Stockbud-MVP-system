@@ -3,17 +3,17 @@ import React, { useState, useEffect } from 'react';
 import { Bot, MessageSquare, Settings, Palette, Zap, Shield, Globe, Brain } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { TrendingUp } from 'lucide-react';
 
 const BotCustomization = () => {
   const { isDarkMode } = useTheme();
   const { user, updateProfile } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
 
   const [botSettings, setBotSettings] = useState({
-    name: 'Analytics Assistant',
-    personality: 'Professional',
     responseSpeed: 'Medium',
     theme: 'Blue',
     language: 'English',
@@ -73,26 +73,27 @@ const BotCustomization = () => {
           // But actually, updateProfile refetch logic in AuthContext might be useful.
           // Let's manually trigger a profile refresh if possible.
           // Since we don't have direct access to refreshUser from here (unless we destructure it), let's assume valid.
-          setSaveStatus('Settings saved successfully!');
+          // Since we don't have direct access to refreshUser from here (unless we destructure it), let's assume valid.
+          setSaveStatus(t('bot.success'));
           setTimeout(() => setSaveStatus(''), 3000);
           // Trigger a user refresh if the function is available in AuthContext (it is: refreshUser)
         } else {
-          setSaveStatus('Failed to save settings.');
+          setSaveStatus(t('bot.error'));
         }
       } else {
         // Fallback for legacy (shouldn't happen with new logic)
         const result = await updateProfile({ botSettings });
         if (result.success) {
-          setSaveStatus('Settings saved successfully!');
+          setSaveStatus(t('bot.success'));
           setTimeout(() => setSaveStatus(''), 3000);
         } else {
-          setSaveStatus('Failed to save settings.');
+          setSaveStatus(t('bot.error'));
         }
       }
 
     } catch (error) {
       console.error(error);
-      setSaveStatus('Error saving settings.');
+      setSaveStatus(t('bot.error'));
     } finally {
       setLoading(false);
     }
@@ -117,9 +118,9 @@ const BotCustomization = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Bot Customization</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('bot.title')}</h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Configure your AI assistant's behavior, appearance, and capabilities
+            {t('bot.subtitle')}
           </p>
         </div>
 
@@ -144,24 +145,24 @@ const BotCustomization = () => {
                 </div>
               </div>
               <div className="flex items-center justify-between w-full sm:w-auto sm:block text-right">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Status</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t('bot.status')}</div>
                 <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="font-medium">Active</span>
+                  <span className="font-medium">{t('bot.active')}</span>
                 </div>
               </div>
             </div>
 
             {/* Preview Chat */}
             <div className={`rounded-lg p-4 mb-6 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <div className="text-sm font-medium mb-2">Preview Chat</div>
+              <div className="text-sm font-medium mb-2">{t('bot.previewChat')}</div>
               <div className="space-y-3">
                 <div className="flex items-start gap-2">
                   <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                    <span className="text-white text-xs">You</span>
+                    <span className="text-white text-xs">{t('bot.you')}</span>
                   </div>
                   <div className={`rounded-lg p-3 max-w-[70%] ${isDarkMode ? 'bg-gray-600' : 'bg-white'}`}>
-                    <p className="text-sm">What's my revenue today?</p>
+                    <p className="text-sm">{t('bot.sampleQuestion')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
@@ -186,15 +187,15 @@ const BotCustomization = () => {
 
             {/* Bot Capabilities */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Capabilities</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('bot.capabilities')}</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {[
-                  { icon: <Brain size={20} />, label: 'Data Analysis', enabled: true },
-                  { icon: <TrendingUp size={20} />, label: 'Trend Prediction', enabled: true },
-                  { icon: <Globe size={20} />, label: 'Multi-language', enabled: botSettings.language !== 'English' },
-                  { icon: <Shield size={20} />, label: 'Security', enabled: true },
-                  { icon: <MessageSquare size={20} />, label: 'Context Memory', enabled: true },
-                  { icon: <Zap size={20} />, label: 'Quick Responses', enabled: botSettings.responseSpeed === 'Fast' }
+                  { icon: <Brain size={20} />, label: t('bot.dataAnalysis'), enabled: true },
+                  { icon: <TrendingUp size={20} />, label: t('bot.trendPrediction'), enabled: true },
+                  { icon: <Globe size={20} />, label: t('bot.multiLanguage'), enabled: botSettings.language !== 'English' },
+                  { icon: <Shield size={20} />, label: t('bot.security'), enabled: true },
+                  { icon: <MessageSquare size={20} />, label: t('bot.contextMemory'), enabled: true },
+                  { icon: <Zap size={20} />, label: t('bot.quickResponses'), enabled: botSettings.responseSpeed === 'Fast' }
                 ].map((cap, idx) => (
                   <div key={idx} className={`flex items-center gap-3 p-3 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                     <div className={`p-2 rounded-lg ${cap.enabled ? (isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100') : (isDarkMode ? 'bg-gray-600' : 'bg-gray-200')}`}>
@@ -216,12 +217,12 @@ const BotCustomization = () => {
 
           {/* Right Column - Settings */}
           <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-            <h2 className="text-xl font-bold mb-6">Configuration Settings</h2>
+            <h2 className="text-xl font-bold mb-6">{t('bot.configSettings')}</h2>
 
             <div className="space-y-6">
               {/* Bot Name */}
               <div>
-                <label className="block text-sm font-medium mb-2">Bot Name</label>
+                <label className="block text-sm font-medium mb-2">{t('bot.botName')}</label>
                 <input
                   type="text"
                   value={botSettings.name}
@@ -232,7 +233,7 @@ const BotCustomization = () => {
 
               {/* Personality */}
               <div>
-                <label className="block text-sm font-medium mb-2">Personality Type</label>
+                <label className="block text-sm font-medium mb-2">{t('bot.personalityType')}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {personalityOptions.map((option) => (
                     <button
@@ -255,7 +256,7 @@ const BotCustomization = () => {
 
               {/* Response Speed */}
               <div>
-                <label className="block text-sm font-medium mb-2">Response Speed</label>
+                <label className="block text-sm font-medium mb-2">{t('bot.responseSpeed')}</label>
                 <div className="flex gap-2">
                   {['Slow', 'Medium', 'Fast'].map((speed) => (
                     <button
@@ -274,7 +275,7 @@ const BotCustomization = () => {
 
               {/* Theme Color */}
               <div>
-                <label className="block text-sm font-medium mb-2">Theme Color</label>
+                <label className="block text-sm font-medium mb-2">{t('bot.themeColor')}</label>
                 <div className="flex gap-3">
                   {themeOptions.map((theme) => (
                     <button
@@ -293,7 +294,7 @@ const BotCustomization = () => {
 
               {/* Language */}
               <div>
-                <label className="block text-sm font-medium mb-2">Language</label>
+                <label className="block text-sm font-medium mb-2">{t('bot.language')}</label>
                 <select
                   value={botSettings.language}
                   onChange={(e) => handleSettingChange('language', e.target.value)}
@@ -310,9 +311,9 @@ const BotCustomization = () => {
               {/* Toggles */}
               <div className="space-y-4">
                 {[
-                  { label: 'Enable Notifications', setting: 'notifications', icon: <MessageSquare size={16} /> },
-                  { label: 'Voice Responses', setting: 'voiceEnabled', icon: <Settings size={16} /> },
-                  { label: 'Auto-respond to Queries', setting: 'autoRespond', icon: <Zap size={16} /> }
+                  { label: 'bot.enableNotifications', setting: 'notifications', icon: <MessageSquare size={16} /> },
+                  { label: 'bot.voiceResponses', setting: 'voiceEnabled', icon: <Settings size={16} /> },
+                  { label: 'bot.autoRespond', setting: 'autoRespond', icon: <Zap size={16} /> }
                 ].map((toggle) => (
                   <div key={toggle.setting} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -320,7 +321,7 @@ const BotCustomization = () => {
                         {toggle.icon}
                       </div>
                       <div>
-                        <div className="font-medium">{toggle.label}</div>
+                        <div className="font-medium">{t(toggle.label)}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {toggle.setting === 'notifications' ? 'Receive alerts from bot' :
                             toggle.setting === 'voiceEnabled' ? 'Enable voice output' :
@@ -343,7 +344,7 @@ const BotCustomization = () => {
 
               {/* Data Access */}
               <div>
-                <label className="block text-sm font-medium mb-2">Data Access Level</label>
+                <label className="block text-sm font-medium mb-2">{t('bot.dataAccess')}</label>
                 <select
                   value={botSettings.dataAccess}
                   onChange={(e) => handleSettingChange('dataAccess', e.target.value)}
@@ -367,7 +368,7 @@ const BotCustomization = () => {
                 disabled={loading}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Save Changes'}
+                {loading ? t('bot.saving') : t('bot.saveChanges')}
               </button>
             </div>
           </div>

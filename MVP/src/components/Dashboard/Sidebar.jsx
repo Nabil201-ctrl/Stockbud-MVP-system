@@ -8,19 +8,40 @@ import {
 import FeedbackModal from './FeedbackModal';
 
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, isOpen, onClose }) => {
   const { logout } = useAuth();
+  const { t } = useLanguage();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [showFeedbackWidget, setShowFeedbackWidget] = useState(false);
   const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
 
+  // Check feedback visibility on mount
+  React.useEffect(() => {
+    const lastSubmitted = localStorage.getItem('feedback_last_submitted');
+    if (!lastSubmitted) {
+      setShowFeedbackWidget(true);
+    } else {
+      const daysSince = (Date.now() - parseInt(lastSubmitted)) / (1000 * 60 * 60 * 24);
+      if (daysSince >= 7) {
+        setShowFeedbackWidget(true);
+      }
+    }
+  }, []);
+
+  const handleFeedbackSubmit = () => {
+    localStorage.setItem('feedback_last_submitted', Date.now().toString());
+    setShowFeedbackWidget(false);
+  };
+
   const navItems = [
-    { to: '/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-    { to: '/chat', icon: <MessageSquare size={18} />, label: 'Bot Chat' },
-    { to: '/bot-customization', icon: <Sliders size={18} />, label: 'Bot Customization' },
-    { to: '/products', icon: <Package size={18} />, label: 'Products' },
-    { to: '/settings', icon: <Settings size={18} />, label: 'Settings' },
-    { to: '/reports', icon: <FileText size={18} />, label: 'Reports' },
+    { to: '/dashboard', icon: <LayoutDashboard size={18} />, label: t('nav.dashboard') },
+    { to: '/chat', icon: <MessageSquare size={18} />, label: t('nav.botChat') },
+    { to: '/bot-customization', icon: <Sliders size={18} />, label: t('nav.botCustomization') },
+    { to: '/products', icon: <Package size={18} />, label: t('nav.products') },
+    { to: '/settings', icon: <Settings size={18} />, label: t('nav.settings') },
+    { to: '/reports', icon: <FileText size={18} />, label: t('nav.reports') },
   ];
 
   return (
@@ -69,12 +90,12 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
                 }`}
             >
               <LogOut size={18} />
-              <span className="font-medium">Logout</span>
+              <span className="font-medium">{t('nav.logout')}</span>
             </button>
           </div>
 
-          {/* Calendar Widget */}
-          {isCalendarOpen && (
+          {/* Feedback Widget */}
+          {showFeedbackWidget && (
             <div className="bg-blue-600 rounded-lg p-3 text-white">
               <h4 className="text-xs font-medium mb-2 opacity-90">Help us improve</h4>
               <button
@@ -89,8 +110,8 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
       </div>
 
       <FeedbackModal
-        isOpen={isFeedbackOpen}
         onClose={() => setIsFeedbackOpen(false)}
+        onSubmit={handleFeedbackSubmit}
         isDarkMode={isDarkMode}
       />
     </>

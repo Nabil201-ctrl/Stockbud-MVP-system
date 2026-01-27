@@ -5,10 +5,10 @@
     "name": "Nabil Abubakar",
     "picture": "https://lh3.googleusercontent.com/a/ACg8ocK8zLzSyT5BSvtF6abQftu5TNOc-SiQkA9WDZE_SLS2MYxZfvg=s96-c",
     "isOnboardingComplete": true,
-    "aiTokens": 400,
+    "aiTokens": 390,
     "reportTokens": 250,
     "createdAt": "2026-01-18T07:31:13.145Z",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3Njk1NDk5NTUsImV4cCI6MTc3MjE0MTk1NX0.llezfI4pT0lAqb_XmRbRoAz_Mny2_Ew3qzpPUNbEkZQ",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3Njk1NTY0MzAsImV4cCI6MTc3MjE0ODQzMH0.gDAvX_b41xozSlJd1pRBINaHjfbNm0D8Qxv0_1yh55I",
     "shopifyStores": [
       {
         "id": "bdaf3f42",
