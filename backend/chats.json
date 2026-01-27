@@ -85,8 +85,28 @@
         "role": "assistant",
         "content": "I apologize, but I'm encountering an error processing your request.",
         "timestamp": 1769016931162
+      },
+      {
+        "role": "user",
+        "content": "What  are my products",
+        "timestamp": 1769504790301
+      },
+      {
+        "role": "assistant",
+        "content": "Access to detailed store data is currently disabled. I can only provide high-level metrics right now.",
+        "timestamp": 1769504797270
+      },
+      {
+        "role": "user",
+        "content": "What are my products",
+        "timestamp": 1769504860159
+      },
+      {
+        "role": "assistant",
+        "content": "Access to detailed store data is currently disabled. I can only provide high-level metrics right now.",
+        "timestamp": 1769504861390
       }
     ],
-    "updatedAt": 1769016920943
+    "updatedAt": 1769504860159
   }
 ]

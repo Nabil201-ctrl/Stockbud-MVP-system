@@ -32,7 +32,13 @@ const ProductsPage = () => {
         // 1. Load from cache first
         const cachedProducts = await storage.get('products_cache');
         if (cachedProducts && cachedProducts.length > 0) {
-          setProducts(cachedProducts);
+          // Sanitize cached data to ensure new fields exist
+          const sanitizedCache = cachedProducts.map(p => ({
+            ...p,
+            revenue: p.revenue || 0,
+            rating: p.rating || 'N/A'
+          }));
+          setProducts(sanitizedCache);
           setLoading(false);
         }
 
@@ -74,7 +80,8 @@ const ProductsPage = () => {
           stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || 0,
           status: p.status === 'active' ? 'active' : 'archived',
           image: p.image?.src || p.images?.[0]?.src || '📦',
-          image: p.image?.src || p.images?.[0]?.src || '📦',
+          revenue: 0, // Placeholder as Shopify product API doesn't return revenue directly
+          rating: 'N/A', // Placeholder
         })).sort((a, b) => b.stock - a.stock);
 
         // 3. Update state and cache
@@ -86,16 +93,18 @@ const ProductsPage = () => {
         const active = transformedProducts.filter(p => p.stock >= 10).length;
         const outOfStock = transformedProducts.filter(p => p.stock === 0).length;
         const lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
-        const revenue = transformedProducts.reduce((sum, p) => sum + p.revenue, 0);
+        const totalRevenue = transformedProducts.reduce((sum, p) => sum + (p.revenue || 0), 0);
+        const avgRating = 0; // Placeholder
 
         setProductStats({
           total,
           active,
           outOfStock,
           lowStock,
-          outOfStock,
-          lowStock
+          totalRevenue,
+          avgRating
         });
+
 
       } catch (err) {
         console.error('Failed to fetch products:', err);
@@ -397,7 +406,7 @@ const ProductsPage = () => {
                       <div className="min-w-0">
                         <div className="font-medium truncate">{product.name}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          ${product.revenue.toLocaleString()} revenue
+                          ${(product.revenue || 0).toLocaleString()} revenue
                         </div>
                       </div>
                     </div>
