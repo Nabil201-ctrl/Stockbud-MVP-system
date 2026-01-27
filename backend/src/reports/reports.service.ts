@@ -13,7 +13,7 @@ export interface Report {
     id: string;
     userId: string;
     title: string;
-    type: 'sales' | 'inventory' | 'revenue';
+    type: 'sales' | 'inventory' | 'revenue' | 'weekly' | 'monthly';
     status: 'generating' | 'ready' | 'failed';
     createdAt: Date;
     data?: any;
@@ -149,6 +149,7 @@ export class ReportsService {
 
             switch (type) {
                 case 'sales':
+                case 'weekly': // Weekly is treated similar to sales but with specific prompt
                     reportData = {
                         content: aiContent,
                         stats: {
@@ -222,6 +223,19 @@ export class ReportsService {
                         generatedAt: new Date().toISOString()
                     };
                     break;
+                case 'monthly':
+                    // Monthly logic is handled separately in handleMonthlyReport usually, 
+                    // but if triggered manually we use this flow.
+                    reportData = {
+                        content: aiContent,
+                        stats: {
+                            totalRevenue: stats.revenue.total,
+                            growth: stats.revenue.change
+                        },
+                        raw: stats,
+                        generatedAt: new Date().toISOString()
+                    };
+                    break;
             }
 
             // Update report with data
@@ -259,6 +273,89 @@ export class ReportsService {
         }
     }
 
+    // Monthly Aggregation Report Cron
+    @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
+    async handleMonthlyReport() {
+        console.log('Generating Monthly Aggregation Reports...');
+        const allUsers = await this.usersService.getAllUsers();
+
+        for (const user of allUsers) {
+            if (user.shopifyShop && user.shopifyToken) {
+                await this.generateMonthlyAggregation(user.id);
+            }
+        }
+    }
+
+    private async generateMonthlyAggregation(userId: string) {
+        // 1. Fetch Weekly reports from last 30 days
+        const allReports = await this.getReports(userId);
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+
+        const recentWeeklyReports = allReports.filter(r =>
+            (r.type === 'weekly' || r.type === 'sales') &&
+            new Date(r.createdAt) > thirtyDaysAgo &&
+            r.status === 'ready'
+        );
+
+        if (recentWeeklyReports.length === 0) {
+            console.log(`No weekly reports found for user ${userId} to aggregate.`);
+            return;
+        }
+
+        // 2. Aggregate Data
+        let totalRev = 0;
+        let summaryText = "Based on your weekly reports:\n";
+
+        recentWeeklyReports.forEach((r, index) => {
+            const rev = r.data?.stats?.totalRevenue || 0;
+            totalRev += rev;
+            summaryText += `- Week ${index + 1}: Revenue $${rev}\n`;
+        });
+
+        const avgRev = totalRev / recentWeeklyReports.length;
+
+        // 3. Generate Monthly Report Entry
+        const report = await this.generateReport(userId, 'monthly' as any); // Cast because type check might fail in IDE
+
+        // 4. Generate AI Analysis
+        const prompt = `
+            Generate a comprehensive Monthly Executive Report by analyzing these weekly summaries:
+            ${summaryText}
+
+            Total aggregated revenue from reports: $${totalRev}
+            Average weekly revenue: $${avgRev.toFixed(0)}
+
+            Provide high-level strategic insights, identify consistency or volatility, and suggest focus areas for next month.
+        `;
+
+        let content = "Monthly Aggregation: ";
+        if (this.model) {
+            const result = await this.model.generateContent(prompt);
+            content = result.response.text();
+        } else {
+            content += "AI Analysis unavailable. " + summaryText;
+        }
+
+        // 5. Update Report
+        const reports = this.loadReports();
+        const idx = reports.findIndex(r => r.id === report.id);
+        if (idx !== -1) {
+            reports[idx].status = 'ready';
+            reports[idx].data = {
+                content: content,
+                stats: {
+                    totalRevenue: totalRev,
+                    reportCount: recentWeeklyReports.length
+                },
+                generatedAt: new Date().toISOString()
+            };
+            this.saveReports(reports);
+
+            await this.notificationsService.create(userId, 'Monthly Report', 'Your monthly aggregated report is ready.', 'success');
+        }
+    }
+
     async getReportById(userId: string, reportId: string): Promise<Report | null> {
         const reports = this.loadReports();
         return reports.find(r => r.id === reportId && r.userId === userId) || null;
@@ -288,5 +385,34 @@ export class ReportsService {
             orderCount: stats.salesHistory?.length || 0,
             lostRevenue: stats.revenue.lost || 0
         };
+    }
+    // Cleanup Old Reports Cron
+    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+    async cleanupOldReports() {
+        console.log('Running daily report cleanup...');
+        const reports = this.loadReports();
+        const users = await this.usersService.getAllUsers();
+        const userRetention = new Map(users.map(u => [u.id, u.retentionMonths || 3]));
+
+        const now = Date.now();
+        const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+        let deletedCount = 0;
+
+        const appsKept = reports.filter(report => {
+            const retentionMonths = userRetention.get(report.userId) || 3;
+            const retentionMs = retentionMonths * THIRTY_DAYS_MS;
+            const reportAge = now - new Date(report.createdAt).getTime();
+
+            if (reportAge > retentionMs) {
+                deletedCount++;
+                return false; // Remove
+            }
+            return true; // Keep
+        });
+
+        if (deletedCount > 0) {
+            this.saveReports(appsKept);
+            console.log(`[Cleanup] Deleted ${deletedCount} expired reports.`);
+        }
     }
 }

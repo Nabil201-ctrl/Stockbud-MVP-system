@@ -6,7 +6,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const ReportsPage = () => {
     const { isDarkMode } = useTheme();
-    const { authenticatedFetch } = useAuth();
+    const { authenticatedFetch, user } = useAuth();
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
@@ -44,9 +44,41 @@ const ReportsPage = () => {
         }
     };
 
-    const handleGenerateReport = async () => {
+    const handleGenerateReport = () => {
         setGenerating(true);
+
+        const paystack = new PaystackPop();
+        paystack.newTransaction({
+            key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+            email: user.email,
+            amount: 1000 * 100, // 1000 NGN in kobo
+            metadata: {
+                userId: user.id,
+                type: 'report_payment'
+            },
+            onSuccess: (transaction) => {
+                verifyAndGenerate(transaction.reference);
+            },
+            onCancel: () => {
+                setGenerating(false);
+                alert('Payment cancelled. Report generation aborted.');
+            }
+        });
+    };
+
+    const verifyAndGenerate = async (reference) => {
         try {
+            // Verify payment first
+            const verifyRes = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
+            const verifyData = await verifyRes.json();
+
+            if (!verifyRes.ok || !verifyData.success) {
+                alert('Payment verification failed.');
+                setGenerating(false);
+                return;
+            }
+
+            // If payment successful, generate report
             const response = await authenticatedFetch('http://localhost:3000/reports/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -60,9 +92,11 @@ const ReportsPage = () => {
                 alert('Failed to generate report');
             }
         } catch (error) {
+            console.error('Report generation error:', error);
             alert(`Error: ${error.message}`);
+        } finally {
+            setGenerating(false);
         }
-        setGenerating(false);
     };
 
     const handleDeleteReport = async (reportId) => {

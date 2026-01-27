@@ -21,11 +21,9 @@ export class PaymentsService {
             throw new HttpException('Paystack is not configured', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        // Amount is in kobo? No, stockbud request says 1.50 dollars.
-        // Paystack usually takes currency. If USD, it's cents.
-        // Let's assume the amount passed here is in DOLLARS (e.g. 1.5).
-        // Paystack expects amount in the smallest currency unit.
-        // If USD, 1.50 -> 150 cents.
+        // Amount is passed in NGN (e.g. 2000).
+        // Paystack expects amount in the smallest currency unit (kobo).
+        // 2000 -> 200000 kobo.
 
         const amountInSubunits = Math.round(amount * 100);
 
@@ -36,7 +34,6 @@ export class PaymentsService {
                     {
                         email: user.email,
                         amount: amountInSubunits,
-                        currency: 'USD',
                         callback_url: callbackUrl,
                         metadata: {
                             userId: user.id,
@@ -89,9 +86,25 @@ export class PaymentsService {
                 const userId = data.metadata?.userId;
                 const tokenCount = data.metadata?.tokenCount;
 
-                if (userId && tokenCount) {
-                    await this.usersService.topUpTokens(userId, Number(tokenCount));
-                    return { success: true, message: 'Tokens added successfully', newBalance: await this.usersService.getAiTokens(userId) }; // Note: getAiTokens is also not strictly defined in interface but is property access in logic. Let's rely on logic or check if we need an accessor.
+                if (userId) {
+                    const type = data.metadata?.type;
+
+                    if (type === 'store_slot') {
+                        await this.usersService.increaseStoreLimit(userId);
+                        return { success: true, message: 'Store limit increased successfully' };
+                    } else if (type === 'retention_extend') {
+                        const months = data.metadata?.months || 3;
+                        await this.usersService.extendRetention(userId, Number(months));
+                        return { success: true, message: `Data retention extended by ${months} months` };
+                    } else if (type === 'report_payment') {
+                        // Payment for report - no side effect here (logic is in controller or frontend just checks success), 
+                        // or we could track it. For now just return success.
+                        return { success: true, message: 'Report payment confirmed' };
+                    } else if (tokenCount) {
+                        // Legacy/Default: Token Topup
+                        await this.usersService.topUpTokens(userId, Number(tokenCount));
+                        return { success: true, message: 'Tokens added successfully', newBalance: await this.usersService.getAiTokens(userId) };
+                    }
                 }
             }
 

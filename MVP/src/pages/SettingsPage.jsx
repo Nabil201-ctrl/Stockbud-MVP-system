@@ -41,63 +41,57 @@ const SettingsPage = () => {
     const [purchaseAmount, setPurchaseAmount] = useState(100);
     const [purchaseLoading, setPurchaseLoading] = useState(false);
 
-    // Verify Payment Callback
+    // URL Verification (Legacy/Fallback)
     React.useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         const reference = queryParams.get('reference');
 
         if (reference) {
-            const verifyPayment = async () => {
-                try {
-                    const response = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
-                    const data = await response.json();
-
-                    if (response.ok && data.success) {
-                        alert(`Success! ${data.message}. New Balance: ${data.newBalance}`);
-                        await refreshUser();
-                        // Clean URL
-                        window.history.replaceState({}, document.title, location.pathname);
-                    } else {
-                        alert('Payment verification failed.');
-                    }
-                } catch (error) {
-                    console.error('Verification error:', error);
-                    alert('Error verifying payment.');
-                }
-            };
-            verifyPayment();
+            verifyPayment(reference);
+            // Clean URL
+            window.history.replaceState({}, document.title, location.pathname);
         }
-    }, [location.search, authenticatedFetch, refreshUser]);
+    }, [location.search]);
 
-    const handlePurchase = async () => {
+    const handlePurchase = () => {
         setPurchaseLoading(true);
-        try {
-            const price = (purchaseAmount / 100) * 1.50;
-            const response = await authenticatedFetch('http://localhost:3000/payments/initialize', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    amount: price,
-                    tokenCount: purchaseAmount,
-                    callbackUrl: window.location.href // Redirect back to settings page
-                })
-            });
+        const paystack = new PaystackPop();
+        paystack.newTransaction({
+            key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+            email: user.email,
+            amount: (purchaseAmount / 100) * 500 * 100, // Amount in kobo
+            metadata: {
+                userId: user.id,
+                tokenCount: purchaseAmount
+            },
+            onSuccess: (transaction) => {
+                setPurchaseLoading(true); // Ensure loading is still on while verifying
+                verifyPayment(transaction.reference);
+            },
+            onCancel: () => {
+                setPurchaseLoading(false);
+                alert('Transaction was not completed, window closed.');
+            }
+        });
+    };
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.authorization_url) {
-                    window.location.href = data.authorization_url; // Redirect to Paystack
-                } else {
-                    alert('Failed to initialize payment');
-                }
+    const verifyPayment = async (reference) => {
+        try {
+            const response = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                alert(`Success! ${data.message}. New Balance: ${data.newBalance}`);
+                await refreshUser();
             } else {
-                alert('Failed to contact payment server');
+                alert('Payment verification failed.');
             }
         } catch (error) {
-            console.error('Purchase error:', error);
-            alert('Something went wrong');
+            console.error('Verification error:', error);
+            alert('Error verifying payment.');
+        } finally {
+            setPurchaseLoading(false);
         }
-        setPurchaseLoading(false);
     };
 
     const handleProfileUpdate = async (e) => {
@@ -213,6 +207,19 @@ const SettingsPage = () => {
     };
 
     const handleGeneratePairingCode = async () => {
+        // Enforce store limit (check only if we are adding a NEW store? Pairing code is usually for NEW connection)
+        // Actually, pairing code is for ANY connection. But typically used to add a store.
+        const currentStoreCount = user?.shopifyStores?.length || 0;
+        const limit = user?.storeLimit || 2;
+
+        if (currentStoreCount >= limit) {
+            // Ask to pay to increase limit
+            if (confirm(`You have reached your store limit of ${limit}. Pay ₦5,000 to add another store slot?`)) {
+                initiateStoreLimitPayment();
+            }
+            return;
+        }
+
         setPairingLoading(true);
         try {
             const response = await authenticatedFetch('http://localhost:3000/shopify/pairing-code', {
@@ -236,6 +243,91 @@ const SettingsPage = () => {
             alert(`Error: ${error.message}`);
         }
         setPairingLoading(false);
+    };
+
+    const initiateStoreLimitPayment = () => {
+        const paystack = new PaystackPop();
+        paystack.newTransaction({
+            key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+            email: user.email,
+            amount: 5000 * 100, // 5000 NGN
+            metadata: {
+                userId: user.id,
+                type: 'store_slot'
+            },
+            onSuccess: (transaction) => {
+                verifyStoreLimitPayment(transaction.reference);
+            },
+            onCancel: () => {
+                alert('Payment cancelled.');
+            }
+        });
+    };
+
+    const verifyStoreLimitPayment = async (reference) => {
+        try {
+            const response = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
+            const data = await response.json();
+            if (response.ok && data.success) {
+                alert('Store limit increased! You can now add your store.');
+                await refreshUser();
+            } else {
+                alert('Verification failed.');
+            }
+        } catch (error) {
+            console.error('Limit verify error:', error);
+            alert('Error verifying payment');
+        }
+    };
+    
+    const initiateRetentionPayment = (months, amount) => {
+        const paystack = new PaystackPop();
+        paystack.newTransaction({
+            key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+            email: user.email,
+            amount: amount * 100, // Amount in kobo
+            metadata: {
+                userId: user.id,
+                type: 'retention_extend',
+                months: months
+            },
+            onSuccess: (transaction) => {
+                verifyRetentionPayment(transaction.reference, months);
+            },
+            onCancel: () => {
+                alert('Payment cancelled.');
+            }
+        });
+    };
+
+    const verifyRetentionPayment = async (reference, months) => {
+        try {
+            const response = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
+            const data = await response.json();
+            if (response.ok && data.success) {
+                alert(`Success! Data retention extended by ${months} months.`);
+                await refreshUser();
+            } else {
+                alert('Verification failed.');
+            }
+        } catch (error) {
+            console.error('Retention verify error:', error);
+            alert('Error verifying payment');
+        }
+    };
+
+    const handleAddStoreClick = (e) => {
+        e.preventDefault();
+        const currentStoreCount = user?.shopifyStores?.length || 0;
+        const limit = user?.storeLimit || 2;
+
+        if (currentStoreCount >= limit) {
+            if (confirm(`You have reached your store limit of ${limit}. Pay ₦5,000 to add another store slot?`)) {
+                initiateStoreLimitPayment();
+            }
+        } else {
+            window.open('https://apps.shopify.com/stock-bud', '_blank');
+        }
     };
 
     const handleCopyCode = () => {
@@ -447,7 +539,7 @@ const SettingsPage = () => {
                                 </p>
                             </div>
                             <div className="bg-white dark:bg-gray-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900">
-                                $1.50 / 100 Tokens
+                                ₦500 / 100 Tokens
                             </div>
                         </div>
 
@@ -476,7 +568,7 @@ const SettingsPage = () => {
                                 <div>
                                     <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Price</span>
                                     <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        ${((purchaseAmount / 100) * 1.50).toFixed(2)}
+                                        ₦{((purchaseAmount / 100) * 500).toLocaleString()}
                                     </div>
                                 </div>
                                 <button
@@ -532,6 +624,57 @@ const SettingsPage = () => {
                             </p>
                         </div>
                     </div>
+
+                    <div className={`mt-8 p-6 rounded-xl border ${isDarkMode ? 'bg-gradient-to-r from-purple-900/20 to-blue-900/20 border-purple-800' : 'bg-gradient-to-r from-purple-50 to-blue-50 border-purple-100'}`}>
+                        <div className="flex items-start justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                                    <Save size={20} className="fill-current" />
+                                    Data Retention Plan
+                                </h3>
+                                <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Extend how long your reports and chat history are saved.
+                                </p>
+                            </div>
+                            <div className="bg-white dark:bg-gray-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-900">
+                                Current: {user?.retentionMonths || 3} Months
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+                                <div>
+                                    <h4 className="font-bold text-gray-900 dark:text-white">Extend +3 Months</h4>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Add 3 more months to your retention.</p>
+                                </div>
+                                <div className="mt-4 flex items-center justify-between">
+                                    <span className="text-lg font-bold text-gray-900 dark:text-white">₦5,000</span>
+                                    <button
+                                        onClick={() => initiateRetentionPayment(3, 5000)}
+                                        className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
+                                    >
+                                        Buy Now
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+                                <div>
+                                    <h4 className="font-bold text-gray-900 dark:text-white">Extend +6 Months</h4>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Add 6 more months (Best Value).</p>
+                                </div>
+                                <div className="mt-4 flex items-center justify-between">
+                                    <span className="text-lg font-bold text-gray-900 dark:text-white">₦9,000</span>
+                                    <button
+                                        onClick={() => initiateRetentionPayment(6, 9000)}
+                                        className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+                                    >
+                                        Buy Now
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -539,7 +682,12 @@ const SettingsPage = () => {
             {activeTab === 'integrations' && (
                 <div className={`p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold dark:text-white">Connected Stores</h2>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-bold dark:text-white">Connected Stores</h2>
+                            <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500">
+                                {user?.shopifyStores?.length || 0} / {user?.storeLimit || 2}
+                            </span>
+                        </div>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handleGeneratePairingCode}
@@ -549,15 +697,13 @@ const SettingsPage = () => {
                                 {pairingLoading ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
                                 Generate Code
                             </button>
-                            <a
-                                href="https://apps.shopify.com/stock-bud"
-                                target="_blank"
-                                rel="noreferrer"
+                            <button
+                                onClick={handleAddStoreClick}
                                 className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors flex items-center gap-2"
                             >
                                 <ShoppingBag size={16} />
                                 Add Store
-                            </a>
+                            </button>
                         </div>
                     </div>
 
