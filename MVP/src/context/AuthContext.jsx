@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -22,7 +24,7 @@ export const AuthProvider = ({ children }) => {
         if (response.status === 401) {
             // Try refresh
             try {
-                const refreshResponse = await fetch('http://localhost:3000/auth/refresh', {
+                const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
                     method: 'POST',
                     credentials: 'include'
                 });
@@ -48,7 +50,7 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
         try {
             // We use users/me to check if we are logged in (cookie is valid)
-            const response = await authenticatedFetch(`http://localhost:3000/users/me?t=${Date.now()}`);
+            const response = await authenticatedFetch(`${API_URL}/users/me?t=${Date.now()}`);
             if (response.ok) {
                 const userData = await response.json();
                 setUser(userData);
@@ -68,7 +70,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const loginLocal = async (email, password) => {
-        const response = await fetch('http://localhost:3000/auth/login', {
+        const response = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -86,7 +88,7 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
-            await fetch('http://localhost:3000/auth/logout', {
+            await fetch(`${API_URL}/auth/logout`, {
                 method: 'POST',
                 credentials: 'include'
             });
@@ -97,7 +99,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const register = async (name, email, password) => {
-        const response = await fetch('http://localhost:3000/auth/register', {
+        const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, email, password })
@@ -113,7 +115,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const updateProfile = async (data) => {
-        const response = await authenticatedFetch('http://localhost:3000/users/me', {
+        const response = await authenticatedFetch(`${API_URL}/users/me`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -127,7 +129,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const completeOnboarding = async () => {
-        const response = await authenticatedFetch('http://localhost:3000/users/onboarding/complete', {
+        const response = await authenticatedFetch(`${API_URL}/users/onboarding/complete`, {
             method: 'POST'
         });
         if (response.ok) {

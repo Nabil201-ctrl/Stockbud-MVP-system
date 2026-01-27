@@ -141,3 +141,14 @@ html, body, #root {
 .dark .chat-messages::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
+
+/* Force Paystack iframe to take full screen */
+iframe[name="paystack-checkout-iframe"] {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100vh !important;
+  z-index: 9999999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+}

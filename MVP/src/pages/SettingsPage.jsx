@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import Timeline from '../components/Shopify/Timeline';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 const SettingsPage = () => {
     const isOnline = useOnlineStatus();
     const { isDarkMode } = useTheme();
@@ -55,29 +57,35 @@ const SettingsPage = () => {
 
     const handlePurchase = () => {
         setPurchaseLoading(true);
-        const paystack = new PaystackPop();
-        paystack.newTransaction({
-            key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-            email: user.email,
-            amount: (purchaseAmount / 100) * 500 * 100, // Amount in kobo
-            metadata: {
-                userId: user.id,
-                tokenCount: purchaseAmount
-            },
-            onSuccess: (transaction) => {
-                setPurchaseLoading(true); // Ensure loading is still on while verifying
-                verifyPayment(transaction.reference);
-            },
-            onCancel: () => {
-                setPurchaseLoading(false);
-                alert('Transaction was not completed, window closed.');
-            }
-        });
+        try {
+            const handler = PaystackPop.setup({
+                key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+                email: user.email,
+                amount: (purchaseAmount / 100) * 500 * 100, // Amount in kobo
+                metadata: {
+                    userId: user.id,
+                    tokenCount: purchaseAmount
+                },
+                callback: (transaction) => {
+                    setPurchaseLoading(true); // Ensure loading is still on while verifying
+                    verifyPayment(transaction.reference);
+                },
+                onClose: () => {
+                    setPurchaseLoading(false);
+                    alert('Transaction was not completed, window closed.');
+                }
+            });
+            handler.openIframe();
+        } catch (error) {
+            console.error("Paystack error:", error);
+            setPurchaseLoading(false);
+            alert("Could not load payment window. Please try again.");
+        }
     };
 
     const verifyPayment = async (reference) => {
         try {
-            const response = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
+            const response = await authenticatedFetch(`${API_URL}/payments/verify?reference=${reference}`);
             const data = await response.json();
 
             if (response.ok && data.success) {
@@ -119,7 +127,7 @@ const SettingsPage = () => {
         setPasswordMessage(null);
 
         try {
-            const response = await authenticatedFetch('http://localhost:3000/auth/change-password', {
+            const response = await authenticatedFetch(`${API_URL}/auth/change-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -149,7 +157,7 @@ const SettingsPage = () => {
         }
 
         try {
-            const response = await authenticatedFetch('http://localhost:3000/users/shopify-credentials', {
+            const response = await authenticatedFetch(`${API_URL}/users/shopify-credentials`, {
                 method: 'DELETE'
             });
 
@@ -168,7 +176,7 @@ const SettingsPage = () => {
 
     const handleSetActiveShop = async (storeId) => {
         try {
-            const response = await authenticatedFetch('http://localhost:3000/users/shopify-stores/active', {
+            const response = await authenticatedFetch(`${API_URL}/users/shopify-stores/active`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -192,7 +200,7 @@ const SettingsPage = () => {
         }
 
         try {
-            const response = await authenticatedFetch(`http://localhost:3000/users/shopify-stores/${storeId}`, {
+            const response = await authenticatedFetch(`${API_URL}/users/shopify-stores/${storeId}`, {
                 method: 'DELETE'
             });
 
@@ -222,7 +230,7 @@ const SettingsPage = () => {
 
         setPairingLoading(true);
         try {
-            const response = await authenticatedFetch('http://localhost:3000/shopify/pairing-code', {
+            const response = await authenticatedFetch(`${API_URL}/shopify/pairing-code`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -246,27 +254,32 @@ const SettingsPage = () => {
     };
 
     const initiateStoreLimitPayment = () => {
-        const paystack = new PaystackPop();
-        paystack.newTransaction({
-            key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-            email: user.email,
-            amount: 5000 * 100, // 5000 NGN
-            metadata: {
-                userId: user.id,
-                type: 'store_slot'
-            },
-            onSuccess: (transaction) => {
-                verifyStoreLimitPayment(transaction.reference);
-            },
-            onCancel: () => {
-                alert('Payment cancelled.');
-            }
-        });
+        try {
+            const handler = PaystackPop.setup({
+                key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+                email: user.email,
+                amount: 5000 * 100, // 5000 NGN
+                metadata: {
+                    userId: user.id,
+                    type: 'store_slot'
+                },
+                callback: (transaction) => {
+                    verifyStoreLimitPayment(transaction.reference);
+                },
+                onClose: () => {
+                    alert('Payment cancelled.');
+                }
+            });
+            handler.openIframe();
+        } catch (error) {
+            console.error("Paystack error:", error);
+            alert("Could not load payment window.");
+        }
     };
 
     const verifyStoreLimitPayment = async (reference) => {
         try {
-            const response = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
+            const response = await authenticatedFetch(`${API_URL}/payments/verify?reference=${reference}`);
             const data = await response.json();
             if (response.ok && data.success) {
                 alert('Store limit increased! You can now add your store.');
@@ -279,30 +292,35 @@ const SettingsPage = () => {
             alert('Error verifying payment');
         }
     };
-    
+
     const initiateRetentionPayment = (months, amount) => {
-        const paystack = new PaystackPop();
-        paystack.newTransaction({
-            key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-            email: user.email,
-            amount: amount * 100, // Amount in kobo
-            metadata: {
-                userId: user.id,
-                type: 'retention_extend',
-                months: months
-            },
-            onSuccess: (transaction) => {
-                verifyRetentionPayment(transaction.reference, months);
-            },
-            onCancel: () => {
-                alert('Payment cancelled.');
-            }
-        });
+        try {
+            const handler = PaystackPop.setup({
+                key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+                email: user.email,
+                amount: amount * 100, // Amount in kobo
+                metadata: {
+                    userId: user.id,
+                    type: 'retention_extend',
+                    months: months
+                },
+                callback: (transaction) => {
+                    verifyRetentionPayment(transaction.reference, months);
+                },
+                onClose: () => {
+                    alert('Payment cancelled.');
+                }
+            });
+            handler.openIframe();
+        } catch (error) {
+            console.error("Paystack error:", error);
+            alert("Could not load payment window.");
+        }
     };
 
     const verifyRetentionPayment = async (reference, months) => {
         try {
-            const response = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
+            const response = await authenticatedFetch(`${API_URL}/payments/verify?reference=${reference}`);
             const data = await response.json();
             if (response.ok && data.success) {
                 alert(`Success! Data retention extended by ${months} months.`);

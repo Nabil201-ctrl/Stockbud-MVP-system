@@ -4,6 +4,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 const ReportsPage = () => {
     const { isDarkMode } = useTheme();
     const { authenticatedFetch, user } = useAuth();
@@ -21,7 +23,7 @@ const ReportsPage = () => {
 
     const fetchReports = async () => {
         try {
-            const response = await authenticatedFetch('http://localhost:3000/reports');
+            const response = await authenticatedFetch(`${API_URL}/reports`);
             if (response.ok) {
                 const data = await response.json();
                 setReports(data);
@@ -34,7 +36,7 @@ const ReportsPage = () => {
 
     const fetchStats = async () => {
         try {
-            const response = await authenticatedFetch('http://localhost:3000/reports/stats');
+            const response = await authenticatedFetch(`${API_URL}/reports/stats`);
             if (response.ok) {
                 const data = await response.json();
                 setStats(data);
@@ -44,32 +46,39 @@ const ReportsPage = () => {
         }
     };
 
+
     const handleGenerateReport = () => {
         setGenerating(true);
 
-        const paystack = new PaystackPop();
-        paystack.newTransaction({
-            key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-            email: user.email,
-            amount: 1000 * 100, // 1000 NGN in kobo
-            metadata: {
-                userId: user.id,
-                type: 'report_payment'
-            },
-            onSuccess: (transaction) => {
-                verifyAndGenerate(transaction.reference);
-            },
-            onCancel: () => {
-                setGenerating(false);
-                alert('Payment cancelled. Report generation aborted.');
-            }
-        });
+        try {
+            const handler = PaystackPop.setup({
+                key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+                email: user.email,
+                amount: 1000 * 100, // 1000 NGN in kobo
+                metadata: {
+                    userId: user.id,
+                    type: 'report_payment'
+                },
+                callback: (transaction) => {
+                    verifyAndGenerate(transaction.reference);
+                },
+                onClose: () => {
+                    setGenerating(false);
+                    alert('Payment cancelled. Report generation aborted.');
+                }
+            });
+            handler.openIframe();
+        } catch (error) {
+            console.error("Paystack error:", error);
+            setGenerating(false);
+            alert("Could not load payment window.");
+        }
     };
 
     const verifyAndGenerate = async (reference) => {
         try {
             // Verify payment first
-            const verifyRes = await authenticatedFetch(`http://localhost:3000/payments/verify?reference=${reference}`);
+            const verifyRes = await authenticatedFetch(`${API_URL}/payments/verify?reference=${reference}`);
             const verifyData = await verifyRes.json();
 
             if (!verifyRes.ok || !verifyData.success) {
@@ -79,7 +88,7 @@ const ReportsPage = () => {
             }
 
             // If payment successful, generate report
-            const response = await authenticatedFetch('http://localhost:3000/reports/generate', {
+            const response = await authenticatedFetch(`${API_URL}/reports/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: selectedType })
@@ -103,7 +112,7 @@ const ReportsPage = () => {
         if (!window.confirm('Delete this report?')) return;
 
         try {
-            const response = await authenticatedFetch(`http://localhost:3000/reports/${reportId}`, {
+            const response = await authenticatedFetch(`${API_URL}/reports/${reportId}`, {
                 method: 'DELETE'
             });
 
