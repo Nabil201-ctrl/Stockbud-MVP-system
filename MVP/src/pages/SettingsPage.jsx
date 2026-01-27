@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2, Zap, ShoppingBag, Languages, Copy, Key } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -36,6 +36,31 @@ const SettingsPage = () => {
     const [pairingCode, setPairingCode] = useState(null);
     const [pairingLoading, setPairingLoading] = useState(false);
     const [codeCopied, setCodeCopied] = useState(false);
+    const prevStoreCountRef = useRef(user?.shopifyStores?.length || 0);
+
+    // Polling for new store connection when pairing code is active
+    useEffect(() => {
+        let interval;
+        if (pairingCode) {
+            interval = setInterval(async () => {
+                await refreshUser();
+            }, 3000); // Poll every 3 seconds
+        }
+        return () => clearInterval(interval);
+    }, [pairingCode, refreshUser]);
+
+    // Detect when a new store is added
+    useEffect(() => {
+        const currentCount = user?.shopifyStores?.length || 0;
+        if (currentCount > prevStoreCountRef.current) {
+            if (pairingCode) {
+                setPairingCode(null);
+                // Ideally use a toast, but alert is consistent with existing code
+                alert('Shopify store connected successfully!');
+            }
+        }
+        prevStoreCountRef.current = currentCount;
+    }, [user?.shopifyStores?.length, pairingCode]);
 
 
 

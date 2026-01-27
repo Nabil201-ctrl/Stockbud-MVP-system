@@ -135,10 +135,10 @@ const ChatBotButton = () => {
       {isOpen && (
         <div className={`fixed bottom-0 right-0 w-full h-[100dvh] sm:h-[700px] sm:w-[500px] sm:bottom-24 sm:right-6 sm:rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${isDarkMode
           ? 'bg-gray-800 border-t sm:border border-gray-700'
-          : 'bg-slate-50 border-t sm:border border-gray-200'
+          : 'bg-white border-t sm:border border-gray-200'
           }`}>
           {/* Header */}
-          <div className={`p-4 sm:rounded-t-2xl flex items-center justify-between ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'
+          <div className={`p-4 sm:rounded-t-2xl flex items-center justify-between ${isDarkMode ? 'bg-gray-900' : 'bg-white border-b border-gray-100'
             }`}>
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-blue-600' : 'bg-blue-600'
@@ -244,7 +244,7 @@ const ChatBotButton = () => {
                 disabled={isTyping}
                 className={`flex-1 px-4 py-3 rounded-full text-base outline-none ${isDarkMode
                   ? 'bg-gray-700 text-white placeholder-gray-400'
-                  : 'bg-gray-100 text-gray-900 placeholder-gray-500'
+                  : 'bg-gray-50 text-gray-900 placeholder-gray-500 border border-gray-200'
                   }`}
               />
               <button
