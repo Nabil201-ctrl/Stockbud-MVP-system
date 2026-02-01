@@ -85,8 +85,38 @@
         "role": "assistant",
         "content": "I apologize, but I'm encountering an error processing your request.",
         "timestamp": 1769016931162
+      },
+      {
+        "role": "user",
+        "content": "What  are my products",
+        "timestamp": 1769504790301
+      },
+      {
+        "role": "assistant",
+        "content": "Access to detailed store data is currently disabled. I can only provide high-level metrics right now.",
+        "timestamp": 1769504797270
+      },
+      {
+        "role": "user",
+        "content": "What are my products",
+        "timestamp": 1769504860159
+      },
+      {
+        "role": "assistant",
+        "content": "Access to detailed store data is currently disabled. I can only provide high-level metrics right now.",
+        "timestamp": 1769504861390
+      },
+      {
+        "role": "user",
+        "content": "produits",
+        "timestamp": 1769555541428
+      },
+      {
+        "role": "assistant",
+        "content": "L'accès aux données détaillées des produits est actuellement désactivé. Je ne peux fournir que des métriques de haut niveau pour l'instant.",
+        "timestamp": 1769555543274
       }
     ],
-    "updatedAt": 1769016920943
+    "updatedAt": 1769555541428
   }
 ]

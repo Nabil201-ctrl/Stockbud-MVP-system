@@ -8,7 +8,7 @@ import { useLanguage } from '../../context/LanguageContext';
 const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
   const { user, logout, authenticatedFetch, refreshUser } = useAuth();
   const navigate = useNavigate();
-  const { language, changeLanguage } = useLanguage();
+  const { language, changeLanguage, t } = useLanguage();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showShopMenu, setShowShopMenu] = useState(false);
@@ -146,7 +146,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
                 {showShopMenu && (
                   <div className={`absolute top-full left-0 mt-2 w-64 rounded-xl shadow-xl border overflow-hidden z-50 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
                     <div className={`px-4 py-2 border-b text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'border-gray-700 text-gray-400' : 'border-slate-100 text-slate-500'}`}>
-                      Select Shop
+                      {t('header.selectShop')}
                     </div>
                     <div className="max-h-[300px] overflow-y-auto">
                       {user?.shopifyStores?.map(store => (
@@ -179,14 +179,14 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
                         onClick={() => navigate('/settings')}
                         className="w-full py-2 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-2"
                       >
-                        <ShoppingBag size={14} /> Add New Shop
+                        <ShoppingBag size={14} /> {t('header.addNewShop')}
                       </button>
                     </div>
                   </div>
                 )}
               </>
             ) : (
-              <div className="text-sm text-gray-500 italic">No Shop Selected</div>
+              <div className="text-sm text-gray-500 italic">{t('header.noShopSelected')}</div>
             )}
           </div>
           <div className="flex-1"></div>
@@ -236,13 +236,13 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
             {showNotifications && (
               <div className={`absolute right-0 mt-2 w-80 sm:w-96 rounded-xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} z-50 transform origin-top-right transition-all`}>
                 <div className={`px-4 py-3 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-slate-100 bg-slate-50'}`}>
-                  <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Notifications</h3>
+                  <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{t('header.notifications')}</h3>
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllAsRead}
                       className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
                     >
-                      <Check size={12} /> Mark all as read
+                      <Check size={12} /> {t('header.markAllRead')}
                     </button>
                   )}
                 </div>
@@ -250,7 +250,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
                   {notifications.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
                       <Bell size={32} className="mx-auto mb-2 opacity-50" />
-                      <p>No notifications yet</p>
+                      <p>{t('header.noNotifications')}</p>
                     </div>
                   ) : (
                     notifications.map((notification) => (
@@ -292,7 +292,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
                 </div>
                 <div className={`px-4 py-2 border-t text-center ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-slate-100 bg-slate-50'}`}>
                   <button className={`text-xs font-medium hover:underline ${isDarkMode ? 'text-gray-400' : 'text-slate-500'}`}>
-                    View all notifications
+                    {t('header.viewAll')}
                   </button>
                 </div>
               </div>
@@ -335,7 +335,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
                   onClick={() => setShowProfileMenu(false)}
                 >
                   <UserIcon size={16} />
-                  <span>Profile</span>
+                  <span>{t('header.profile')}</span>
                 </button>
 
                 <button
@@ -346,7 +346,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
                   }}
                 >
                   <LogOut size={16} />
-                  <span>Logout</span>
+                  <span>{t('header.logout')}</span>
                 </button>
               </div>
             )}

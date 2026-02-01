@@ -5,23 +5,36 @@
     "name": "Nabil Abubakar",
     "picture": "https://lh3.googleusercontent.com/a/ACg8ocK8zLzSyT5BSvtF6abQftu5TNOc-SiQkA9WDZE_SLS2MYxZfvg=s96-c",
     "isOnboardingComplete": true,
-    "aiTokens": 200,
+    "aiTokens": 390,
     "reportTokens": 250,
     "createdAt": "2026-01-18T07:31:13.145Z",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3NjkyNDE2ODMsImV4cCI6MTc3MTgzMzY4M30.k9VsmNsiNjmfycAw-fQT_NaJqEjJwhZZAcgQCn1nNGM",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3Njk1NTY0MzAsImV4cCI6MTc3MjE0ODQzMH0.gDAvX_b41xozSlJd1pRBINaHjfbNm0D8Qxv0_1yh55I",
     "shopifyStores": [
       {
         "id": "bdaf3f42",
         "shop": "stockbud-test.myshopify.com",
         "token": "7aaa3e988ffbccf57d0479bebb1d280c:b08fd2fe6f8b9974ee6001a511b4d18ecacad515574c8974286bf65f4e6ad71ef969ba25b064a03ae0739785885b5564",
         "name": "stockbud-test",
-        "addedAt": "2026-01-21T17:23:59.405Z"
+        "addedAt": "2026-01-21T17:23:59.405Z",
+        "botSettings": {
+          "name": "Stockbud",
+          "personality": "Professional",
+          "responseSpeed": "Medium",
+          "theme": "Blue",
+          "language": "English",
+          "notifications": true,
+          "voiceEnabled": false,
+          "dataAccess": "Full Access",
+          "autoRespond": true
+        }
       }
     ],
     "activeShopId": "bdaf3f42",
     "shopifyShop": "stockbud-test.myshopify.com",
     "shopifyToken": "e55987237681e01eb4c6c68e28dfb48b:b3c88b839201173068a09a49e255484b9494562480dbe6d7e65195e96abe9c7706eaccf4c0ade9093985fa67b6588df2",
-    "lastTokenReset": 1768721473145
+    "lastTokenReset": 1768721473145,
+    "storeLimit": 2,
+    "retentionMonths": 3
   },
   {
     "id": "onubcrblr",
@@ -33,6 +46,8 @@
     "reportTokens": 250,
     "createdAt": "2026-01-21T22:19:47.487Z",
     "lastTokenReset": 1769033987493,
-    "shopifyStores": []
+    "shopifyStores": [],
+    "storeLimit": 2,
+    "retentionMonths": 3
   }
 ]

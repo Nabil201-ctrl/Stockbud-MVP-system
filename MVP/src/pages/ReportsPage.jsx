@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Download, Calendar, TrendingUp, TrendingDown, Package, DollarSign, Loader2, RefreshCw, Trash2, Eye, X } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const ReportsPage = () => {
     const { isDarkMode } = useTheme();
-    const { authenticatedFetch } = useAuth();
+    const { authenticatedFetch, user } = useAuth();
+    const { t } = useLanguage();
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
@@ -21,7 +25,7 @@ const ReportsPage = () => {
 
     const fetchReports = async () => {
         try {
-            const response = await authenticatedFetch('http://localhost:3000/reports');
+            const response = await authenticatedFetch(`${API_URL}/reports`);
             if (response.ok) {
                 const data = await response.json();
                 setReports(data);
@@ -34,7 +38,7 @@ const ReportsPage = () => {
 
     const fetchStats = async () => {
         try {
-            const response = await authenticatedFetch('http://localhost:3000/reports/stats');
+            const response = await authenticatedFetch(`${API_URL}/reports/stats`);
             if (response.ok) {
                 const data = await response.json();
                 setStats(data);
@@ -44,10 +48,49 @@ const ReportsPage = () => {
         }
     };
 
-    const handleGenerateReport = async () => {
+
+    const handleGenerateReport = () => {
         setGenerating(true);
+
         try {
-            const response = await authenticatedFetch('http://localhost:3000/reports/generate', {
+            const handler = PaystackPop.setup({
+                key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+                email: user.email,
+                amount: 1000 * 100, // 1000 NGN in kobo
+                metadata: {
+                    userId: user.id,
+                    type: 'report_payment'
+                },
+                callback: (transaction) => {
+                    verifyAndGenerate(transaction.reference);
+                },
+                onClose: () => {
+                    setGenerating(false);
+                    alert('Payment cancelled. Report generation aborted.');
+                }
+            });
+            handler.openIframe();
+        } catch (error) {
+            console.error("Paystack error:", error);
+            setGenerating(false);
+            alert("Could not load payment window.");
+        }
+    };
+
+    const verifyAndGenerate = async (reference) => {
+        try {
+            // Verify payment first
+            const verifyRes = await authenticatedFetch(`${API_URL}/payments/verify?reference=${reference}`);
+            const verifyData = await verifyRes.json();
+
+            if (!verifyRes.ok || !verifyData.success) {
+                alert('Payment verification failed.');
+                setGenerating(false);
+                return;
+            }
+
+            // If payment successful, generate report
+            const response = await authenticatedFetch(`${API_URL}/reports/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: selectedType })
@@ -60,16 +103,18 @@ const ReportsPage = () => {
                 alert('Failed to generate report');
             }
         } catch (error) {
+            console.error('Report generation error:', error);
             alert(`Error: ${error.message}`);
+        } finally {
+            setGenerating(false);
         }
-        setGenerating(false);
     };
 
     const handleDeleteReport = async (reportId) => {
         if (!window.confirm('Delete this report?')) return;
 
         try {
-            const response = await authenticatedFetch(`http://localhost:3000/reports/${reportId}`, {
+            const response = await authenticatedFetch(`${API_URL}/reports/${reportId}`, {
                 method: 'DELETE'
             });
 
@@ -147,7 +192,7 @@ const ReportsPage = () => {
                             {/* Key Stats Appendix (Optional, if we want to show raw numbers at the bottom) */}
                             {report.data.stats && (
                                 <div className={`mt-12 p-6 rounded-lg ${isDarkMode ? 'bg-gray-900/50' : 'bg-gray-50'}`}>
-                                    <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Key Metrics</h3>
+                                    <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">{t('reports.keyMetrics')}</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                                         {Object.entries(report.data.stats).map(([key, value]) => (
                                             <div key={key}>
@@ -188,16 +233,16 @@ const ReportsPage = () => {
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-4">
-                <h1 className="text-2xl font-bold dark:text-white">Reports</h1>
+                <h1 className="text-2xl font-bold dark:text-white">{t('reports.title')}</h1>
                 <div className="flex items-center gap-2">
                     <select
                         value={selectedType}
                         onChange={(e) => setSelectedType(e.target.value)}
                         className={`px-3 py-2 rounded-lg border text-sm ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200'}`}
                     >
-                        <option value="sales">Sales Summary</option>
-                        <option value="inventory">Inventory Report</option>
-                        <option value="revenue">Revenue Analysis</option>
+                        <option value="sales">{t('reports.salesSummary')}</option>
+                        <option value="inventory">{t('reports.inventoryReport')}</option>
+                        <option value="revenue">{t('reports.revenueAnalysis')}</option>
                     </select>
                     <button
                         onClick={handleGenerateReport}
@@ -205,7 +250,7 @@ const ReportsPage = () => {
                         className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-70"
                     >
                         {generating ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-                        Generate Report
+                        {t('reports.generate')}
                     </button>
                 </div>
             </div>
@@ -219,40 +264,43 @@ const ReportsPage = () => {
                                 <TrendingUp className="text-green-600 dark:text-green-400" size={20} />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Total Revenue</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{t('reports.totalRevenue')}</p>
                                 <p className="text-xl font-bold dark:text-white">${stats.totalRevenue?.toLocaleString() || '0'}</p>
                             </div>
                         </div>
                     </div>
+
                     <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                         <div className="flex items-center gap-3">
                             <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
                                 <Package className="text-blue-600 dark:text-blue-400" size={20} />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Top Products</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{t('reports.topProducts')}</p>
                                 <p className="text-xl font-bold dark:text-white">{stats.productCount || 0}</p>
                             </div>
                         </div>
                     </div>
+
                     <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                         <div className="flex items-center gap-3">
                             <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
                                 <DollarSign className="text-yellow-600 dark:text-yellow-400" size={20} />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Recent Orders</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{t('reports.recentOrders')}</p>
                                 <p className="text-xl font-bold dark:text-white">{stats.orderCount || 0}</p>
                             </div>
                         </div>
                     </div>
+
                     <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                         <div className="flex items-center gap-3">
                             <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
                                 <TrendingDown className="text-red-600 dark:text-red-400" size={20} />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Lost Revenue</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{t('reports.lostRevenue')}</p>
                                 <p className="text-xl font-bold dark:text-white">${stats.lostRevenue?.toLocaleString() || '0'}</p>
                             </div>
                         </div>
@@ -263,7 +311,7 @@ const ReportsPage = () => {
             {/* Reports List */}
             <div className={`rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold dark:text-white">Generated Reports</h2>
+                    <h2 className="text-lg font-semibold dark:text-white">{t('reports.generated')}</h2>
                     <button
                         onClick={fetchReports}
                         className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -279,8 +327,8 @@ const ReportsPage = () => {
                 ) : reports.length === 0 ? (
                     <div className="p-12 text-center">
                         <FileText className="mx-auto mb-4 text-gray-400" size={48} />
-                        <h3 className="font-semibold text-lg dark:text-white mb-2">No reports yet</h3>
-                        <p className="text-gray-500 dark:text-gray-400">Generate your first report to get started.</p>
+                        <h3 className="font-semibold text-lg dark:text-white mb-2">{t('reports.noReports')}</h3>
+                        <p className="text-gray-500 dark:text-gray-400">{t('reports.firstReport')}</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -319,14 +367,14 @@ const ReportsPage = () => {
                                                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-sm font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
                                             >
                                                 <Eye size={14} />
-                                                Preview
+                                                {t('reports.preview')}
                                             </button>
                                             <button
                                                 onClick={() => downloadReport(report)}
                                                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                                             >
                                                 <Download size={14} />
-                                                Download
+                                                {t('reports.download')}
                                             </button>
                                         </>
                                     )}
@@ -348,10 +396,9 @@ const ReportsPage = () => {
                 <div className="flex items-start gap-3">
                     <FileText className="text-blue-600 dark:text-blue-400 mt-0.5" size={20} />
                     <div>
-                        <h4 className="font-medium text-blue-800 dark:text-blue-300">About Reports</h4>
+                        <h4 className="font-medium text-blue-800 dark:text-blue-300">{t('reports.aboutTitle')}</h4>
                         <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-                            Reports are generated from your connected Shopify store data. They include sales performance,
-                            inventory levels, and revenue analytics. Connect a store in Settings to get real data.
+                            {t('reports.aboutDesc')}
                         </p>
                     </div>
                 </div>
@@ -391,7 +438,7 @@ const ReportsPage = () => {
                                 onClick={() => setPreviewReport(null)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'}`}
                             >
-                                Close
+                                {t('reports.close')}
                             </button>
                             <button
                                 onClick={() => {
@@ -401,7 +448,7 @@ const ReportsPage = () => {
                                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
                             >
                                 <Download size={16} />
-                                Download Report
+                                {t('reports.download')}
                             </button>
                         </div>
                     </div>

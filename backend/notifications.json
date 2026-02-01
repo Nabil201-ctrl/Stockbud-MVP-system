@@ -16,5 +16,14 @@
     "type": "success",
     "read": true,
     "createdAt": "2026-01-24T07:21:26.850Z"
+  },
+  {
+    "id": "ynpkuu7r7",
+    "userId": "113831482632022329688",
+    "title": "Report Ready",
+    "message": "Your sales report \"Weekly Sales Summary\" has been successfully generated.",
+    "type": "success",
+    "read": true,
+    "createdAt": "2026-01-27T09:08:00.736Z"
   }
 ]

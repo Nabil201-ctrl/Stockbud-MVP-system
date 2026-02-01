@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { ReportsController } from './reports.controller';
 import { DashboardModule } from '../dashboard/dashboard.module';
@@ -8,7 +8,7 @@ import { ShopifyModule } from '../shopify/shopify.module';
 
 
 @Module({
-    imports: [DashboardModule, UsersModule, NotificationsModule, ShopifyModule],
+    imports: [DashboardModule, UsersModule, NotificationsModule, forwardRef(() => ShopifyModule)],
     controllers: [ReportsController],
     providers: [ReportsService],
     exports: [ReportsService],

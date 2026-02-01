@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { DashboardService } from '../dashboard/dashboard.service';
+import { ReportsService } from '../reports/reports.service';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -31,7 +32,8 @@ export class ChatService implements OnModuleInit {
     constructor(
         private readonly usersService: UsersService,
         private readonly dashboardService: DashboardService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        private readonly reportsService: ReportsService
     ) {
         const apiKey = this.configService.get<string>('GEMINI_API_KEY');
         if (apiKey) {
@@ -45,6 +47,8 @@ export class ChatService implements OnModuleInit {
     async onModuleInit() {
         this.loadChats();
     }
+
+    // ... (keep private methods same)
 
     private loadChats() {
         if (fs.existsSync(this.filePath)) {
@@ -67,6 +71,22 @@ export class ChatService implements OnModuleInit {
             console.error('Error saving chats to file:', error);
         }
     }
+
+    // ... (keep getUserChats, getChat, createChat, deleteChat, addMessage, quickChat, generateBotResponse same) 
+    // Wait, I can't skip lines in replace_file_content like this unless I target them.
+    // I need to only replace the constructor and the generateWeeklyReportForUser method.
+
+    // Let's do partial replacements.
+
+    // NO, I will use multi_replace for accuracy.
+    // Actually, I can just use replace_file_content for the method if I can identify it clearly.
+    // But I also need to update constructor.
+    // I'll do 2 chunks.
+
+    // Wait, I cannot use multiple chunks in replace_file_content.
+    // I'll use multi_replace.
+
+    // ... (keep private methods same)
 
     async getUserChats(userId: string) {
         return Array.from(this.chats.values())
@@ -168,9 +188,7 @@ export class ChatService implements OnModuleInit {
         const personality = settings?.personality || 'Professional';
 
         // Calculate Token Cost
-        const complexKeywords = ['revenue', 'sales', 'orders', 'profit', 'growth', 'trend', 'analysis', 'report', 'visitors', 'traffic', 'conversion', 'customer', 'product', 'best selling'];
-        const isComplex = complexKeywords.some(keyword => userMessage.toLowerCase().includes(keyword));
-        const tokenCost = isComplex ? 50 : 25;
+        const tokenCost = 10;
 
         // Check AI Tokens
         if ((user.aiTokens ?? 0) < tokenCost) {
@@ -298,32 +316,18 @@ export class ChatService implements OnModuleInit {
         if (!user || !user.shopifyShop || !user.shopifyToken) return;
 
         // Check Report Tokens
-        if ((user.reportTokens ?? 0) <= 0) {
+        if ((user.reportTokens ?? 0) < 50) {
             console.log(`Skipping weekly report for ${userId}: Not enough tokens.`);
             return;
         }
 
-        // Deduct 1 Report Token
-        await this.usersService.updateProfile(userId, { reportTokens: (user.reportTokens ?? 0) - 1 });
+        // Deduct 50 Report Tokens
+        await this.usersService.updateProfile(userId, { reportTokens: (user.reportTokens ?? 0) - 50 });
 
         try {
-            const decryptedToken = await this.usersService.getDecryptedShopifyToken(userId);
-            const stats = await this.dashboardService.getStats(user.shopifyShop, decryptedToken);
-            const prompt = `Generate a motivational weekly summary for the shop owner based on these stats: 
-                Total Revenue: $${stats.revenue.total}
-                Revenue Change: ${stats.revenue.change}%
-                Lost Revenue: $${stats.revenue.lost || 0}
-                Top Product: ${stats.topProducts?.[0]?.name || 'N/A'}
-                Top Source: ${stats.source[0]?.name}
-                Keep it short, punchy, and highlight the wins (or opportunities if revenue dropped).`;
-
-            let content = "Weekly Report: ";
-            if (this.model) {
-                const result = await this.model.generateContent(prompt);
-                content += result.response.text();
-            } else {
-                content += `Revenue is $${stats.revenue.total} (${stats.revenue.change}%). Top Product: ${stats.topProducts?.[0]?.name || 'N/A'}.`;
-            }
+            // Generate persistently stored report
+            const report = await this.reportsService.generateReport(userId, 'weekly' as any);
+            const content = report.data.content;
 
             // Find or create 'StockBud' chat
             const chats = await this.getUserChats(userId);
@@ -333,13 +337,10 @@ export class ChatService implements OnModuleInit {
                 chat = await this.createChat(userId, 'StockBud Updates');
             }
 
-            await this.addMessage(userId, chat.id, "Generic weekly report trigger"); // This adds a USER message.
-            // We want the BOT to initiate. My addMessage logic assumes USER speaks first.
-            // I need to manually push a bot message.
-
+            // Add bot message with report summary
             const botMsg: Message = {
                 role: 'assistant',
-                content: content,
+                content: `**Weekly Report Ready:**\n\n${content}\n\n[View Full Report in Reports Tab]`,
                 timestamp: Date.now()
             };
             chat.messages.push(botMsg);
@@ -348,6 +349,34 @@ export class ChatService implements OnModuleInit {
 
         } catch (error) {
             console.error(`Failed to generate report for user ${userId}`, error);
+        }
+    }
+    // Cleanup Old Chats Cron
+    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+    async cleanupOldChats() {
+        console.log('Running daily chat cleanup...');
+        this.loadChats();
+        const users = await this.usersService.getAllUsers();
+        const userRetention = new Map(users.map(u => [u.id, u.retentionMonths || 3]));
+
+        const now = Date.now();
+        const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+        let deletedCount = 0;
+
+        for (const [id, chat] of this.chats.entries()) {
+            const retentionMonths = userRetention.get(chat.userId) || 3;
+            const retentionMs = retentionMonths * THIRTY_DAYS_MS;
+            const chatAge = now - chat.updatedAt;
+
+            if (chatAge > retentionMs) {
+                this.chats.delete(id);
+                deletedCount++;
+            }
+        }
+
+        if (deletedCount > 0) {
+            this.saveChats();
+            console.log(`[Cleanup] Deleted ${deletedCount} expired chats.`);
         }
     }
 }

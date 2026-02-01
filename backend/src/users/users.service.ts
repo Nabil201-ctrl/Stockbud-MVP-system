@@ -37,6 +37,8 @@ export interface User {
     // New multi-shop fields
     shopifyStores?: ShopifyStore[];
     activeShopId?: string;
+    storeLimit?: number; // Max allowed shops
+    retentionMonths?: number; // Data retention period in months
     createdAt?: string;
     isOnboardingComplete?: boolean;
     refreshToken?: string;
@@ -67,6 +69,8 @@ export class UsersService implements OnModuleInit {
                     // Migration: Ensure new fields exist
                     if (user.aiTokens === undefined) user.aiTokens = 500;
                     if (user.reportTokens === undefined) user.reportTokens = 250;
+                    if (user.storeLimit === undefined) user.storeLimit = 2; // Default limit
+                    if (user.retentionMonths === undefined) user.retentionMonths = 3; // Default retention
                     if (user.lastTokenReset === undefined) user.lastTokenReset = user.createdAt ? new Date(user.createdAt).getTime() : Date.now();
 
                     // Migration: Convert legacy single-shop to multi-shop format
@@ -136,6 +140,7 @@ export class UsersService implements OnModuleInit {
                 isOnboardingComplete: false,
                 aiTokens: 500,
                 reportTokens: 250,
+                storeLimit: 2, // Default limit
                 createdAt: new Date().toISOString(),
             };
             this.users.set(user.id, user);
@@ -156,6 +161,7 @@ export class UsersService implements OnModuleInit {
             isOnboardingComplete: false,
             aiTokens: 500,
             reportTokens: 250,
+            storeLimit: 2, // Default limit
             createdAt: new Date().toISOString(),
         };
         this.users.set(user.id, user);
@@ -193,6 +199,12 @@ export class UsersService implements OnModuleInit {
 
         // Add new store
         const storeId = crypto.randomBytes(4).toString('hex');
+        // Check Store Limit
+        // If shop is NEW (not updating existing), check limit.
+        if (user.shopifyStores.length >= (user.storeLimit || 2)) {
+            throw new Error('Store limit reached. Please upgrade to add more stores.');
+        }
+
         user.shopifyStores.push({
             id: storeId,
             shop,
@@ -457,5 +469,26 @@ export class UsersService implements OnModuleInit {
     async getAiTokens(userId: string): Promise<number> {
         const user = this.users.get(userId);
         return user?.aiTokens || 0;
+    }
+
+    async increaseStoreLimit(userId: string): Promise<User> {
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+
+        user.storeLimit = (user.storeLimit || 2) + 1;
+        this.users.set(userId, user);
+        this.saveUsers();
+        console.log(`[Limits] User ${userId} increased store limit to ${user.storeLimit}`);
+        return user;
+    }
+    async extendRetention(userId: string, months: number): Promise<User> {
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+
+        user.retentionMonths = (user.retentionMonths || 3) + months;
+        this.users.set(userId, user);
+        this.saveUsers();
+        console.log(`[Retention] User ${userId} extended retention by ${months} months. New limit: ${user.retentionMonths}`);
+        return user;
     }
 }

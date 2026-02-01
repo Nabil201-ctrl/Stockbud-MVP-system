@@ -4,12 +4,14 @@ import { ShopifyService } from './shopify.service';
 import { UsersService } from '../users/users.service'; // Add this import
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { ConnectShopDto } from './dto/connect-shop.dto';
+import { ReportsService } from '../reports/reports.service';
 
 @Controller('shopify')
 export class ShopifyController {
     constructor(
         private readonly shopifyService: ShopifyService,
-        private readonly usersService: UsersService
+        private readonly usersService: UsersService,
+        private readonly reportsService: ReportsService
     ) { }
 
     @Post('connect')
@@ -66,6 +68,17 @@ export class ShopifyController {
             const errorMessage = 'error' in result ? result.error : 'Connection failed';
             throw new HttpException(errorMessage, HttpStatus.BAD_REQUEST);
         }
+
+        // Trigger Initial Reports
+        if (result.success && (result as any).userId) {
+            const userId = (result as any).userId;
+            console.log(`[Handshake] Triggering initial reports for user ${userId}`);
+            // Generate baseline reports asynchronously
+            this.reportsService.generateReport(userId, 'sales');
+            this.reportsService.generateReport(userId, 'inventory');
+            this.reportsService.generateReport(userId, 'revenue');
+        }
+
         return result;
     }
 }

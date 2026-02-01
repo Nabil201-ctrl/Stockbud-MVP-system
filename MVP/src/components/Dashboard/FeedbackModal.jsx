@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, MessageSquare, ThumbsUp, ThumbsDown, Send } from 'lucide-react';
 
-const FeedbackModal = ({ isOpen, onClose, isDarkMode }) => {
+const FeedbackModal = ({ isOpen, onClose, onSubmit, isDarkMode }) => {
     const [rating, setRating] = useState(null);
     const [feedback, setFeedback] = useState('');
     const [email, setEmail] = useState('');
@@ -34,6 +34,7 @@ const FeedbackModal = ({ isOpen, onClose, isDarkMode }) => {
                 setFeedback('');
                 setRating(null);
                 setEmail('');
+                if (onSubmit) onSubmit();
                 onClose();
             }, 2000);
         } catch (error) {
