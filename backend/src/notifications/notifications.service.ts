@@ -1,6 +1,9 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as nodemailer from 'nodemailer';
+import * as webpush from 'web-push';
+import { ConfigService } from '@nestjs/config';
 
 export interface Notification {
     id: string;
@@ -16,6 +19,36 @@ export interface Notification {
 export class NotificationsService implements OnModuleInit {
     private notifications: Map<string, Notification> = new Map();
     private readonly filePath = path.join(process.cwd(), 'notifications.json');
+    private mailer: nodemailer.Transporter;
+
+    constructor(private configService: ConfigService) {
+        // Initialize Nodemailer - Using Ethereal for testing or real SMTP if configured
+        const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.ethereal.email';
+        const smtpPort = this.configService.get<number>('SMTP_PORT') || 587;
+        const smtpUser = this.configService.get<string>('SMTP_USER') || 'ethereal_user';
+        const smtpPass = this.configService.get<string>('SMTP_PASS') || 'ethereal_pass';
+
+        this.mailer = nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: false, // true for 465, false for other ports
+            auth: {
+                user: smtpUser,
+                pass: smtpPass,
+            },
+        });
+
+        // Initialize Web Push
+        const vapidPublicKey = this.configService.get<string>('VAPID_PUBLIC_KEY') || 'BFZhuGm7mzZ46vV6jPV8KiPOmbjnay0d5lQL9Qm1-rV6x69IBPgyd_nZGMu77y9t3lbLrHkAUprNu-TCtXPcqyY';
+        const vapidPrivateKey = this.configService.get<string>('VAPID_PRIVATE_KEY') || 'YQ8ZfVCq3Xi8Dgbb1MZ2Al-fLJZbESHfPn3cATVnUXs';
+        const vapidEmail = this.configService.get<string>('VAPID_EMAIL') || 'mailto:admin@stockbud.com';
+
+        webpush.setVapidDetails(
+            vapidEmail,
+            vapidPublicKey,
+            vapidPrivateKey
+        );
+    }
 
     onModuleInit() {
         this.loadNotifications();
@@ -57,7 +90,7 @@ export class NotificationsService implements OnModuleInit {
         // Better: Provide a method to create welcome notification for a new user.
     }
 
-    async create(userId: string, title: string, message: string, type: 'info' | 'success' | 'warning' | 'error'): Promise<Notification> {
+    async create(userId: string, title: string, message: string, type: 'info' | 'success' | 'warning' | 'error', channels: string[] = ['in-app']): Promise<Notification> {
         const notification: Notification = {
             id: Math.random().toString(36).substr(2, 9),
             userId,
@@ -67,9 +100,45 @@ export class NotificationsService implements OnModuleInit {
             read: false,
             createdAt: new Date().toISOString(),
         };
-        this.notifications.set(notification.id, notification);
-        this.saveNotifications();
+
+        if (channels.includes('in-app')) {
+            this.notifications.set(notification.id, notification);
+            this.saveNotifications();
+        }
+
+        // We would fetch user email/subscription here. For now, assuming email is known or passed.
+        // In a real app, inject UsersService and fetch user details.
+
         return notification;
+    }
+
+    async sendEmail(to: string, subject: string, html: string) {
+        try {
+            const info = await this.mailer.sendMail({
+                from: '"StockBud Notification" <notify@stockbud.com>',
+                to,
+                subject,
+                html,
+            });
+            console.log("Message sent: %s", info.messageId);
+            // Preview only available when sending through an Ethereal account
+            console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+            return info;
+        } catch (error) {
+            console.error('Error sending email:', error);
+            throw error;
+        }
+    }
+
+    async sendPush(subscription: any, payload: any) {
+        try {
+            await webpush.sendNotification(subscription, JSON.stringify(payload));
+            console.log('Push notification sent successfully');
+            return true;
+        } catch (error) {
+            console.error('Error sending push notification:', error);
+            return false;
+        }
     }
 
     async findByUser(userId: string): Promise<Notification[]> {

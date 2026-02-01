@@ -216,7 +216,7 @@ export class ReportsService {
                         content: aiContent,
                         stats: {
                             totalRevenue: stats.revenue.total,
-                            profitMargin: stats.revenue.total * 0.3, // Mock profit margin
+                            profitMargin: await this.calculateProfitMargin(shop, token, stats.revenue.total),
                             growth: stats.revenue.change
                         },
                         raw: stats,
@@ -413,6 +413,42 @@ export class ReportsService {
         if (deletedCount > 0) {
             this.saveReports(appsKept);
             console.log(`[Cleanup] Deleted ${deletedCount} expired reports.`);
+        }
+    }
+    private async calculateProfitMargin(shop: string, token: string, totalRevenue: number): Promise<number> {
+        if (totalRevenue === 0) return 0;
+        try {
+            const products = await this.shopifyService.getProducts(shop, token);
+            let totalCost = 0;
+            // Calculate margin based on estimated cost from inventory
+            // Calculate current potential margin percentage and apply it to the revenue.
+
+            let totalPotentialRevenue = 0;
+            let totalPotentialCost = 0;
+
+            products.forEach(product => {
+                product.variants.forEach(variant => {
+                    const price = parseFloat(variant.price);
+                    const cost = parseFloat(variant.cost || '0');
+                    const qty = variant.inventory_quantity > 0 ? variant.inventory_quantity : 1; // Weight by stock
+
+                    if (cost > 0) {
+                        totalPotentialRevenue += price * qty;
+                        totalPotentialCost += cost * qty;
+                    }
+                });
+            });
+
+            if (totalPotentialRevenue > 0) {
+                const marginPercent = (totalPotentialRevenue - totalPotentialCost) / totalPotentialRevenue;
+                return totalRevenue * marginPercent;
+            }
+
+            // Fallback if no cost data found
+            return totalRevenue * 0.3; // Industry avg fallback
+        } catch (error) {
+            console.error('Error calculating profit margin:', error);
+            return totalRevenue * 0.3;
         }
     }
 }

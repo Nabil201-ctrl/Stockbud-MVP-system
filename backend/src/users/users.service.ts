@@ -31,7 +31,7 @@ export interface User {
     name: string;
     password?: string; // Hashed password
     picture?: string;
-    // Legacy fields (kept for migration, will be removed eventually)
+    // Legacy fields (kept for migration)
     shopifyShop?: string;
     shopifyToken?: string;
     // New multi-shop fields
@@ -46,6 +46,7 @@ export interface User {
     reportTokens?: number;
     botSettings?: BotSettings; // Legacy global settings (migration source)
     lastTokenReset?: number;
+    pushSubscription?: any; // Web Push subscription object
 }
 
 @Injectable()
@@ -81,10 +82,9 @@ export class UsersService implements OnModuleInit {
                             shop: user.shopifyShop,
                             token: user.shopifyToken,
                             addedAt: user.createdAt || new Date().toISOString(),
-                            botSettings: user.botSettings // Move global settings to first shop
+                            botSettings: user.botSettings // Move global setttings to first shop
                         }];
                         user.activeShopId = storeId;
-                        console.log(`[Migration] Converted single-shop user ${user.id} to multi-shop format`);
                     }
 
                     // Migration: Move global botSettings to shop-specific if they exist and shops exist but no shop settings
@@ -92,11 +92,8 @@ export class UsersService implements OnModuleInit {
                         user.shopifyStores.forEach(store => {
                             if (!store.botSettings) {
                                 store.botSettings = { ...user.botSettings };
-                                console.log(`[Migration] Moved botSettings to shop ${store.shop} for user ${user.id}`);
                             }
                         });
-                        // We can delete user.botSettings but keeping it for safety for now is okay, 
-                        // or we can remove it to verify migration is done. Let's keep it optional.
                     }
 
                     // Initialize empty array if no stores
