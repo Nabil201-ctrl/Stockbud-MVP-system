@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Search, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon, Zap, Globe, Check, Info, AlertTriangle, CheckCircle, ShoppingBag } from 'lucide-react';
+import { Menu, Search, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon, Zap, Globe, Check, Info, AlertTriangle, CheckCircle, ShoppingBag, HelpCircle } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
-const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
+const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   const { user, logout, authenticatedFetch, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { language, changeLanguage, t } = useLanguage();
@@ -121,7 +121,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
   const activeShop = user?.shopifyStores?.find(s => s.id === user?.activeShopId);
 
   return (
-    <div className={`px-6 py-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} border-b sticky top-0 z-10`}>
+    <div id="app-header" className={`px-6 py-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} border-b sticky top-0 z-10`}>
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4 flex-1">
           <button className="lg:hidden" onClick={toggleSidebar}>
@@ -131,6 +131,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
             {activeShop ? (
               <>
                 <button
+                  id="shop-selector"
                   onClick={() => setShowShopMenu(!showShopMenu)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
                 >
@@ -195,6 +196,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
 
           {/* AI Token Display */}
           <div
+            id="ai-tokens"
             onClick={() => navigate('/settings', { state: { activeTab: 'usage' } })}
             className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}
           >
@@ -214,6 +216,15 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar }) => {
           </button>
 
           <button
+            onClick={startTour}
+            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-slate-100 text-slate-600'}`}
+            title={t('header.startTour') || 'Start Tour'}
+          >
+            <HelpCircle size={20} />
+          </button>
+
+          <button
+            id="theme-toggle"
             onClick={toggleTheme}
             className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-slate-100'}`}
             aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}

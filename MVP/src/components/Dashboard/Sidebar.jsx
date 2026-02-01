@@ -6,6 +6,7 @@ import {
   RefreshCw, Settings, FileText, Calendar, MessageSquare, LogOut
 } from 'lucide-react';
 import FeedbackModal from './FeedbackModal';
+import FulLogo from '../../assets/FulLogo.png';
 
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -46,17 +47,14 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
 
   return (
     <>
-      <div className={`
+      <div id="app-sidebar" className={`
         fixed inset-y-0 left-0 z-30 transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         w-64 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-slate-50 border-gray-200'} border-r flex flex-col flex-shrink-0
       `}>
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-              <span className="text-white font-bold text-sm">a</span>
-            </div>
-            <span className="font-bold text-xl">stockbud.</span>
+          <div className="flex items-center justify-center">
+            <img src={FulLogo} alt="StockBud Logo" className="h-10 w-auto object-contain" />
           </div>
         </div>
 

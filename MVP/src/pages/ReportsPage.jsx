@@ -150,11 +150,65 @@ const ReportsPage = () => {
     };
 
     const downloadReport = (report) => {
-        const blob = new Blob([JSON.stringify(report.data, null, 2)], { type: 'application/json' });
+        const title = report.title || 'Report';
+        const date = formatDate(report.createdAt);
+        const type = report.type.toUpperCase();
+
+        // Prepare HTML content for Word
+        const htmlContent = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset="utf-8">
+                <title>${title}</title>
+                <style>
+                    body { font-family: 'Calibri', 'Arial', sans-serif; line-height: 1.5; color: #333; }
+                    h1 { color: #2563eb; font-size: 24px; margin-bottom: 10px; }
+                    h2 { color: #1e40af; font-size: 20px; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+                    h3 { color: #374151; font-size: 16px; margin-top: 15px; font-weight: bold; }
+                    p { margin-bottom: 10px; }
+                    ul { margin-bottom: 10px; }
+                    li { margin-bottom: 5px; }
+                    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 20px; }
+                    .meta { color: #6b7280; font-size: 14px; margin-bottom: 5px; }
+                    .stats-box { background-color: #f3f4f6; border: 1px solid #d1d5db; padding: 15px; border-radius: 8px; margin-top: 30px; }
+                    .stats-title { font-weight: bold; margin-bottom: 10px; font-size: 16px; border-bottom: 1px solid #9ca3af; padding-bottom: 5px; }
+                    .stat-item { margin-bottom: 5px; font-family: 'Consolas', monospace; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>${title}</h1>
+                    <div class="meta">Generated on: ${date}</div>
+                    <div class="meta">Report Type: ${type}</div>
+                </div>
+
+                <div class="content">
+                    ${(report.data.content || '')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/\*\*(.*)\*\*/gim, '<b>$1</b>')
+                .replace(/\*(.*)\*/gim, '<i>$1</i>')
+                .replace(/^\s*-\s+(.*$)/gim, '<ul><li>$1</li></ul>')
+                .replace(/\n/g, '<br />')
+            }
+                </div>
+
+                <div class="stats-box">
+                    <div class="stats-title">Appendix: Key Metrics</div>
+                    ${Object.entries(report.data.stats || {}).map(([key, value]) =>
+                `<div class="stat-item"><b>${key}:</b> ${value}</div>`
+            ).join('')}
+                </div>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob([htmlContent], { type: 'application/msword' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${report.type}-report-${report.id}.json`;
+        a.download = `${report.title.replace(/\s+/g, '_')}_${report.id.substr(0, 6)}.doc`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -189,7 +243,7 @@ const ReportsPage = () => {
                                 <MarkdownRenderer content={report.data.content} isDarkMode={isDarkMode} />
                             </div>
 
-                            {/* Key Stats Appendix (Optional, if we want to show raw numbers at the bottom) */}
+                            {/* Key Stats Appendix */}
                             {report.data.stats && (
                                 <div className={`mt-12 p-6 rounded-lg ${isDarkMode ? 'bg-gray-900/50' : 'bg-gray-50'}`}>
                                     <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">{t('reports.keyMetrics')}</h3>
@@ -216,7 +270,6 @@ const ReportsPage = () => {
 
         // Fallback for legacy reports
         const data = report.data;
-        // ... (Using simpler fallback for old data to save space if needed, or we can keep the switch statement if user has old data they care about. The user asked for "proper reports", so converting the view is key. I'll include a simple fallback.)
 
         return (
             <div className="p-4">
