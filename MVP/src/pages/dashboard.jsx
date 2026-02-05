@@ -82,7 +82,9 @@ const Dashboard = () => {
       <div className="flex-1 flex flex-col min-h-0">
 
         <div className="flex-1 overflow-y-auto p-6">
-          <DashboardStats isDarkMode={isDarkMode} />
+          <div id="dashboard-stats">
+            <DashboardStats isDarkMode={isDarkMode} />
+          </div>
 
           {loading ? (
             <div className="flex items-center justify-center p-12">
@@ -91,7 +93,7 @@ const Dashboard = () => {
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Revenue Chart */}
-              <div className="lg:col-span-2 rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
+              <div id="revenue-chart" className="lg:col-span-2 rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                   <div>
                     <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dashboard.totalRevenue')}</div>
@@ -123,7 +125,7 @@ const Dashboard = () => {
               </div>
 
               {/* Source of Purchases - Pie Chart */}
-              <div className="rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
+              <div id="source-chart" className="rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-semibold">{t('dashboard.sourceOfPurchases')}</span>
                   <div className="text-gray-400">

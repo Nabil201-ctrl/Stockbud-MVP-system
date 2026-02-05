@@ -107,10 +107,10 @@ const ChatBotButton = () => {
   };
 
   const suggestedQuestions = [
-    t('chat.suggestion1', {}, "How's my revenue?"),
-    t('chat.suggestion2', {}, "Tell me about visitors"),
-    t('chat.suggestion3', {}, "Top countries?"),
-    t('chat.suggestion4', {}, "Purchase sources?")
+    t('chat.suggestion1', {}, "How to add a product?"),
+    t('chat.suggestion2', {}, "Explain 'Total Revenue'"),
+    t('chat.suggestion3', {}, "What are my top products?"),
+    t('chat.suggestion4', {}, "Where do I find reports?")
   ];
 
   const handleSuggestionClick = (question) => {

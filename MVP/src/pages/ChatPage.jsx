@@ -184,70 +184,72 @@ const ChatPage = () => {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0 md:w-0 md:overflow-hidden'}
         ${isDarkMode ? 'bg-black text-gray-100' : 'bg-gray-50 text-gray-900 border-r border-gray-200'}
       `}>
-                <div className="p-3 flex-shrink-0">
-                    <button
-                        onClick={createNewChat}
-                        className={`
+                <div id="chat-sidebar" className="h-full flex flex-col">
+                    <div className="p-3 flex-shrink-0">
+                        <button
+                            onClick={createNewChat}
+                            className={`
               w-full flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm border 
               ${isDarkMode ? 'border-gray-700 hover:bg-gray-900' : 'bg-white border-gray-200 hover:bg-gray-100 text-gray-900'}
             `}
-                    >
-                        <Plus size={16} />
-                        <span>{t('chat.newChat')}</span>
-                    </button>
-                </div>
+                        >
+                            <Plus size={16} />
+                            <span>{t('chat.newChat')}</span>
+                        </button>
+                    </div>
 
-                <div className="flex-1 overflow-y-auto px-2 pb-2 scrollbar-thin scrollbar-thumb-gray-600">
-                    <div className="flex flex-col gap-2">
-                        <div className="text-xs font-semibold text-gray-500 px-3 py-2">{t('chat.recent')}</div>
-                        {chats.map(chat => (
-                            <div
-                                key={chat.id}
-                                onClick={() => {
-                                    setCurrentChatId(chat.id);
-                                    if (window.innerWidth < 768) setSidebarOpen(false);
-                                }}
-                                className={`
+                    <div className="flex-1 overflow-y-auto px-2 pb-2 scrollbar-thin scrollbar-thumb-gray-600">
+                        <div className="flex flex-col gap-2">
+                            <div className="text-xs font-semibold text-gray-500 px-3 py-2">{t('chat.recent')}</div>
+                            {chats.map(chat => (
+                                <div
+                                    key={chat.id}
+                                    onClick={() => {
+                                        setCurrentChatId(chat.id);
+                                        if (window.innerWidth < 768) setSidebarOpen(false);
+                                    }}
+                                    className={`
                   group flex items-center gap-3 px-3 py-3 rounded-md cursor-pointer text-sm relative transition-colors
                   ${currentChatId === chat.id
-                                        ? (isDarkMode ? 'bg-gray-800/80 text-white' : 'bg-gray-200 text-gray-900')
-                                        : (isDarkMode ? 'hover:bg-gray-900 text-gray-300' : 'hover:bg-gray-100 text-gray-700')}
+                                            ? (isDarkMode ? 'bg-gray-800/80 text-white' : 'bg-gray-200 text-gray-900')
+                                            : (isDarkMode ? 'hover:bg-gray-900 text-gray-300' : 'hover:bg-gray-100 text-gray-700')}
                 `}
-                            >
-                                <div className="flex-shrink-0">
-                                    <MessageSquare size={16} className="text-gray-400" />
-                                </div>
-                                <div className="flex-1 truncate overflow-hidden pr-6">
-                                    {chat.title}
-                                </div>
-
-                                {/* Delete Button (visible on hover or active) */}
-                                {(currentChatId === chat.id || true) && (
-                                    <div className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={(e) => deleteChat(e, chat.id)}
-                                            className="p-1 hover:text-red-400 text-gray-400"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
+                                >
+                                    <div className="flex-shrink-0">
+                                        <MessageSquare size={16} className="text-gray-400" />
                                     </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                                    <div className="flex-1 truncate overflow-hidden pr-6">
+                                        {chat.title}
+                                    </div>
 
-                {/* User Profile / Settings at bottom */}
-                <div className={`p-3 border-t flex items-center gap-3 cursor-pointer rounded-md m-2 ${isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-100'}`}>
-                    {user?.picture ? (
-                        <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-sm object-cover" />
-                    ) : (
-                        <div className="w-8 h-8 rounded-sm bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
-                            {getInitials(user?.name)}
+                                    {/* Delete Button (visible on hover or active) */}
+                                    {(currentChatId === chat.id || true) && (
+                                        <div className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => deleteChat(e, chat.id)}
+                                                className="p-1 hover:text-red-400 text-gray-400"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
                         </div>
-                    )}
-                    <div className="flex-1 text-sm font-medium truncate">{user?.name || 'User Account'}</div>
-                    <MoreHorizontal size={16} className="text-gray-400" />
+                    </div>
+
+                    {/* User Profile / Settings at bottom */}
+                    <div className={`p-3 border-t flex items-center gap-3 cursor-pointer rounded-md m-2 ${isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-100'}`}>
+                        {user?.picture ? (
+                            <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-sm object-cover" />
+                        ) : (
+                            <div className="w-8 h-8 rounded-sm bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                                {getInitials(user?.name)}
+                            </div>
+                        )}
+                        <div className="flex-1 text-sm font-medium truncate">{user?.name || 'User Account'}</div>
+                        <MoreHorizontal size={16} className="text-gray-400" />
+                    </div>
                 </div>
             </div>
 
@@ -333,7 +335,7 @@ const ChatPage = () => {
           absolute bottom-0 left-0 right-0 p-4 
           ${isDarkMode ? 'bg-gradient-to-t from-gray-900 via-gray-900 to-transparent' : 'bg-gradient-to-t from-white via-white to-transparent'}
         `}>
-                    <div className="max-w-3xl mx-auto">
+                    <div id="chat-input" className="max-w-3xl mx-auto">
                         <form onSubmit={handleSend} className="relative">
                             <input
                                 type="text"

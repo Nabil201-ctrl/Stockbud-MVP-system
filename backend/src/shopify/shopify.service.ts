@@ -240,12 +240,6 @@ export class ShopifyService {
     }
   }
 
-  async getProducts(shop: string, token: string, options: { first?: number, last?: number, after?: string, before?: string } = {}) {
-    if (!shop || !token) {
-      console.error('getProducts: Missing credentials', { shop, token: token ? 'PRESENT' : 'MISSING' });
-      throw new HttpException('Missing Shopify credentials', HttpStatus.UNAUTHORIZED);
-    }
-
     console.log(`[ShopifyService] Fetching products for shop: ${shop}`, options);
     
     // Fetch total count (separate query, as connection count can be expensive or not available directly depending on API version)
@@ -298,6 +292,11 @@ export class ShopifyService {
                     node {
                       price
                       inventoryQuantity
+                      inventoryItem {
+                        unitCost {
+                          amount
+                        }
+                      }
                     }
                   }
                 }

@@ -1,12 +1,14 @@
 // components/Layout.jsx
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../Dashboard/Sidebar';
 import Header from '../Dashboard/Header';
 import ChatBotButton from '../ChatBot/ChatBotButton';
 import OfflineBanner from '../common/OfflineBanner';
 import FeedbackModal from '../Dashboard/FeedbackModal';
 import { useTheme } from '../../context/ThemeContext';
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
 
 const Layout = ({ children }) => {
   const [selectedDate, setSelectedDate] = useState(17);
@@ -37,6 +39,63 @@ const Layout = ({ children }) => {
     };
 
     checkFeedback();
+  }, []);
+
+  const location = useLocation();
+
+  const startTour = () => {
+    // Define base steps common to all pages (optional, maybe just sidebar/header)
+    const baseSteps = [
+      { element: '#app-sidebar', popover: { title: 'Navigation', description: 'Use the sidebar to navigate between different sections of the app.' } },
+      { element: '#app-header', popover: { title: 'Header', description: 'Access your profile, notifications, and settings here.' } },
+      { element: '#shop-selector', popover: { title: 'Shop Selector', description: 'Switch between your connected Shopify stores.' } },
+      { element: '#ai-tokens', popover: { title: 'AI Tokens', description: 'View your remaining AI tokens.' } },
+      { element: '#theme-toggle', popover: { title: 'Theme', description: 'Toggle between light and dark mode.' } },
+    ];
+
+    // Define page-specific steps
+    const pageSteps = {
+      '/dashboard': [
+        { element: '#dashboard-stats', popover: { title: 'Overview Stats', description: 'Quick view of your key metrics.' } },
+        { element: '#revenue-chart', popover: { title: 'Revenue Chart', description: 'Track your revenue trends over time.' } },
+        { element: '#source-chart', popover: { title: 'Traffic Sources', description: 'See where your customers are coming from.' } },
+      ],
+      '/products': [
+        { element: '#products-stats', popover: { title: 'Product Stats', description: 'Summary of your product inventory.' } },
+        { element: '#products-search', popover: { title: 'Search & Filter', description: 'Find specific products or filter by category.' } },
+        { element: '#products-table', popover: { title: 'Product List', description: 'Manage your products here.' } },
+      ],
+      '/chat': [
+        { element: '#chat-sidebar', popover: { title: 'Chat History', description: 'Access your previous conversations here.' } },
+        { element: '#chat-input', popover: { title: 'Ask AI', description: 'Type your questions about your store data here.' } },
+      ]
+    };
+
+    // Get steps for current path, normalize path (remove trailing slash if needed)
+    const currentPath = location.pathname.endsWith('/') && location.pathname.length > 1
+      ? location.pathname.slice(0, -1)
+      : location.pathname;
+
+    const specificSteps = pageSteps[currentPath] || [];
+
+    const driverObj = driver({
+      showProgress: true,
+      steps: [
+        ...baseSteps,
+        ...specificSteps
+      ]
+    });
+    driverObj.drive();
+  };
+
+  useEffect(() => {
+    const tourSeen = localStorage.getItem('tour_seen');
+    if (!tourSeen) {
+      setTimeout(() => {
+        startTour();
+        localStorage.setItem('tour_seen', 'true');
+      }, 1500);
+    }
   }, []);
 
   const handleFeedbackSubmit = (feedback) => {
@@ -82,6 +141,7 @@ const Layout = ({ children }) => {
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
           toggleSidebar={toggleMobileSidebar}
+          startTour={startTour}
         />
         <main className="flex-1 overflow-y-auto">
           {children || <Outlet />}

@@ -249,10 +249,27 @@ export class ChatService implements OnModuleInit {
         if (personality === 'Concise') systemInstruction += " Keep answers very short and directly to the point.";
 
         systemInstruction += ` Respond in ${language}.`;
-        systemInstruction += ` ${name} answers specific questions about the data and provides clarifications.`;
-        systemInstruction += " CRITICAL: You are NOT allowed to generate reports. If the user asks for a report, explain that you can only provide information and answer questions about the system. You can clarify data points but cannot compile full reports. Keep your responses extremely short, punchy, and data-driven. Avoid conversational filler.";
+        systemInstruction += ` ${name} acts as a Dashboard Explainer, Navigation Guide, and Business Tutor.`;
 
-        systemInstruction += ` You have access to the user's REAL e-commerce data. Here is the current snapshot: ${storeStats}. Use this data to answer questions accurately. If asked about something not in this snapshot, explains that you only can see high-level metrics right now.`;
+        // 1. Navigation & Features
+        systemInstruction += `\n\n**Navigation Guide**:\n`;
+        systemInstruction += `- **Dashboard**: Main overview, revenue charts, traffic sources, heatmap.\n`;
+        systemInstruction += `- **Products**: Manage inventory, add new products, view stock levels.\n`;
+        systemInstruction += `- **Chat**: Access this AI assistant and full chat history.\n`;
+        systemInstruction += `- **Reports**: (Read-only) View generated weekly reports. You cannot generate them here.\n`;
+        systemInstruction += `- **Settings**: Connect Shopify store, manage preferences, toggle theme.\n`;
+        systemInstruction += `If asked "How do I..." or "Where is...", guide them to the correct page.\n`;
+
+        // 2. Limitations
+        systemInstruction += `\n\n**Limitations (CRITICAL)**:\n`;
+        systemInstruction += `- You CANNOT generate downloadable reports (PDF/CSV). Guide them to the Reports page.\n`;
+        systemInstruction += `- You CANNOT duplicate, refund, or edit orders/products. You are Read-Only.\n`;
+        systemInstruction += `- You ONLY see the snapshot provided below. You DO NOT have access to historical data (last year, last month) unless it's in the snapshot.\n`;
+
+        // 3. Data Context
+        systemInstruction += `\n\n**Current Data Snapshot**:\n${storeStats}\n`;
+        systemInstruction += `Use this data to answer questions accurately. If asked about metric definitions (e.g. "What is AOV?"), explain them simply.`;
+        systemInstruction += ` Keep responses concise and helpful.`;
 
         if (this.model) {
             try {

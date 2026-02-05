@@ -234,7 +234,7 @@ const ProductsPage = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div id="products-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
             { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total, change: '+12%', color: 'bg-blue-500' },
             { icon: <DollarSign size={24} />, label: t('products.revenue'), value: `$${productStats.totalRevenue.toLocaleString()}`, change: '+8.5%', color: 'bg-green-500' },
@@ -262,7 +262,7 @@ const ProductsPage = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold">{t('products.catalog')}</h2>
               <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-lg w-full sm:w-auto ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                <div id="products-search" className={`flex items-center gap-2 px-4 py-2 rounded-lg w-full sm:w-auto ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                   <Search size={18} className="text-gray-400 flex-shrink-0" />
                   <input
                     type="text"
@@ -279,7 +279,7 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div id="products-table" className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
