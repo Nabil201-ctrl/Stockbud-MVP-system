@@ -8,7 +8,7 @@
     "aiTokens": 390,
     "reportTokens": 250,
     "createdAt": "2026-01-18T07:31:13.145Z",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3Njk1NTY0MzAsImV4cCI6MTc3MjE0ODQzMH0.gDAvX_b41xozSlJd1pRBINaHjfbNm0D8Qxv0_1yh55I",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3Njk4NDcwNTQsImV4cCI6MTc3MjQzOTA1NH0.-RCwsjjAknnLdGd5944tOqpdtj-hCpku4MZ2_1C2SSo",
     "shopifyStores": [
       {
         "id": "bdaf3f42",
@@ -42,7 +42,7 @@
     "name": "Test User",
     "password": "hash",
     "isOnboardingComplete": false,
-    "aiTokens": 700,
+    "aiTokens": 2355165,
     "reportTokens": 250,
     "createdAt": "2026-01-21T22:19:47.487Z",
     "lastTokenReset": 1769033987493,

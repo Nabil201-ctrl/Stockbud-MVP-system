@@ -11,7 +11,7 @@ export class PaymentsController {
     async initialize(@Req() req, @Body() body: { amount: number; tokenCount: number; callbackUrl: string }) {
         const user = req.user;
         // Validation logic
-        // 100 tokens = 2000 NGN
+        // 100 tokens = 20.00 USD
         // ...
         // We trust frontend for now or we can strictly enforce:
         // const expectedPrice = (body.tokenCount / 100) * 2000;

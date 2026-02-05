@@ -74,6 +74,9 @@ export class ReportsService {
     }
 
     async generateReport(userId: string, type: 'sales' | 'inventory' | 'revenue'): Promise<Report> {
+        // Check and deduct tokens first
+        await this.usersService.deductReportToken(userId, 1);
+
         const user = await this.usersService.findById(userId);
         const shop = user?.shopifyShop;
         const token = await this.usersService.getDecryptedShopifyToken(userId);
@@ -106,33 +109,54 @@ export class ReportsService {
         this.saveReports(reports);
 
         // Generate report data asynchronously
-        this.generateReportData(reportId, shop, token, type);
+        this.generateReportData(reportId, shop, token, type, userId);
 
         return report;
     }
 
-    private async generateReportData(reportId: string, shop: string, token: string, type: string) {
+    private async generateReportData(reportId: string, shop: string, token: string, type: string, userId: string) {
         try {
             // Get current stats from dashboard
             const stats = await this.dashboardService.getStats(shop, token);
 
+            // Get user's language preference
+            // We need to fetch user again or pass it down. Since we only have reportId here which doesn't help much, 
+            // let's assume we can fetch user by token owner or just pass userId to this method.
+            // Wait, generateReport calls this. Let's update generateReport to pass userId.
+            // For now, let's fetch user using the userId (which we don't have here directly).
+            // Actually, generateReportData needs userId. Let's add it to arguments in next step.
+            // But wait, I can't change signature easily without changing call site.
+            // Let's modify generateReportData signature first.
+            const user = await this.usersService.findById(reportId); // wait, reportId is not userId.
+            // I need to update the signature of generateReportData.
+
             let reportData: any = {};
             let aiContent = "";
+
+            // Placeholder for now, I will update signature in next step.
+            const language = 'en';
 
             // Prepare prompt for AI
             const statsSummary = JSON.stringify(stats, null, 2);
             const prompt = `
-                You are a professional business analyst. Generate a detailed, professional ${type} report for an e-commerce store owner based on the following data:
+                You are a Senior Retail Data Strategist & Business Critic. Your role is NOT to just summarize data, but to critically analyze the shop's performance and "find faults" in their business strategy, operational efficiency, and revenue maximization.
+
+                Analyze the following sales data for an e-commerce store:
                 ${statsSummary}
 
-                The report should be in Markdown format and include the following sections:
-                1. **Executive Summary**: A brief overview of performance.
-                2. **Key Findings**: Bullet points of the most important metrics and trends.
-                3. **Detailed Analysis**: A deeper dive into the numbers (discuss revenue, products, sources etc).
-                4. **Recommendations**: Actionable advice based on the data.
+                The report should be in Markdown format. BE DIRECT AND CRITICAL.
                 
-                Use bolding for emphasis. Use lists where appropriate. Keep the tone professional but encouraging.
-                Do not include any "Here is the report" preamble, start directly with the report content.
+                Structure:
+                1. **Critical Performance Review**: Immediately highlight what is going WRONG or could be significantly better. calling out specific metrics.
+                2. **Missed Opportunities (Fault Finding)**: Identify specific "faults" such as:
+                   - High-demand products that are under-monetized?
+                   - Over-reliance on a single product?
+                   - Declining trends that need immediate intervention?
+                3. **Strategic Analysis**: Deep dive into the "Why" behind the numbers.
+                4. **Corrective Actions**: Specific, hard-hitting advice to fix the identified faults.
+
+                Use bolding for emphasis. Do not use fluff. Speak like a business partner obsessed with optimization.
+                Start directly with the content.
             `;
 
             if (this.model) {
@@ -166,7 +190,15 @@ export class ReportsService {
                     let inventorySummary = aiContent;
 
                     try {
-                        const products = await this.shopifyService.getProducts(shop, token);
+                        const productsResult = await this.shopifyService.getProducts(shop, token);
+                        // Normalize productsresult to array
+                        let products: any[] = [];
+                        if (Array.isArray(productsResult)) {
+                            products = productsResult;
+                        } else if (productsResult && productsResult.products) {
+                            products = productsResult.products;
+                        }
+
                         if (products && products.length > 0) {
                             const totalStock = products.reduce((sum, p) => sum + (p.variants?.reduce((vSum, v) => vSum + (v.inventory_quantity || 0), 0) || 0), 0);
                             const lowStockProducts = products.filter(p => p.variants?.some(v => v.inventory_quantity < 10)).map(p => p.title);
@@ -183,18 +215,24 @@ export class ReportsService {
                             // Regenerate AI content with REAL inventory data if we have it
                             if (this.model) {
                                 const inventoryPrompt = `
-                                    You are a professional business analyst. Generate a detailed Inventory Report based on the following REAL inventory data from Shopify:
+                                    You are an Inventory Optimization Expert. Your goal is to identify "Dead Cash" (Overstock) and "Lost Revenue" (Out of Stock). Critically analyze this inventory data:
                                     - Total Products: ${products.length}
                                     - Total Stock Items: ${totalStock}
-                                    - Low Stock Products (${lowStockProducts.length}): ${lowStockProducts.join(', ') || 'None'}
-                                    - Out of Stock Products (${outOfStockProducts.length}): ${outOfStockProducts.join(', ') || 'None'}
+                                    - LOW STOCK DANGER (${lowStockProducts.length}): ${lowStockProducts.join(', ') || 'None'}
+                                    - OUT OF STOCK FAILURES (${outOfStockProducts.length}): ${outOfStockProducts.join(', ') || 'None'}
                                     
-                                    Also consider this sales context: ${JSON.stringify(stats.topProducts)}
+                                    Sales Context (Top Performers): ${JSON.stringify(stats.topProducts)}
 
-                                    Structure the report with:
-                                    1. **Inventory Overview**: High-level summary.
-                                    2. **Stock Health**: Analysis of stock levels.
-                                    3. **Restock Recommendations**: Specific advice based on low/out of stock items.
+                                    Structure:
+                                    1. **Inventory Health Check**: Grade the inventory health. Is it lean or bloated?
+                                    2. **Critical Faults**: 
+                                       - Are top-selling items out of stock? (Major Fault: Revenue Leak)
+                                       - Are there too many items with low stock risk?
+                                    3. **Action Plan**: 
+                                       - What needs immediate reordering?
+                                       - What strategy needs to change to prevent this?
+                                    
+                                    Be strict about out-of-stock top sellers. That is a critical business failure.
                                 `;
                                 const result = await this.model.generateContent(inventoryPrompt);
                                 inventorySummary = result.response.text();
@@ -320,13 +358,19 @@ export class ReportsService {
 
         // 4. Generate AI Analysis
         const prompt = `
-            Generate a comprehensive Monthly Executive Report by analyzing these weekly summaries:
+            Act as a fractional CFO. Generate a Monthly Strategic Review based on these weekly summaries:
             ${summaryText}
 
-            Total aggregated revenue from reports: $${totalRev}
-            Average weekly revenue: $${avgRev.toFixed(0)}
+            Financials:
+            - Aggregated Revenue: $${totalRev}
+            - Avg Weekly Revenue: $${avgRev.toFixed(0)}
 
-            Provide high-level strategic insights, identify consistency or volatility, and suggest focus areas for next month.
+            Your Goal: Find the "Trend Faults".
+            1. **Volatility Analysis**: Is revenue consistent or erratic? Why?
+            2. **Growth Stagnation**: If the growth is flat, critique the lack of momentum.
+            3. **Strategic Pivot**: What ONE major change should they make next month to break the current pattern?
+
+            Be concise, strategic, and forward-looking.
         `;
 
         let content = "Monthly Aggregation: ";

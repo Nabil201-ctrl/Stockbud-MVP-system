@@ -21,9 +21,9 @@ export class PaymentsService {
             throw new HttpException('Paystack is not configured', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        // Amount is passed in NGN (e.g. 2000).
-        // Paystack expects amount in the smallest currency unit (kobo).
-        // 2000 -> 200000 kobo.
+        // Amount is passed in USD (e.g. 20.00).
+        // Paystack expects amount in the smallest currency unit (cents).
+        // 20 -> 2000 cents.
 
         const amountInSubunits = Math.round(amount * 100);
 
@@ -34,6 +34,7 @@ export class PaymentsService {
                     {
                         email: user.email,
                         amount: amountInSubunits,
+                        currency: 'USD',
                         callback_url: callbackUrl,
                         metadata: {
                             userId: user.id,

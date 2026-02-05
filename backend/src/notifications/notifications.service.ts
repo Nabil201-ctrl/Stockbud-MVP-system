@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { NotificationsGateway } from './notifications.gateway';
 
 export interface Notification {
     id: string;
@@ -16,6 +17,10 @@ export interface Notification {
 export class NotificationsService implements OnModuleInit {
     private notifications: Map<string, Notification> = new Map();
     private readonly filePath = path.join(process.cwd(), 'notifications.json');
+
+    constructor(
+        private readonly notificationsGateway: NotificationsGateway
+    ) { }
 
     onModuleInit() {
         this.loadNotifications();
@@ -69,6 +74,14 @@ export class NotificationsService implements OnModuleInit {
         };
         this.notifications.set(notification.id, notification);
         this.saveNotifications();
+
+        // Push notification in real-time
+        try {
+            this.notificationsGateway.sendNotificationToUser(userId, notification);
+        } catch (error) {
+            console.error('Failed to send push notification', error);
+        }
+
         return notification;
     }
 

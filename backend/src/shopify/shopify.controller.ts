@@ -35,8 +35,18 @@ export class ShopifyController {
             throw new HttpException('Shopify credentials not found. Please connect your store in Settings.', HttpStatus.BAD_REQUEST);
         }
 
+        const { first, last, after, before } = req.query;
+        const limit = first ? parseInt(first as string) : (last ? undefined : 10);
+        const lastLimit = last ? parseInt(last as string) : undefined;
+
         const decryptedToken = await this.usersService.getDecryptedShopifyToken(user.id);
-        return await this.shopifyService.getProducts(user.shopifyShop, decryptedToken);
+
+        return await this.shopifyService.getProducts(user.shopifyShop, decryptedToken, {
+            first: limit,
+            last: lastLimit,
+            after: after as string,
+            before: before as string
+        });
     }
 
     /**

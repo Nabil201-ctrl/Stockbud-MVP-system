@@ -1,0 +1,151 @@
+npm warn Unknown project config "shamefully-hoist". This will stop working in the next major version of npm.
+
+> build
+> react-router build
+
+vite v6.4.1 building for production...
+transforming...
+✓ 1390 modules transformed.
+✗ Build failed in 9.54s
+app/routes/_index/route.jsx (17:20): "ChartHistogramIcon" is not exported by "node_modules/@shopify/polaris-icons/dist/index.mjs", imported by "app/routes/_index/route.jsx".
+file: /home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/_index/route.jsx:17:20
+
+15:   Box
+16: } from "@shopify/polaris";
+17: import { StoreIcon, ChartHistogramIcon, ProductIcon, CashDollarIcon } from "@shopify/polaris-icons";
+                        ^
+18: 
+19: export const loader = async ({ request }) => {
+
+    at getRollupError (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at error (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/parseAst.js:397:42)
+    at Module.error (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/node-entry.js:17022:16)
+    at Module.traceVariable (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/node-entry.js:17478:29)
+    at ModuleScope.findVariable (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/node-entry.js:15141:39)
+    at ChildScope.findVariable (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/node-entry.js:5688:38)
+    at FunctionScope.findVariable (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/node-entry.js:5688:38)
+    at FunctionBodyScope.findVariable (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/node-entry.js:5688:38)
+    at Identifier.bind (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/node-entry.js:5462:40)
+    at Property.bind (file:///home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/rollup/dist/es/shared/node-entry.js:2829:23) {
+  binding: 'ChartHistogramIcon',
+  code: 'MISSING_EXPORT',
+  exporter: '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris-icons/dist/index.mjs',
+  id: '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/_index/route.jsx',
+  url: 'https://rollupjs.org/troubleshooting/#error-name-is-not-exported-by-module',
+  pos: 360,
+  loc: {
+    column: 20,
+    file: '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/_index/route.jsx',
+    line: 17
+  },
+  frame: '15:   Box\n' +
+    '16: } from "@shopify/polaris";\n' +
+    '17: import { StoreIcon, ChartHistogramIcon, ProductIcon, CashDollarIcon } from "@shopify/polaris-icons";\n' +
+    '                        ^\n' +
+    '18: \n' +
+    '19: export const loader = async ({ request }) => {',
+  watchFiles: [
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@react-router/dev/dist/config/defaults/entry.client.tsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/root.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/webhooks.app.scopes_update.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/webhooks.app.uninstalled.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/auth.login/route.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/contact.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/_index/route.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/auth.$.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/about.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/app.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/app._index.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/app/routes/app.additional.jsx',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react/jsx-runtime.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react-dom/client.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react/index.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react-router/dist/development/dom-export.mjs',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/package.json',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react/cjs/react.production.min.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react-dom/index.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react/cjs/react-jsx-runtime.production.min.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react-router/dist/development/chunk-FNSCYPCZ.mjs',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react-router/dist/development/chunk-EPOLDU6W.mjs',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react-dom/cjs/react-dom.production.min.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react-router/dist/development/index.mjs',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/shopify-app-react-router/dist/esm/react/index.mjs',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/index.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris-icons/dist/index.mjs',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/styles.css',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/react-router/node_modules/cookie/dist/index.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/set-cookie-parser/lib/set-cookie.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/scheduler/index.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/shopify-app-react-router/dist/esm/react/components/AppProvider/AppProvider.mjs',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/shopify-app-react-router/dist/esm/react/components/AppProxyProvider/AppProxyProvider.mjs',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/shopify-app-react-router/dist/esm/react/components/AppProxyLink/AppProxyLink.mjs',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/configure.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/types.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/shared.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/ThemeProvider/ThemeProvider.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/color-transformers.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/within-content-context.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/use-copy-to-clipboard.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/use-focus.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/use-event-listener.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/use-hover.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/use-media-query.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/use-index-resource-state.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/breakpoints.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/utilities/use-theme.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/AppProvider/AppProvider.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/AccountConnection/AccountConnection.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/ActionList/ActionList.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/ActionMenu/ActionMenu.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Autocomplete/Autocomplete.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Avatar/Avatar.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Backdrop/Backdrop.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Badge/Badge.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Banner/Banner.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Bleed/Bleed.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Badge/types.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Box/Box.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Breadcrumbs/Breadcrumbs.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/BulkActions/BulkActions.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Button/Button.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Button/utils.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/ButtonGroup/ButtonGroup.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/CalloutCard/CalloutCard.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Card/Card.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Checkbox/Checkbox.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/ChoiceList/ChoiceList.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Collapsible/Collapsible.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/ColorPicker/ColorPicker.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/InlineGrid/InlineGrid.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Combobox/Combobox.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Connected/Connected.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/ContextualSaveBar/ContextualSaveBar.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/DataTable/DataTable.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/DatePicker/DatePicker.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/DescriptionList/DescriptionList.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Divider/Divider.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/DropZone/DropZone.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/EmptySearchResult/EmptySearchResult.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/EmptyState/EmptyState.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/EventListener/EventListener.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/ExceptionList/ExceptionList.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Filters/Filters.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Focus/Focus.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/FooterHelp/FooterHelp.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Form/Form.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/FormLayout/FormLayout.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Frame/Frame.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Frame/components/Toast/Toast.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/FullscreenBar/FullscreenBar.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Grid/Grid.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Icon/Icon.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Image/Image.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/IndexFilters/IndexFilters.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/IndexFilters/hooks/useSetIndexFiltersMode/useSetIndexFiltersMode.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/IndexFilters/types.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/IndexTable/IndexTable.js',
+    '/home/nabil-abubakar/Documents/Github/Stockbud-MVP-system/shopify_app/stock-bud/node_modules/@shopify/polaris/build/esm/components/Indicator/Indicator.js',
+    ... 1258 more items
+  ],
+  Symbol(augmented): true
+}

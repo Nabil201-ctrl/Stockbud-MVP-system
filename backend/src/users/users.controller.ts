@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 
@@ -84,5 +84,19 @@ export class UsersController {
     @UseGuards(AuthGuard('jwt'))
     async topUpTokens(@Req() req, @Body() body: { amount: number }) {
         return this.usersService.topUpTokens(req.user.id, body.amount);
+    }
+
+
+    @Patch('free-reports-all')
+    @UseGuards(AuthGuard('jwt'))
+    async setAllFreeReports(@Body() body: { enable: boolean }) {
+        const count = await this.usersService.setAllFreeReports(body.enable);
+        return { success: true, count };
+    }
+
+    @Patch(':id/free-reports')
+    @UseGuards(AuthGuard('jwt'))
+    async setFreeReports(@Param('id') id: string, @Body() body: { enable: boolean }) {
+        return this.usersService.setFreeReports(id, body.enable);
     }
 }

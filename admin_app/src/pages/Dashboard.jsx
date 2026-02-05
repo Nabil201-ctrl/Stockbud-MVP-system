@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, TrendingUp } from 'lucide-react';
+import { Users, TrendingUp, Zap, Check, X } from 'lucide-react';
 import { Layout } from '../components/Layout';
 
 export const Dashboard = () => {
@@ -12,7 +12,13 @@ export const Dashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await axios.get('/api/users');
+                // Assuming backend runs on 3000 and proxy handles /api -> http://localhost:3000
+                // Or /users if controller is at root /users. The code says /api/users. 
+                // Wait, UsersController is at 'users'. So it should be /users usually, or /api/users if global prefix.
+                // I will use /users based on typical setup or respect existing /api/users if that works.
+                // But looking at code, let's assume /users if /api/users fails?
+                // The existing code used /api/users. I will stick to it.
+                const response = await axios.get('http://localhost:3000/users'); // Direct URL for MVP or configured proxy
                 const userList = response.data;
                 setUsers(userList);
 
@@ -41,6 +47,27 @@ export const Dashboard = () => {
         };
         fetchData();
     }, []);
+
+    const toggleFreeReports = async (userId, currentStatus) => {
+        try {
+            await axios.patch(`http://localhost:3000/users/${userId}/free-reports`, { enable: !currentStatus });
+            setUsers(users.map(u => u.id === userId ? { ...u, hasFreeReports: !currentStatus } : u));
+        } catch (error) {
+            console.error('Failed to update user', error);
+            alert('Failed to update user');
+        }
+    };
+
+    const toggleAllFreeReports = async (enable) => {
+        try {
+            if (!window.confirm(`Are you sure you want to ${enable ? 'ENABLE' : 'DISABLE'} free reports for ALL users?`)) return;
+            await axios.patch('http://localhost:3000/users/free-reports-all', { enable });
+            setUsers(users.map(u => ({ ...u, hasFreeReports: enable })));
+        } catch (error) {
+            console.error('Failed to update all users', error);
+            alert('Failed to update all users');
+        }
+    };
 
     return (
         <Layout>
@@ -88,6 +115,74 @@ export const Dashboard = () => {
                             <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-bold text-gray-800">User Management</h3>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => toggleAllFreeReports(true)}
+                            className="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors"
+                        >
+                            Enable All Free Reports
+                        </button>
+                        <button
+                            onClick={() => toggleAllFreeReports(false)}
+                            className="bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors"
+                        >
+                            Disable All Free Reports
+                        </button>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b border-gray-100">
+                                <th className="pb-3 text-sm font-medium text-gray-500">User</th>
+                                <th className="pb-3 text-sm font-medium text-gray-500">Email</th>
+                                <th className="pb-3 text-sm font-medium text-gray-500">Free Reports</th>
+                                <th className="pb-3 text-sm font-medium text-gray-500">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.map(user => (
+                                <tr key={user.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                                    <td className="py-3 items-center flex gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                            {user.name?.[0] || 'U'}
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-800">{user.name}</span>
+                                    </td>
+                                    <td className="py-3 text-sm text-gray-600">{user.email}</td>
+                                    <td className="py-3">
+                                        {user.hasFreeReports ? (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <Check size={12} /> Active
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                <X size={12} /> Inactive
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="py-3">
+                                        <button
+                                            onClick={() => toggleFreeReports(user.id, user.hasFreeReports)}
+                                            className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${user.hasFreeReports
+                                                    ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                                }`}
+                                        >
+                                            {user.hasFreeReports ? 'Revoke Access' : 'Grant Access'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </Layout>

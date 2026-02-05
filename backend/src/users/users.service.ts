@@ -46,6 +46,8 @@ export interface User {
     reportTokens?: number;
     botSettings?: BotSettings; // Legacy global settings (migration source)
     lastTokenReset?: number;
+    hasFreeReports?: boolean;
+    language?: 'en' | 'fr';
 }
 
 @Injectable()
@@ -141,6 +143,8 @@ export class UsersService implements OnModuleInit {
                 aiTokens: 500,
                 reportTokens: 250,
                 storeLimit: 2, // Default limit
+                hasFreeReports: false,
+                language: 'en',
                 createdAt: new Date().toISOString(),
             };
             this.users.set(user.id, user);
@@ -162,6 +166,8 @@ export class UsersService implements OnModuleInit {
             aiTokens: 500,
             reportTokens: 250,
             storeLimit: 2, // Default limit
+            hasFreeReports: false,
+            language: 'en',
             createdAt: new Date().toISOString(),
         };
         this.users.set(user.id, user);
@@ -353,6 +359,7 @@ export class UsersService implements OnModuleInit {
             if (data.aiTokens !== undefined) user.aiTokens = data.aiTokens;
             if (data.reportTokens !== undefined) user.reportTokens = data.reportTokens;
             if (data.botSettings !== undefined) user.botSettings = data.botSettings;
+            if (data.language !== undefined) user.language = data.language as 'en' | 'fr';
 
             this.users.set(userId, user);
             this.saveUsers();
@@ -489,6 +496,47 @@ export class UsersService implements OnModuleInit {
         this.users.set(userId, user);
         this.saveUsers();
         console.log(`[Retention] User ${userId} extended retention by ${months} months. New limit: ${user.retentionMonths}`);
+        return user;
+    }
+
+    async setFreeReports(userId: string, enable: boolean): Promise<User> {
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+        user.hasFreeReports = enable;
+        this.users.set(userId, user);
+        this.saveUsers();
+        console.log(`[Admin] Set free reports for user ${userId} to ${enable}`);
+        return user;
+    }
+
+    async setAllFreeReports(enable: boolean): Promise<number> {
+        let count = 0;
+        for (const user of this.users.values()) {
+            user.hasFreeReports = enable;
+            this.users.set(user.id, user);
+            count++;
+        }
+        this.saveUsers();
+        console.log(`[Admin] Set free reports for ALL ${count} users to ${enable}`);
+        return count;
+    }
+
+    async deductReportToken(userId: string, amount: number = 1): Promise<User> {
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+
+        if (user.hasFreeReports) {
+            console.log(`[Tokens] User ${userId} has free reports, skipping deduction.`);
+            return user;
+        }
+
+        if ((user.reportTokens || 0) < amount) {
+            throw new Error('Insufficient report tokens');
+        }
+
+        user.reportTokens = (user.reportTokens || 0) - amount;
+        this.users.set(userId, user);
+        this.saveUsers();
         return user;
     }
 }

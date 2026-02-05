@@ -16,6 +16,12 @@ const ProductsPage = () => {
 
   // State for data
   const [products, setProducts] = useState([]);
+  const [pageInfo, setPageInfo] = useState({
+    hasNextPage: false,
+    hasPreviousPage: false,
+    startCursor: null,
+    endCursor: null
+  });
   const [productStats, setProductStats] = useState({
     total: 0,
     active: 0,
@@ -29,94 +35,97 @@ const ProductsPage = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        // 1. Load from cache first
-        const cachedProducts = await storage.get('products_cache');
-        if (cachedProducts && cachedProducts.length > 0) {
-          // Sanitize cached data to ensure new fields exist
-          const sanitizedCache = cachedProducts.map(p => ({
-            ...p,
-            revenue: p.revenue || 0,
-            rating: p.rating || 'N/A'
-          }));
-          setProducts(sanitizedCache);
-          setLoading(false);
-        }
-
-        // 2. Fetch from backend using authenticated cookie
-        const response = await authenticatedFetch('http://localhost:3000/shopify/products');
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-
-          if (response.status === 401) {
-            // Authentication issue - token expired or invalid
-            setError('Session expired. Please log in again.');
-            return;
-          }
-
-          if (response.status === 400) {
-            // Shopify not connected
-            setShopifyNotConnected(true);
-            setProducts([]);
-            await storage.remove('products_cache');
-            return;
-          }
-
-          throw new Error(errorData.message || 'Failed to fetch from backend');
-        }
-
-        const data = await response.json();
-
-        // Successfully connected, reset any error states
-        setShopifyNotConnected(false);
-        setError(null);
-
-        // Transform data
-        const transformedProducts = data.map(p => ({
-          id: p.id,
-          name: p.title,
-          category: p.product_type || 'Uncategorized',
-          price: p.variants?.[0]?.price || '0.00',
-          stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || 0,
-          status: p.status === 'active' ? 'active' : 'archived',
-          image: p.image?.src || p.images?.[0]?.src || '📦',
-          revenue: 0, // Placeholder as Shopify product API doesn't return revenue directly
-          rating: 'N/A', // Placeholder
-        })).sort((a, b) => b.stock - a.stock);
-
-        // 3. Update state and cache
-        setProducts(transformedProducts);
-        await storage.set('products_cache', transformedProducts);
-
-        // Calculate stats based on real data
-        const total = transformedProducts.length;
-        const active = transformedProducts.filter(p => p.stock >= 10).length;
-        const outOfStock = transformedProducts.filter(p => p.stock === 0).length;
-        const lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
-        const totalRevenue = transformedProducts.reduce((sum, p) => sum + (p.revenue || 0), 0);
-        const avgRating = 0; // Placeholder
-
-        setProductStats({
-          total,
-          active,
-          outOfStock,
-          lowStock,
-          totalRevenue,
-          avgRating
-        });
-
-
-      } catch (err) {
-        console.error('Failed to fetch products:', err);
-        setError(err.message || 'Failed to load products');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchProducts();
   }, [authenticatedFetch]);
+
+  const fetchProducts = async (cursor = null, direction = 'next') => {
+    try {
+      setLoading(true);
+
+      // Construct URL with pagination
+      let url = 'http://localhost:3000/shopify/products?first=6';
+      if (cursor) {
+        if (direction === 'next') {
+          url = `http://localhost:3000/shopify/products?first=6&after=${cursor}`;
+        } else {
+          url = `http://localhost:3000/shopify/products?last=6&before=${cursor}`;
+        }
+      }
+
+      const response = await authenticatedFetch(url);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+
+        if (response.status === 401) {
+          setError('Session expired. Please log in again.');
+          return;
+        }
+
+        if (response.status === 400) {
+          setShopifyNotConnected(true);
+          setProducts([]);
+          return;
+        }
+
+        throw new Error(errorData.message || 'Failed to fetch from backend');
+      }
+
+      const data = await response.json();
+
+      // Successfully connected
+      setShopifyNotConnected(false);
+      setError(null);
+
+      // Handle new response structure { products: [], pageInfo: {} }
+      // Handle new response structure { products: [], pageInfo: {} }
+      const productsData = Array.isArray(data) ? data : (data.products || []);
+      const pageInfoData = data.pageInfo || { hasNextPage: false, hasPreviousPage: false };
+
+      setPageInfo(pageInfoData);
+
+      // Transform data
+      const transformedProducts = productsData.map(p => ({
+        id: p.id,
+        name: p.title,
+        category: p.product_type || 'Uncategorized',
+        price: p.variants?.[0]?.price || '0.00',
+        stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || 0,
+        status: p.status === 'active' ? 'active' : 'archived',
+        image: p.image?.src || p.images?.[0]?.src || '📦',
+        revenue: 0,
+        rating: 'N/A',
+      })); // Removed client-side sorting to respect server-side pagination order
+
+      setProducts(transformedProducts);
+      // We don't cache paginated results in the same simple way for now to avoid complexity
+
+      // Calculate stats (Note: This will only be for the current page, ideally stats come from a separate endpoint)
+      // For MVP, we'll accept this limitation or we should fetch holistic stats separately.
+      // Keeping it simple for now.
+      const total = transformedProducts.length;
+      const active = transformedProducts.filter(p => p.stock >= 10).length;
+      const outOfStock = transformedProducts.filter(p => p.stock === 0).length;
+      const lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
+      const totalRevenue = transformedProducts.reduce((sum, p) => sum + (p.revenue || 0), 0);
+      const avgRating = 0;
+
+      setProductStats({
+        total,
+        active,
+        outOfStock,
+        lowStock,
+        totalRevenue,
+        avgRating
+      });
+
+    } catch (err) {
+      console.error('Failed to fetch products:', err);
+      setError(err.message || 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Dynamic Categories calculation
   const categories = useMemo(() => {
@@ -336,6 +345,35 @@ const ProductsPage = () => {
                 </tbody>
               </table>
             </div>
+
+
+            {/* Pagination Controls */}
+            <div className={`px-6 py-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between`}>
+              <button
+                onClick={() => fetchProducts(pageInfo.startCursor, 'prev')}
+                disabled={!pageInfo.hasPreviousPage || loading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!pageInfo.hasPreviousPage || loading
+                  ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
+                  : 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600'
+                  }`}
+              >
+                Previous
+              </button>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                {/* Page info textual display could go here if we tracked page numbers, but cursor pagination doesn't strictly have page numbers */}
+                Showing {products.length} products
+              </div>
+              <button
+                onClick={() => fetchProducts(pageInfo.endCursor, 'next')}
+                disabled={!pageInfo.hasNextPage || loading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!pageInfo.hasNextPage || loading
+                  ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+              >
+                Next
+              </button>
+            </div>
           </div>
 
           {/* Right Column - Analytics */}
@@ -423,7 +461,7 @@ const ProductsPage = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
