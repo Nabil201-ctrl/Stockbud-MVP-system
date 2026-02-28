@@ -49,6 +49,29 @@ export class ShopifyController {
         });
     }
 
+    @Get('orders')
+    @UseGuards(AuthGuard('jwt'))
+    async getOrders(@Req() req) {
+        const user = req.user;
+
+        if (!user || !user.shopifyShop || !user.shopifyToken) {
+            throw new HttpException('Shopify credentials not found. Please connect your store in Settings.', HttpStatus.BAD_REQUEST);
+        }
+
+        const { first, last, after, before } = req.query;
+        const limit = first ? parseInt(first as string) : (last ? undefined : 20);
+        const lastLimit = last ? parseInt(last as string) : undefined;
+
+        const decryptedToken = await this.usersService.getDecryptedShopifyToken(user.id);
+
+        return await this.shopifyService.getOrders(user.shopifyShop, decryptedToken, {
+            first: limit,
+            last: lastLimit,
+            after: after as string,
+            before: before as string
+        });
+    }
+
     /**
      * Generate a pairing code for the authenticated user.
      * The user will enter this code in the Shopify App.
@@ -79,14 +102,12 @@ export class ShopifyController {
             throw new HttpException(errorMessage, HttpStatus.BAD_REQUEST);
         }
 
-        // Trigger Initial Reports
+        // Trigger Welcome Report (first-time connection)
         if (result.success && (result as any).userId) {
             const userId = (result as any).userId;
-            console.log(`[Handshake] Triggering initial reports for user ${userId}`);
-            // Generate baseline reports asynchronously
-            this.reportsService.generateReport(userId, 'sales');
-            this.reportsService.generateReport(userId, 'inventory');
-            this.reportsService.generateReport(userId, 'revenue');
+            console.log(`[Handshake] Triggering welcome report for user ${userId}`);
+            // Generate welcome analysis — will be emailed via Brevo with DOCX attachment
+            this.reportsService.generateWelcomeReport(userId);
         }
 
         return result;

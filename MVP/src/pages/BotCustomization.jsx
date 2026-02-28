@@ -117,7 +117,7 @@ const BotCustomization = () => {
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8" id="bot-header">
           <h1 className="text-3xl font-bold mb-2">{t('bot.title')}</h1>
           <p className="text-gray-500 dark:text-gray-400">
             {t('bot.subtitle')}
@@ -126,7 +126,7 @@ const BotCustomization = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Bot Preview */}
-          <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+          <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="bot-preview-card">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className={`w-16 h-16 rounded-full flex-shrink-0 ${themeOptions.find(t => t.id === botSettings.theme.toLowerCase())?.color || 'bg-blue-500'} flex items-center justify-center`}>
@@ -216,7 +216,7 @@ const BotCustomization = () => {
           </div>
 
           {/* Right Column - Settings */}
-          <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+          <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="bot-settings-card">
             <h2 className="text-xl font-bold mb-6">{t('bot.configSettings')}</h2>
 
             <div className="space-y-6">

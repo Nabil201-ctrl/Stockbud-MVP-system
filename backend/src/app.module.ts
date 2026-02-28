@@ -12,6 +12,7 @@ import { FeedModule } from './feed/feed.module';
 import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { PaymentsModule } from './payments/payments.module';
             isGlobal: true,
         }),
         ScheduleModule.forRoot(),
+        EmailModule,
         DashboardModule,
         ProductsModule,
         UsersModule,

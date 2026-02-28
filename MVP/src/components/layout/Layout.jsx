@@ -44,47 +44,72 @@ const Layout = ({ children }) => {
   const location = useLocation();
 
   const startTour = () => {
-    // Define base steps common to all pages (optional, maybe just sidebar/header)
-    const baseSteps = [
-      { element: '#app-sidebar', popover: { title: 'Navigation', description: 'Use the sidebar to navigate between different sections of the app.' } },
-      { element: '#app-header', popover: { title: 'Header', description: 'Access your profile, notifications, and settings here.' } },
-      { element: '#shop-selector', popover: { title: 'Shop Selector', description: 'Switch between your connected Shopify stores.' } },
-      { element: '#ai-tokens', popover: { title: 'AI Tokens', description: 'View your remaining AI tokens.' } },
-      { element: '#theme-toggle', popover: { title: 'Theme', description: 'Toggle between light and dark mode.' } },
-    ];
-
-    // Define page-specific steps
-    const pageSteps = {
-      '/dashboard': [
-        { element: '#dashboard-stats', popover: { title: 'Overview Stats', description: 'Quick view of your key metrics.' } },
-        { element: '#revenue-chart', popover: { title: 'Revenue Chart', description: 'Track your revenue trends over time.' } },
-        { element: '#source-chart', popover: { title: 'Traffic Sources', description: 'See where your customers are coming from.' } },
-      ],
-      '/products': [
-        { element: '#products-stats', popover: { title: 'Product Stats', description: 'Summary of your product inventory.' } },
-        { element: '#products-search', popover: { title: 'Search & Filter', description: 'Find specific products or filter by category.' } },
-        { element: '#products-table', popover: { title: 'Product List', description: 'Manage your products here.' } },
-      ],
-      '/chat': [
-        { element: '#chat-sidebar', popover: { title: 'Chat History', description: 'Access your previous conversations here.' } },
-        { element: '#chat-input', popover: { title: 'Ask AI', description: 'Type your questions about your store data here.' } },
-      ]
-    };
-
-    // Get steps for current path, normalize path (remove trailing slash if needed)
-    const currentPath = location.pathname.endsWith('/') && location.pathname.length > 1
-      ? location.pathname.slice(0, -1)
-      : location.pathname;
-
-    const specificSteps = pageSteps[currentPath] || [];
-
     const driverObj = driver({
       showProgress: true,
+      animate: true,
+      popoverClass: 'driverjs-theme',
       steps: [
-        ...baseSteps,
-        ...specificSteps
+        // Global Steps
+        { element: '#app-sidebar', popover: { title: 'Navigation', description: 'Use the sidebar to navigate between different sections of the app.' } },
+        { element: '#app-header', popover: { title: 'Header', description: 'Access your profile, notifications, and settings here.' } },
+        
+        // Dashboard
+        ...(location.pathname === '/dashboard' ? [
+          { element: '#dashboard-stats', popover: { title: 'Overview Stats', description: 'Quick view of your key metrics.' } },
+          { element: '#revenue-chart', popover: { title: 'Revenue Chart', description: 'Track your revenue trends over time.' } },
+          { element: '#source-chart', popover: { title: 'Traffic Sources', description: 'See where your customers are coming from.' } },
+        ] : []),
+
+        // Products
+        ...(location.pathname === '/products' ? [
+          { element: '#products-stats', popover: { title: 'Product Stats', description: 'Summary of your product inventory.' } },
+          { element: '#products-search', popover: { title: 'Search & Filter', description: 'Find specific products or filter by category.' } },
+          { element: '#products-table', popover: { title: 'Product List', description: 'Manage your products here.' } },
+        ] : []),
+
+        // Reports
+        ...(location.pathname === '/reports' ? [
+          { element: '#reports-header', popover: { title: 'Reports Overview', description: 'View and manage your generated reports here.' } },
+          { element: '#reports-stats-grid', popover: { title: 'Key Metrics', description: 'Quick summary of your business performance.' } },
+          { element: '#reports-list', popover: { title: 'Generated Reports', description: 'Access your history of generated reports. You can preview, download, or delete them.' } },
+        ] : []),
+
+        // Settings
+        ...(location.pathname === '/settings' ? [
+          { element: '#settings-header', popover: { title: 'Settings', description: 'Manage your account, profile, and security preferences.' } },
+          { element: '#settings-tabs', popover: { title: 'Configuration Categories', description: 'Switch between different settings categories like Profile, Security, and Integrations.' } },
+        ] : []),
+
+        // Realtime
+        ...(location.pathname === '/realtime' ? [
+          { element: '#realtime-header', popover: { title: 'Realtime Analytics', description: 'Monitor live user activity on your store.' } },
+          { element: '#realtime-stats', popover: { title: 'Live Stats', description: 'Real-time counters for active users, views, and clicks.' } },
+          { element: '#realtime-activity', popover: { title: 'Activity Stream', description: 'Watch user actions as they happen.' } },
+          { element: '#realtime-analytics', popover: { title: 'Detailed Breakdown', description: 'See geographic and device distribution of your current traffic.' } },
+        ] : []),
+
+        // Bot Customization
+        ...(location.pathname === '/bot-customization' ? [
+          { element: '#bot-header', popover: { title: 'AI Bot Customization', description: 'Tailor your AI assistant to match your brand.' } },
+          { element: '#bot-preview-card', popover: { title: 'Live Preview', description: 'See how your bot looks and behaves in real-time.' } },
+          { element: '#bot-settings-card', popover: { title: 'Bot Settings', description: 'Configure personality, speed, language, and other behaviors.' } },
+        ] : []),
+
+        // Users
+        ...(location.pathname === '/users' ? [
+          { element: '#users-header', popover: { title: 'User Management', description: 'View and manage your registered users.' } },
+          { element: '#users-stats', popover: { title: 'User Growth', description: 'Track user acquisition and retention metrics.' } },
+          { element: '#users-table', popover: { title: 'User Directory', description: 'Filter, search, and manage individual user accounts.' } },
+        ] : []),
+
+        // Chat
+        ...(location.pathname === '/chat' ? [
+          { element: '#chat-sidebar', popover: { title: 'Chat History', description: 'Access your previous conversations here.' } },
+          { element: '#chat-input', popover: { title: 'Ask AI', description: 'Type your questions about your store data here.' } },
+        ] : []),
       ]
     });
+    
     driverObj.drive();
   };
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { ShopifyService } from '../shopify/shopify.service';
 import { UsersService } from '../users/users.service';
@@ -6,6 +6,8 @@ import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService } from '../email/email.service';
+import { DocxGeneratorService } from '../email/docx-generator.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -13,11 +15,13 @@ export interface Report {
     id: string;
     userId: string;
     title: string;
-    type: 'sales' | 'inventory' | 'revenue' | 'weekly' | 'monthly';
+    type: 'sales' | 'inventory' | 'revenue' | 'weekly' | 'monthly' | 'welcome' | 'instant';
     status: 'generating' | 'ready' | 'failed';
     createdAt: Date;
     data?: any;
     description: string;
+    emailSent?: boolean;
+    docxBase64?: string; // Store the DOCX for download
 }
 
 @Injectable()
@@ -29,14 +33,17 @@ export class ReportsService {
     constructor(
         private readonly dashboardService: DashboardService,
         private readonly usersService: UsersService,
+        @Inject(forwardRef(() => ShopifyService))
         private readonly shopifyService: ShopifyService,
         private readonly notificationsService: NotificationsService,
         private readonly configService: ConfigService,
+        private readonly emailService: EmailService,
+        private readonly docxGeneratorService: DocxGeneratorService,
     ) {
         const apiKey = this.configService.get<string>('GEMINI_API_KEY');
         if (apiKey) {
             this.genAI = new GoogleGenerativeAI(apiKey);
-            this.model = this.genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+            this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
         } else {
             console.warn('GEMINI_API_KEY is not set. Reports will use templates.');
         }
@@ -73,9 +80,13 @@ export class ReportsService {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
-    async generateReport(userId: string, type: 'sales' | 'inventory' | 'revenue'): Promise<Report> {
-        // Check and deduct tokens first
-        await this.usersService.deductReportToken(userId, 1);
+    // ────────────── Core Report Generation ──────────────
+
+    async generateReport(userId: string, type: 'sales' | 'inventory' | 'revenue' | 'weekly' | 'monthly' | 'welcome' | 'instant'): Promise<Report> {
+        // Deduct tokens for paid types only (weekly/monthly/welcome are free, instant costs tokens)
+        if (type === 'sales' || type === 'inventory' || type === 'revenue' || type === 'instant') {
+            await this.usersService.deductReportToken(userId, 1);
+        }
 
         const user = await this.usersService.findById(userId);
         const shop = user?.shopifyShop;
@@ -85,15 +96,22 @@ export class ReportsService {
         const titles = {
             sales: 'Weekly Sales Summary',
             inventory: 'Inventory Status Report',
-            revenue: 'Monthly Revenue Analysis'
+            revenue: 'Monthly Revenue Analysis',
+            weekly: `Weekly Performance Report — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+            monthly: `Monthly Business Review — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+            welcome: `Welcome Analysis — ${shop || 'Your Store'}`,
+            instant: `Instant System Review — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
         };
         const descriptions = {
             sales: 'Overview of sales performance for the past week',
             inventory: 'Current stock levels and low inventory alerts',
-            revenue: 'Detailed breakdown of monthly revenue streams'
+            revenue: 'Detailed breakdown of monthly revenue streams',
+            weekly: 'AI-powered critical analysis of your weekly store performance',
+            monthly: 'Comprehensive monthly review with trend analysis and strategic recommendations',
+            welcome: 'First-time analysis of your store when you connected to StockBud',
+            instant: 'On-demand comprehensive system review of your entire store',
         };
 
-        // Create report entry
         const report: Report = {
             id: reportId,
             userId,
@@ -101,14 +119,15 @@ export class ReportsService {
             type,
             status: 'generating',
             createdAt: new Date(),
-            description: descriptions[type]
+            description: descriptions[type],
+            emailSent: false,
         };
 
         const reports = this.loadReports();
         reports.push(report);
         this.saveReports(reports);
 
-        // Generate report data asynchronously
+        // Generate asynchronously
         this.generateReportData(reportId, shop, token, type, userId);
 
         return report;
@@ -116,90 +135,41 @@ export class ReportsService {
 
     private async generateReportData(reportId: string, shop: string, token: string, type: string, userId: string) {
         try {
-            // Get current stats from dashboard
+            const user = await this.usersService.findById(userId);
             const stats = await this.dashboardService.getStats(shop, token);
-
-            // Get user's language preference
-            // We need to fetch user again or pass it down. Since we only have reportId here which doesn't help much, 
-            // let's assume we can fetch user by token owner or just pass userId to this method.
-            // Wait, generateReport calls this. Let's update generateReport to pass userId.
-            // For now, let's fetch user using the userId (which we don't have here directly).
-            // Actually, generateReportData needs userId. Let's add it to arguments in next step.
-            // But wait, I can't change signature easily without changing call site.
-            // Let's modify generateReportData signature first.
-            const user = await this.usersService.findById(reportId); // wait, reportId is not userId.
-            // I need to update the signature of generateReportData.
 
             let reportData: any = {};
             let aiContent = "";
 
-            // Placeholder for now, I will update signature in next step.
-            const language = 'en';
-
-            // Prepare prompt for AI
             const statsSummary = JSON.stringify(stats, null, 2);
-            const prompt = `
-                You are a Senior Retail Data Strategist & Business Critic. Your role is NOT to just summarize data, but to critically analyze the shop's performance and "find faults" in their business strategy, operational efficiency, and revenue maximization.
-
-                Analyze the following sales data for an e-commerce store:
-                ${statsSummary}
-
-                The report should be in Markdown format. BE DIRECT AND CRITICAL.
-                
-                Structure:
-                1. **Critical Performance Review**: Immediately highlight what is going WRONG or could be significantly better. calling out specific metrics.
-                2. **Missed Opportunities (Fault Finding)**: Identify specific "faults" such as:
-                   - High-demand products that are under-monetized?
-                   - Over-reliance on a single product?
-                   - Declining trends that need immediate intervention?
-                3. **Strategic Analysis**: Deep dive into the "Why" behind the numbers.
-                4. **Corrective Actions**: Specific, hard-hitting advice to fix the identified faults.
-
-                Use bolding for emphasis. Do not use fluff. Speak like a business partner obsessed with optimization.
-                Start directly with the content.
-            `;
-
-            if (this.model) {
-                try {
-                    const result = await this.model.generateContent(prompt);
-                    aiContent = result.response.text();
-                } catch (err) {
-                    console.error("AI Generation failed, using fallback", err);
-                    aiContent = "## Report Generation Failed\n\nCould not generate the narrative report at this time. Please review the raw data below.";
-                }
-            } else {
-                aiContent = "## AI Not Configured\n\nPlease configure the GEMINI_API_KEY to enable AI-generated reports.";
-            }
 
             switch (type) {
-                case 'sales':
-                case 'weekly': // Weekly is treated similar to sales but with specific prompt
+                case 'weekly':
+                case 'sales': {
+                    const prompt = this.buildWeeklyPrompt(statsSummary);
+                    aiContent = await this.generateAIContent(prompt);
                     reportData = {
                         content: aiContent,
                         stats: {
-                            totalRevenue: stats.revenue.total,
-                            revenueChange: stats.revenue.change,
-                            topProducts: stats.topProducts
+                            totalRevenue: stats.revenue?.total || 0,
+                            revenueChange: stats.revenue?.change || 0,
+                            topProducts: stats.topProducts,
                         },
-                        raw: stats, // Keep raw stats for charts if needed
-                        generatedAt: new Date().toISOString()
+                        raw: stats,
+                        generatedAt: new Date().toISOString(),
                     };
                     break;
-                case 'inventory':
+                }
+
+                case 'inventory': {
                     let inventoryStats: any = stats.topProducts;
-                    let inventorySummary = aiContent;
+                    let inventorySummary = "";
 
                     try {
                         const productsResult = await this.shopifyService.getProducts(shop, token);
-                        // Normalize productsresult to array
-                        let products: any[] = [];
-                        if (Array.isArray(productsResult)) {
-                            products = productsResult;
-                        } else if (productsResult && productsResult.products) {
-                            products = productsResult.products;
-                        }
+                        let products: any[] = Array.isArray(productsResult) ? productsResult : (productsResult?.products || []);
 
-                        if (products && products.length > 0) {
+                        if (products.length > 0) {
                             const totalStock = products.reduce((sum, p) => sum + (p.variants?.reduce((vSum, v) => vSum + (v.inventory_quantity || 0), 0) || 0), 0);
                             const lowStockProducts = products.filter(p => p.variants?.some(v => v.inventory_quantity < 10)).map(p => p.title);
                             const outOfStockProducts = products.filter(p => p.variants?.every(v => v.inventory_quantity === 0)).map(p => p.title);
@@ -209,89 +179,160 @@ export class ReportsService {
                                 totalStockItems: totalStock,
                                 lowStockCount: lowStockProducts.length,
                                 outOfStockCount: outOfStockProducts.length,
-                                topProducts: stats.topProducts // Keep sales-based top products as well
                             };
 
-                            // Regenerate AI content with REAL inventory data if we have it
-                            if (this.model) {
-                                const inventoryPrompt = `
-                                    You are an Inventory Optimization Expert. Your goal is to identify "Dead Cash" (Overstock) and "Lost Revenue" (Out of Stock). Critically analyze this inventory data:
-                                    - Total Products: ${products.length}
-                                    - Total Stock Items: ${totalStock}
-                                    - LOW STOCK DANGER (${lowStockProducts.length}): ${lowStockProducts.join(', ') || 'None'}
-                                    - OUT OF STOCK FAILURES (${outOfStockProducts.length}): ${outOfStockProducts.join(', ') || 'None'}
-                                    
-                                    Sales Context (Top Performers): ${JSON.stringify(stats.topProducts)}
-
-                                    Structure:
-                                    1. **Inventory Health Check**: Grade the inventory health. Is it lean or bloated?
-                                    2. **Critical Faults**: 
-                                       - Are top-selling items out of stock? (Major Fault: Revenue Leak)
-                                       - Are there too many items with low stock risk?
-                                    3. **Action Plan**: 
-                                       - What needs immediate reordering?
-                                       - What strategy needs to change to prevent this?
-                                    
-                                    Be strict about out-of-stock top sellers. That is a critical business failure.
-                                `;
-                                const result = await this.model.generateContent(inventoryPrompt);
-                                inventorySummary = result.response.text();
-                            }
+                            const inventoryPrompt = this.buildInventoryPrompt(products.length, totalStock, lowStockProducts, outOfStockProducts, stats.topProducts);
+                            inventorySummary = await this.generateAIContent(inventoryPrompt);
                         }
                     } catch (err) {
-                        console.error('Failed to fetch real inventory data for report', err);
+                        console.error('Failed to fetch inventory data for report', err);
+                    }
+
+                    if (!inventorySummary) {
+                        inventorySummary = await this.generateAIContent(this.buildWeeklyPrompt(statsSummary));
                     }
 
                     reportData = {
                         content: inventorySummary,
                         stats: inventoryStats,
                         raw: stats,
-                        generatedAt: new Date().toISOString()
+                        generatedAt: new Date().toISOString(),
                     };
                     break;
-                case 'revenue':
+                }
+
+                case 'revenue': {
+                    const prompt = this.buildRevenuePrompt(statsSummary);
+                    aiContent = await this.generateAIContent(prompt);
                     reportData = {
                         content: aiContent,
                         stats: {
-                            totalRevenue: stats.revenue.total,
-                            profitMargin: await this.calculateProfitMargin(shop, token, stats.revenue.total),
-                            growth: stats.revenue.change
+                            totalRevenue: stats.revenue?.total || 0,
+                            profitMargin: await this.calculateProfitMargin(shop, token, stats.revenue?.total || 0),
+                            growth: stats.revenue?.change || 0,
                         },
                         raw: stats,
-                        generatedAt: new Date().toISOString()
+                        generatedAt: new Date().toISOString(),
                     };
                     break;
-                case 'monthly':
-                    // Monthly logic is handled separately in handleMonthlyReport usually, 
-                    // but if triggered manually we use this flow.
+                }
+
+                case 'monthly': {
+                    // Aggregate all previous weekly reports
+                    const allReports = await this.getReports(userId);
+                    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+                    const recentWeeklyReports = allReports.filter(r =>
+                        (r.type === 'weekly' || r.type === 'sales') &&
+                        new Date(r.createdAt) > thirtyDaysAgo &&
+                        r.status === 'ready'
+                    );
+
+                    let weeklyAggregation = '';
+                    let totalRev = 0;
+
+                    recentWeeklyReports.forEach((r, idx) => {
+                        const rev = r.data?.stats?.totalRevenue || 0;
+                        totalRev += rev;
+                        weeklyAggregation += `\n--- Week ${idx + 1} Summary ---\n`;
+                        weeklyAggregation += r.data?.content ? r.data.content.substring(0, 500) + '...' : `Revenue: $${rev}`;
+                        weeklyAggregation += '\n';
+                    });
+
+                    const avgRev = recentWeeklyReports.length > 0 ? totalRev / recentWeeklyReports.length : 0;
+
+                    const monthlyPrompt = this.buildMonthlyPrompt(weeklyAggregation, totalRev, avgRev, recentWeeklyReports.length, statsSummary);
+                    aiContent = await this.generateAIContent(monthlyPrompt);
+
                     reportData = {
                         content: aiContent,
                         stats: {
-                            totalRevenue: stats.revenue.total,
-                            growth: stats.revenue.change
+                            totalRevenue: totalRev,
+                            avgWeeklyRevenue: Math.round(avgRev),
+                            weeksAnalyzed: recentWeeklyReports.length,
+                            growth: stats.revenue?.change || 0,
                         },
                         raw: stats,
-                        generatedAt: new Date().toISOString()
+                        generatedAt: new Date().toISOString(),
                     };
                     break;
+                }
+
+                case 'welcome': {
+                    const prompt = this.buildWelcomePrompt(statsSummary, shop);
+                    aiContent = await this.generateAIContent(prompt);
+                    reportData = {
+                        content: aiContent,
+                        stats: {
+                            totalRevenue: stats.revenue?.total || 0,
+                            productCount: stats.topProducts?.length || 0,
+                            orderCount: stats.salesHistory?.length || 0,
+                        },
+                        raw: stats,
+                        generatedAt: new Date().toISOString(),
+                    };
+                    break;
+                }
+
+                case 'instant': {
+                    const prompt = this.buildInstantReviewPrompt(statsSummary);
+                    aiContent = await this.generateAIContent(prompt);
+                    reportData = {
+                        content: aiContent,
+                        stats: {
+                            totalRevenue: stats.revenue?.total || 0,
+                            profitMargin: await this.calculateProfitMargin(shop, token, stats.revenue?.total || 0),
+                            productCount: stats.topProducts?.length || 0,
+                            growth: stats.revenue?.change || 0,
+                        },
+                        raw: stats,
+                        generatedAt: new Date().toISOString(),
+                    };
+                    break;
+                }
             }
 
-            // Update report with data
+            // Generate DOCX
             const reports = this.loadReports();
             const idx = reports.findIndex(r => r.id === reportId);
-            if (idx !== -1) {
-                reports[idx].status = 'ready';
-                reports[idx].data = reportData;
-                this.saveReports(reports);
+            if (idx === -1) return;
 
-                // Notify User
-                await this.notificationsService.create(
-                    reportData.raw.userId || reports[idx].userId, // Fallback to report userId if raw missing
-                    'Report Ready',
-                    `Your ${type} report "${reports[idx].title}" has been successfully generated.`,
-                    'success'
-                );
+            let docxBase64 = '';
+            try {
+                docxBase64 = await this.docxGeneratorService.generateDocx({
+                    title: reports[idx].title,
+                    type: reports[idx].type,
+                    generatedAt: reportData.generatedAt || new Date().toISOString(),
+                    content: reportData.content || '',
+                    stats: reportData.stats,
+                    shopName: shop,
+                    userName: user?.name,
+                });
+            } catch (docxErr) {
+                console.error('[Reports] DOCX generation failed:', docxErr.message);
             }
+
+            // Update report
+            reports[idx].status = 'ready';
+            reports[idx].data = reportData;
+            reports[idx].docxBase64 = docxBase64;
+            this.saveReports(reports);
+
+            // Send email based on report type
+            const emailSent = await this.sendReportEmail(type, user, reports[idx], docxBase64);
+            if (emailSent) {
+                reports[idx].emailSent = true;
+                this.saveReports(reports);
+            }
+
+            // Notify in-app
+            await this.notificationsService.create(
+                userId,
+                'Report Ready',
+                `Your ${type} report "${reports[idx].title}" has been generated.${emailSent ? ' A copy was sent to your email.' : ''}`,
+                'success'
+            );
+
         } catch (error) {
             console.error('Report generation failed:', error);
             const reports = this.loadReports();
@@ -300,9 +341,8 @@ export class ReportsService {
                 reports[idx].status = 'failed';
                 this.saveReports(reports);
 
-                // Notify User of Failure
                 await this.notificationsService.create(
-                    reports[idx].userId,
+                    userId,
                     'Report Failed',
                     `Your ${type} report "${reports[idx].title}" failed to generate. Please try again.`,
                     'error'
@@ -311,98 +351,104 @@ export class ReportsService {
         }
     }
 
-    // Monthly Aggregation Report Cron
-    @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
-    async handleMonthlyReport() {
-        console.log('Generating Monthly Aggregation Reports...');
+    // ────────────── Email Dispatch ──────────────
+
+    private async sendReportEmail(type: string, user: any, report: Report, docxBase64: string): Promise<boolean> {
+        if (!user?.email || !docxBase64) return false;
+
+        try {
+            switch (type) {
+                case 'weekly':
+                case 'sales':
+                    return await this.emailService.sendWeeklyReport(user.email, user.name || 'User', report.title, docxBase64);
+                case 'monthly':
+                    return await this.emailService.sendMonthlyReview(user.email, user.name || 'User', report.title, docxBase64);
+                case 'welcome':
+                    return await this.emailService.sendWelcomeReport(user.email, user.name || 'User', user.shopifyShop || 'Your Store', docxBase64);
+                case 'instant':
+                    return await this.emailService.sendInstantReview(user.email, user.name || 'User', report.title, docxBase64);
+                default:
+                    return false;
+            }
+        } catch (err) {
+            console.error(`[Reports] Failed to send ${type} email:`, err.message);
+            return false;
+        }
+    }
+
+    // ────────────── Scheduled Jobs ──────────────
+
+    /**
+     * Weekly Report Cron - Every Monday at 8:00 AM
+     */
+    @Cron('0 8 * * 1') // Monday 8 AM
+    async handleWeeklyReports() {
+        console.log('[Cron] Generating Weekly Reports for all connected users...');
         const allUsers = await this.usersService.getAllUsers();
 
         for (const user of allUsers) {
             if (user.shopifyShop && user.shopifyToken) {
-                await this.generateMonthlyAggregation(user.id);
+                try {
+                    console.log(`[Cron] Generating weekly report for user ${user.id} (${user.email})`);
+                    await this.generateReport(user.id, 'weekly');
+                } catch (err) {
+                    console.error(`[Cron] Weekly report failed for user ${user.id}:`, err.message);
+                }
             }
         }
     }
 
-    private async generateMonthlyAggregation(userId: string) {
-        // 1. Fetch Weekly reports from last 30 days
-        const allReports = await this.getReports(userId);
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+    /**
+     * Monthly Review Cron - 1st of every month at 9:00 AM
+     */
+    @Cron('0 9 1 * *') // 1st of month at 9 AM
+    async handleMonthlyReport() {
+        console.log('[Cron] Generating Monthly Reviews for all connected users...');
+        const allUsers = await this.usersService.getAllUsers();
 
-        const recentWeeklyReports = allReports.filter(r =>
-            (r.type === 'weekly' || r.type === 'sales') &&
-            new Date(r.createdAt) > thirtyDaysAgo &&
-            r.status === 'ready'
-        );
-
-        if (recentWeeklyReports.length === 0) {
-            console.log(`No weekly reports found for user ${userId} to aggregate.`);
-            return;
-        }
-
-        // 2. Aggregate Data
-        let totalRev = 0;
-        let summaryText = "Based on your weekly reports:\n";
-
-        recentWeeklyReports.forEach((r, index) => {
-            const rev = r.data?.stats?.totalRevenue || 0;
-            totalRev += rev;
-            summaryText += `- Week ${index + 1}: Revenue $${rev}\n`;
-        });
-
-        const avgRev = totalRev / recentWeeklyReports.length;
-
-        // 3. Generate Monthly Report Entry
-        const report = await this.generateReport(userId, 'monthly' as any); // Cast because type check might fail in IDE
-
-        // 4. Generate AI Analysis
-        const prompt = `
-            Act as a fractional CFO. Generate a Monthly Strategic Review based on these weekly summaries:
-            ${summaryText}
-
-            Financials:
-            - Aggregated Revenue: $${totalRev}
-            - Avg Weekly Revenue: $${avgRev.toFixed(0)}
-
-            Your Goal: Find the "Trend Faults".
-            1. **Volatility Analysis**: Is revenue consistent or erratic? Why?
-            2. **Growth Stagnation**: If the growth is flat, critique the lack of momentum.
-            3. **Strategic Pivot**: What ONE major change should they make next month to break the current pattern?
-
-            Be concise, strategic, and forward-looking.
-        `;
-
-        let content = "Monthly Aggregation: ";
-        if (this.model) {
-            const result = await this.model.generateContent(prompt);
-            content = result.response.text();
-        } else {
-            content += "AI Analysis unavailable. " + summaryText;
-        }
-
-        // 5. Update Report
-        const reports = this.loadReports();
-        const idx = reports.findIndex(r => r.id === report.id);
-        if (idx !== -1) {
-            reports[idx].status = 'ready';
-            reports[idx].data = {
-                content: content,
-                stats: {
-                    totalRevenue: totalRev,
-                    reportCount: recentWeeklyReports.length
-                },
-                generatedAt: new Date().toISOString()
-            };
-            this.saveReports(reports);
-
-            await this.notificationsService.create(userId, 'Monthly Report', 'Your monthly aggregated report is ready.', 'success');
+        for (const user of allUsers) {
+            if (user.shopifyShop && user.shopifyToken) {
+                try {
+                    console.log(`[Cron] Generating monthly review for user ${user.id} (${user.email})`);
+                    await this.generateReport(user.id, 'monthly');
+                } catch (err) {
+                    console.error(`[Cron] Monthly report failed for user ${user.id}:`, err.message);
+                }
+            }
         }
     }
+
+    /**
+     * Generate a welcome report when user first connects their Shopify store
+     */
+    async generateWelcomeReport(userId: string): Promise<void> {
+        console.log(`[Reports] Generating welcome report for user ${userId}`);
+        try {
+            await this.generateReport(userId, 'welcome');
+        } catch (err) {
+            console.error(`[Reports] Welcome report failed for user ${userId}:`, err.message);
+        }
+    }
+
+    /**
+     * Generate an instant paid review
+     */
+    async generateInstantReview(userId: string): Promise<Report> {
+        console.log(`[Reports] Generating instant review for user ${userId}`);
+        return this.generateReport(userId, 'instant');
+    }
+
+    // ────────────── Report Data Endpoints ──────────────
 
     async getReportById(userId: string, reportId: string): Promise<Report | null> {
         const reports = this.loadReports();
         return reports.find(r => r.id === reportId && r.userId === userId) || null;
+    }
+
+    async getReportDocx(userId: string, reportId: string): Promise<string | null> {
+        const report = await this.getReportById(userId, reportId);
+        if (!report || !report.docxBase64) return null;
+        return report.docxBase64;
     }
 
     async deleteReport(userId: string, reportId: string): Promise<boolean> {
@@ -423,14 +469,16 @@ export class ReportsService {
         const stats = await this.dashboardService.getStats(shop, token);
 
         return {
-            totalRevenue: stats.revenue.total || 0,
-            revenueChange: stats.revenue.change || 0,
+            totalRevenue: stats.revenue?.total || 0,
+            revenueChange: stats.revenue?.change || 0,
             productCount: stats.topProducts?.length || 0,
             orderCount: stats.salesHistory?.length || 0,
-            lostRevenue: stats.revenue.lost || 0
+            lostRevenue: stats.revenue?.lost || 0,
         };
     }
-    // Cleanup Old Reports Cron
+
+    // ────────────── Cleanup ──────────────
+
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async cleanupOldReports() {
         console.log('Running daily report cleanup...');
@@ -442,31 +490,196 @@ export class ReportsService {
         const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
         let deletedCount = 0;
 
-        const appsKept = reports.filter(report => {
+        // Also strip docxBase64 from reports older than 7 days to save disk space
+        const cleaned = reports.filter(report => {
             const retentionMonths = userRetention.get(report.userId) || 3;
             const retentionMs = retentionMonths * THIRTY_DAYS_MS;
             const reportAge = now - new Date(report.createdAt).getTime();
 
             if (reportAge > retentionMs) {
                 deletedCount++;
-                return false; // Remove
+                return false;
             }
-            return true; // Keep
+
+            // Strip DOCX data from reports older than 7 days to save space
+            if (reportAge > 7 * 24 * 60 * 60 * 1000 && report.docxBase64) {
+                report.docxBase64 = undefined;
+            }
+
+            return true;
         });
 
         if (deletedCount > 0) {
-            this.saveReports(appsKept);
+            this.saveReports(cleaned);
             console.log(`[Cleanup] Deleted ${deletedCount} expired reports.`);
         }
     }
+
+    // ────────────── AI Prompt Builders ──────────────
+
+    private async generateAIContent(prompt: string): Promise<string> {
+        if (!this.model) {
+            return "## AI Not Configured\n\nPlease configure the GEMINI_API_KEY to enable AI-generated reports.";
+        }
+
+        try {
+            const result = await this.model.generateContent(prompt);
+            return result.response.text();
+        } catch (err) {
+            console.error("AI Generation failed:", err.message);
+            return "## Report Generation Issue\n\nCould not generate the narrative report at this time. Please review the raw data below.";
+        }
+    }
+
+    private buildWeeklyPrompt(statsSummary: string): string {
+        return `
+You are a Senior Retail Data Strategist & Business Critic. Your role is NOT to just summarize data, but to critically analyze the shop's performance and find faults in their business strategy, operational efficiency, and revenue maximization.
+
+Analyze the following sales data for an e-commerce store:
+${statsSummary}
+
+Generate a WEEKLY PERFORMANCE REPORT in Markdown format. BE DIRECT AND CRITICAL.
+
+Structure:
+1. **Executive Summary** — 2-3 sentences summarizing the week. Don't sugarcoat.
+2. **Critical Performance Review** — What went WRONG or could be better? Call out specific metrics.
+3. **Revenue Analysis** — Break down revenue performance: is it growing, stagnating, or declining?
+4. **Missed Opportunities** — Identify:
+   - Under-monetized products
+   - Over-reliance on single products
+   - Declining trends that need intervention
+5. **Corrective Actions** — 3-5 specific, actionable recommendations
+
+Use **bold** for emphasis. Be concise, strategic, and direct. Start directly with the content.`;
+    }
+
+    private buildInventoryPrompt(totalProducts: number, totalStock: number, lowStockProducts: string[], outOfStockProducts: string[], topProducts: any): string {
+        return `
+You are an Inventory Optimization Expert. Your goal is to identify "Dead Cash" (Overstock) and "Lost Revenue" (Out of Stock). Critically analyze this inventory data:
+- Total Products: ${totalProducts}
+- Total Stock Items: ${totalStock}
+- LOW STOCK DANGER (${lowStockProducts.length}): ${lowStockProducts.join(', ') || 'None'}
+- OUT OF STOCK FAILURES (${outOfStockProducts.length}): ${outOfStockProducts.join(', ') || 'None'}
+
+Sales Context (Top Performers): ${JSON.stringify(topProducts)}
+
+Structure:
+1. **Inventory Health Check** — Grade the inventory health. Is it lean or bloated?
+2. **Critical Faults** — Are top-selling items out of stock? Are there too many items with low stock risk?
+3. **Action Plan** — What needs immediate reordering? What strategy needs to change?
+
+Be strict about out-of-stock top sellers. That is a critical business failure.`;
+    }
+
+    private buildRevenuePrompt(statsSummary: string): string {
+        return `
+You are a Revenue Optimization Specialist. Analyze this e-commerce store's financial data:
+${statsSummary}
+
+Generate a REVENUE ANALYSIS in Markdown format. Be critical and data-driven.
+
+Structure:
+1. **Revenue Health** — Overall revenue trajectory
+2. **Profit Margin Analysis** — Estimated margins and issues
+3. **Revenue Leaks** — Where is money being lost?
+4. **Growth Opportunities** — Specific strategies to increase revenue
+5. **Strategic Recommendations** — 3-5 specific actions
+
+Use **bold** for key findings. Start directly with the content.`;
+    }
+
+    private buildMonthlyPrompt(weeklyAggregation: string, totalRev: number, avgRev: number, weekCount: number, currentStats: string): string {
+        return `
+You are acting as a Fractional CFO conducting a MONTHLY STRATEGIC REVIEW. This is the most important report of the month.
+
+You have access to:
+
+## WEEKLY REPORT SUMMARIES FROM THE PAST MONTH
+${weeklyAggregation || 'No weekly reports available.'}
+
+## CURRENT STORE SNAPSHOT
+${currentStats}
+
+## FINANCIAL SUMMARY
+- Total Monthly Revenue: $${totalRev}
+- Average Weekly Revenue: $${avgRev.toFixed(0)}
+- Weeks Analyzed: ${weekCount}
+
+YOUR TASK: Generate a COMPREHENSIVE MONTHLY BUSINESS REVIEW in Markdown.
+
+This should be significantly more detailed and strategic than a weekly report. Cover:
+
+1. **Monthly Executive Summary** — The big picture. Were goals met? What's the trajectory?
+2. **Trend Analysis** — Week-over-week trends. Is revenue volatile or stable? Why?
+3. **Performance Scorecard** — Grade the business on Revenue (A-F), Inventory (A-F), Growth (A-F)
+4. **Deep Dive: Revenue** — Monthly revenue breakdown, comparisons, projections
+5. **Deep Dive: Inventory** — Stock health, dead stock identification, reorder recommendations
+6. **Fault Report** — Every significant issue found across the month. Be brutally honest.
+7. **Competitive Position** — Where does this store stand? What are competitors likely doing better?
+8. **Strategic Roadmap for Next Month** — 5-7 specific, prioritized actions
+9. **Risk Assessment** — What could go wrong next month? How to mitigate.
+
+This is NOT a summary. This is a BOARD-LEVEL business review. Be thorough, critical, and strategic.
+Use **bold** for key findings. Use headers for organization. Start directly with the content.`;
+    }
+
+    private buildWelcomePrompt(statsSummary: string, shopName: string): string {
+        return `
+You are a Senior Retail Consultant performing a FIRST-TIME STORE ASSESSMENT for a new client.
+
+The store "${shopName}" has just been connected to StockBud for the first time. This is their welcome analysis.
+
+Current Store Data:
+${statsSummary}
+
+Generate a WELCOME ANALYSIS REPORT in Markdown. Be insightful and constructive (but still critical where needed).
+
+Structure:
+1. **Welcome & First Impressions** — What does the data say about this store at first glance?
+2. **Current State Assessment** — Revenue health, product catalog quality, inventory status
+3. **Strengths Identified** — What's working well? (Be honest, don't fabricate)
+4. **Immediate Concerns** — Red flags or areas that need urgent attention
+5. **Quick Wins** — 3-5 things they can do THIS WEEK to improve
+6. **What to Expect** — Explain that StockBud will send weekly reports and monthly reviews
+7. **Baseline Metrics** — Establish the baseline numbers for future comparison
+
+Be welcoming but professional. This sets the tone for the relationship. Start directly with the content.`;
+    }
+
+    private buildInstantReviewPrompt(statsSummary: string): string {
+        return `
+You are a Senior Business Analyst performing an ON-DEMAND COMPREHENSIVE SYSTEM REVIEW.
+
+The store owner has PAID for this review. They expect maximum value, depth, and actionable insights.
+
+Current Store Data:
+${statsSummary}
+
+Generate a COMPREHENSIVE SYSTEM REVIEW in Markdown. This should be your most detailed, valuable analysis.
+
+Structure:
+1. **Executive Overview** — Complete business health snapshot
+2. **Revenue Deep Dive** — Detailed revenue analysis with projections
+3. **Product Performance Matrix** — Every product analyzed: stars, cash cows, dogs, question marks
+4. **Inventory Intelligence** — Stock optimization recommendations
+5. **Customer Insights** — Order patterns, customer behavior analysis
+6. **Competitive Audit** — Industry context and competitive positioning
+7. **Growth Strategy** — Detailed 30/60/90 day growth plan
+8. **Risk Register** — All identified risks with mitigation strategies
+9. **Priority Action Matrix** — Urgent vs Important grid of recommended actions
+10. **Key Metrics Dashboard** — The numbers that matter most going forward
+
+This is a PREMIUM report. Make it worth paying for. Be exhaustive, analytical, and strategic.
+Use **bold** for key findings. Use headers for clear organization. Start directly with the content.`;
+    }
+
+    // ────────────── Helpers ──────────────
+
     private async calculateProfitMargin(shop: string, token: string, totalRevenue: number): Promise<number> {
         if (totalRevenue === 0) return 0;
         try {
-            const products = await this.shopifyService.getProducts(shop, token);
-            let totalCost = 0;
-            // Calculate margin based on estimated cost from inventory
-            // Calculate current potential margin percentage and apply it to the revenue.
-
+            const productsData = await this.shopifyService.getProducts(shop, token, { first: 250 });
+            const products = Array.isArray(productsData) ? productsData : productsData.products;
             let totalPotentialRevenue = 0;
             let totalPotentialCost = 0;
 
@@ -474,7 +687,7 @@ export class ReportsService {
                 product.variants.forEach(variant => {
                     const price = parseFloat(variant.price);
                     const cost = parseFloat(variant.cost || '0');
-                    const qty = variant.inventory_quantity > 0 ? variant.inventory_quantity : 1; // Weight by stock
+                    const qty = variant.inventory_quantity > 0 ? variant.inventory_quantity : 1;
 
                     if (cost > 0) {
                         totalPotentialRevenue += price * qty;
@@ -488,8 +701,7 @@ export class ReportsService {
                 return totalRevenue * marginPercent;
             }
 
-            // Fallback if no cost data found
-            return totalRevenue * 0.3; // Industry avg fallback
+            return totalRevenue * 0.3;
         } catch (error) {
             console.error('Error calculating profit margin:', error);
             return totalRevenue * 0.3;

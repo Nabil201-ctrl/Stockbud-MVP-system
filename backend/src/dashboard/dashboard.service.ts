@@ -17,7 +17,14 @@ export class DashboardService {
 
         if (shop && token) {
             try {
-                const orders = await this.shopifyService.getOrders(shop, token);
+                const ordersData = await this.shopifyService.getOrders(shop, token, { first: 50 });
+                let orders: any[] = [];
+
+                if (Array.isArray(ordersData)) {
+                    orders = ordersData;
+                } else {
+                    orders = ordersData.orders;
+                }
                 // We're not using products for now as order line items differ from product objects
                 // const products = await this.shopifyService.getProducts(shop, token); 
 

@@ -25,5 +25,14 @@
     "type": "success",
     "read": true,
     "createdAt": "2026-01-27T09:08:00.736Z"
+  },
+  {
+    "id": "x97j3lvav",
+    "userId": "113831482632022329688",
+    "title": "Report Ready",
+    "message": "Your weekly report \"undefined\" has been successfully generated.",
+    "type": "success",
+    "read": false,
+    "createdAt": "2026-02-28T23:00:17.710Z"
   }
 ]

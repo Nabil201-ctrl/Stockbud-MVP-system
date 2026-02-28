@@ -1,5 +1,5 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import {query} from "express";
+
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -146,14 +146,28 @@ export class ShopifyService {
     }
   }
 
-  async getOrders(shop: string, token: string) {
+  async getOrders(shop: string, token: string, options: any = {}) {
     if (!shop || !token) throw new HttpException('Missing Shopify credentials', HttpStatus.UNAUTHORIZED);
 
+    const { first = 20, last, after, before } = options;
+
+    let args = '';
+    if (first && !last) args += `first: ${first}`;
+    if (last) args += `last: ${last}`;
+    if (after) args += `, after: "${after}"`;
+    if (before) args += `, before: "${before}"`;
 
     const query = `
         {
-          orders(first: 20, reverse: true) {
+          orders(${args}, reverse: true) {
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
             edges {
+              cursor
               node {
                 id
                 name
@@ -204,9 +218,8 @@ export class ShopifyService {
 
       console.log("DEBUG: Shopify GraphQL Response:", JSON.stringify(response.data, null, 2));
 
-      // Transform GraphQL structure to a flatter structure for the dashboard service
-      // We map it to look somewhat like the old object, but without restricted fields
-      return response.data.data.orders.edges.map(edge => {
+      // return response.data.data.orders.edges.map(edge => { ... });
+      const orders = response.data.data.orders.edges.map(edge => {
         const node = edge.node;
         return {
           id: node.id,
@@ -220,14 +233,19 @@ export class ShopifyService {
             title: li.node.title,
             quantity: li.node.quantity
           })),
-          // Map customer data if available, otherwise null
           customer: node.customer ? {
             first_name: node.customer.firstName || "Unknown",
             last_name: node.customer.lastName || "",
             email: node.customer.email
-          } : null
+          } : null,
+          cursor: edge.cursor
         };
       });
+
+      return {
+        orders,
+        pageInfo: response.data.data.orders.pageInfo
+      };
 
     } catch (error) {
       console.error('Error fetching orders via GraphQL:', {
@@ -236,23 +254,34 @@ export class ShopifyService {
         statusText: error.response?.statusText,
         data: error.response?.data
       });
-      return [];
+      return { orders: [], pageInfo: {} };
     }
   }
 
-    console.log(`[ShopifyService] Fetching products for shop: ${shop}`, options);
-    
-    // Fetch total count (separate query, as connection count can be expensive or not available directly depending on API version)
-    // We try to use the count field if available in REST or a separate GraphQL query.
-    // Simplest is to just do a quick count query.
-    const countQuery = `
-      {
-        productsCount {
-          count
-        }
+  async getProducts(shop: string, token: string, options: any = {}) {
+
+    console.log(`[ShopifyService] Fetching products for shop: ${shop} `, options);
+
+    const apiUrl = `https://${shop}/admin/api/2024-01/graphql.json`;
+    const headers = {
+      'X-Shopify-Access-Token': token,
+      'Content-Type': 'application/json',
+    };
+
+    // Fetch total product count
+    let totalCount = 0;
+    try {
+      const countQuery = `{ productsCount { count } }`;
+      const countResponse = await firstValueFrom(
+        this.httpService.post(apiUrl, { query: countQuery }, { headers, timeout: 30000 }),
+      );
+      if (countResponse.data?.data?.productsCount?.count !== undefined) {
+        totalCount = countResponse.data.data.productsCount.count;
       }
-    `;
-    
+    } catch (countError) {
+      console.warn('[ShopifyService] Could not fetch product count:', countError.message);
+    }
+
     // Main products query
     const { first = 6, last, after, before } = options;
 
@@ -261,65 +290,60 @@ export class ShopifyService {
     if (first && !last) args += `first: ${first}`;
     if (last) args += `last: ${last}`;
     if (after) args += `, after: "${after}"`;
-    if (after) args += `, after: "${after}"`;
     if (before) args += `, before: "${before}"`;
 
     const productsQuery = `
-        {
-          products(${args}) {
-            pageInfo {
-              hasNextPage
-              hasPreviousPage
-              startCursor
-              endCursor
-            }
-            edges {
-              cursor
-              node {
-                id
-                title
-                productType
-                status
-                images(first: 1) {
-                  edges {
-                    node {
-                      url
-                    }
-                  }
+    {
+      products(${args}) {
+        pageInfo {
+          hasNextPage
+          hasPreviousPage
+          startCursor
+          endCursor
+        }
+        edges {
+          cursor
+          node {
+            id
+            title
+            productType
+            status
+            images(first: 1) {
+              edges {
+                node {
+                  url
                 }
-                variants(first: 10) {
-                  edges {
-                    node {
-                      price
-                      inventoryQuantity
-                      inventoryItem {
-                        unitCost {
-                          amount
-                        }
-                      }
+              }
+            }
+            variants(first: 10) {
+              edges {
+                node {
+                  price
+                  inventoryQuantity
+                  inventoryItem {
+                    unitCost {
+                      amount
                     }
                   }
                 }
               }
             }
           }
-        }`;
+        }
+      }
+    }`;
 
     try {
-      const url = `https://${shop}/admin/api/2024-01/graphql.json`;
       const response = await firstValueFrom(
-        this.httpService.post(url, { query }, {
-          headers: {
-            'X-Shopify-Access-Token': token,
-            'Content-Type': 'application/json',
-          },
-          timeout: 60000, // 60 seconds timeout
+        this.httpService.post(apiUrl, { query: productsQuery }, {
+          headers,
+          timeout: 60000,
         }),
       );
 
       if (response.data.errors) {
         console.error("GraphQL Errors:", JSON.stringify(response.data.errors));
-        return [];
+        return { products: [], pageInfo: {}, totalCount: 0 };
       }
 
       // Transform GraphQL structure
@@ -330,18 +354,19 @@ export class ShopifyService {
           title: node.title,
           product_type: node.productType,
           status: node.status.toLowerCase(),
-          images: node.images.edges.map(img => ({ src: img.node.url })), // Map url to src for frontend compatibility
+          images: node.images.edges.map(img => ({ src: img.node.url })),
           variants: node.variants.edges.map(v => ({
             price: v.node.price,
             inventory_quantity: v.node.inventoryQuantity
           })),
-          cursor: edge.cursor // Include cursor for pagination
+          cursor: edge.cursor
         };
       });
 
       return {
         products,
-        pageInfo: response.data.data.products.pageInfo
+        pageInfo: response.data.data.products.pageInfo,
+        totalCount
       };
 
     } catch (error) {
@@ -351,8 +376,7 @@ export class ShopifyService {
         responseStatus: error.response?.status,
         responseData: JSON.stringify(error.response?.data)
       });
-      // Return empty array to prevent crashing reports
-      return [];
+      return { products: [], pageInfo: {}, totalCount: 0 };
     }
   }
 }

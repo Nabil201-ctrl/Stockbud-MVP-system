@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Req, Res, HttpException, HttpStatus } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ReportsService } from './reports.service';
+import { Response } from 'express';
 
 @Controller('reports')
 export class ReportsController {
@@ -24,6 +25,32 @@ export class ReportsController {
         return this.reportsService.getReportById(req.user.id, id);
     }
 
+    /**
+     * Download a report as DOCX file
+     */
+    @Get(':id/download')
+    @UseGuards(AuthGuard('jwt'))
+    async downloadReport(@Req() req, @Param('id') id: string, @Res() res: Response) {
+        const docxBase64 = await this.reportsService.getReportDocx(req.user.id, id);
+
+        if (!docxBase64) {
+            throw new HttpException('DOCX not available for this report. It may have expired or is still generating.', HttpStatus.NOT_FOUND);
+        }
+
+        const report = await this.reportsService.getReportById(req.user.id, id);
+        const filename = `StockBud_${(report?.type || 'report').toUpperCase()}_${id}.docx`;
+
+        const buffer = Buffer.from(docxBase64, 'base64');
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Length', buffer.length.toString());
+        res.send(buffer);
+    }
+
+    /**
+     * Generate a report (free types: sales, inventory, revenue)
+     */
     @Post('generate')
     @UseGuards(AuthGuard('jwt'))
     async generateReport(
@@ -31,6 +58,16 @@ export class ReportsController {
         @Body() body: { type: 'sales' | 'inventory' | 'revenue' }
     ) {
         return this.reportsService.generateReport(req.user.id, body.type);
+    }
+
+    /**
+     * Generate an instant paid system review
+     * This endpoint should be called AFTER payment verification
+     */
+    @Post('instant-review')
+    @UseGuards(AuthGuard('jwt'))
+    async generateInstantReview(@Req() req) {
+        return this.reportsService.generateInstantReview(req.user.id);
     }
 
     @Delete(':id')

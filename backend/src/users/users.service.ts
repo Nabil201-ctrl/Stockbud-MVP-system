@@ -48,6 +48,7 @@ export interface User {
     lastTokenReset?: number;
     hasFreeReports?: boolean;
     language?: 'en' | 'fr';
+    pushSubscription?: any;
 }
 
 @Injectable()

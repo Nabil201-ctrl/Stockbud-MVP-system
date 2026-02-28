@@ -383,7 +383,7 @@ const SettingsPage = () => {
 
     return (
         <div className="p-6 space-y-6">
-            <h1 className="text-2xl font-bold dark:text-white">{t('settings.title')}</h1>
+            <h1 className="text-2xl font-bold dark:text-white" id="settings-header">{t('settings.title')}</h1>
 
             {/* Network Status Block (Preserved) */}
             <div className={`p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
@@ -405,7 +405,7 @@ const SettingsPage = () => {
             </div>
 
             {/* Tabs */}
-            <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto" id="settings-tabs">
                 <nav className="-mb-px flex space-x-8 min-w-max">
                     <button
                         onClick={() => setActiveTab('profile')}

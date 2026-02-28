@@ -56,7 +56,7 @@ const UsersPage = () => {
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8" id="users-header">
           <div>
             <h1 className="text-3xl font-bold mb-2">{t('users.title')}</h1>
             <p className="text-gray-500 dark:text-gray-400">
@@ -70,7 +70,7 @@ const UsersPage = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="users-stats">
           {[
             { icon: <Users size={24} />, label: t('users.totalUsers'), value: userStats.total.toLocaleString(), change: `+${userStats.growth}%`, color: 'bg-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
             { icon: <UserCheck size={24} />, label: t('users.activeUsers'), value: userStats.active.toLocaleString(), change: '+8.2%', color: 'bg-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
@@ -96,7 +96,7 @@ const UsersPage = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - User Table */}
-          <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+          <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="users-table">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold">{t('users.listTitle')}</h2>
               <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">

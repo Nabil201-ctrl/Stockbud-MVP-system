@@ -7,9 +7,12 @@ import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
+const ITEMS_PER_PAGE = 6;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 const ProductsPage = () => {
   const { isDarkMode } = useTheme();
-  const { authenticatedFetch } = useAuth(); // Import authenticatedFetch
+  const { authenticatedFetch } = useAuth();
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
@@ -22,6 +25,8 @@ const ProductsPage = () => {
     startCursor: null,
     endCursor: null
   });
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [productStats, setProductStats] = useState({
     total: 0,
     active: 0,
@@ -31,6 +36,7 @@ const ProductsPage = () => {
     avgRating: 0
   });
   const [loading, setLoading] = useState(true);
+  const [paginationLoading, setPaginationLoading] = useState(false);
   const [shopifyNotConnected, setShopifyNotConnected] = useState(false);
   const [error, setError] = useState(null);
 
@@ -40,15 +46,20 @@ const ProductsPage = () => {
 
   const fetchProducts = async (cursor = null, direction = 'next') => {
     try {
-      setLoading(true);
+      // Use full-page loading only on initial load, inline loading for pagination
+      if (!cursor) {
+        setLoading(true);
+      } else {
+        setPaginationLoading(true);
+      }
 
       // Construct URL with pagination
-      let url = 'http://localhost:3000/shopify/products?first=6';
+      let url = `${API_URL}/shopify/products?first=${ITEMS_PER_PAGE}`;
       if (cursor) {
         if (direction === 'next') {
-          url = `http://localhost:3000/shopify/products?first=6&after=${cursor}`;
+          url = `${API_URL}/shopify/products?first=${ITEMS_PER_PAGE}&after=${encodeURIComponent(cursor)}`;
         } else {
-          url = `http://localhost:3000/shopify/products?last=6&before=${cursor}`;
+          url = `${API_URL}/shopify/products?last=${ITEMS_PER_PAGE}&before=${encodeURIComponent(cursor)}`;
         }
       }
 
@@ -77,12 +88,22 @@ const ProductsPage = () => {
       setShopifyNotConnected(false);
       setError(null);
 
-      // Handle new response structure { products: [], pageInfo: {} }
-      // Handle new response structure { products: [], pageInfo: {} }
+      // Handle response structure { products: [], pageInfo: {}, totalCount: number }
       const productsData = Array.isArray(data) ? data : (data.products || []);
       const pageInfoData = data.pageInfo || { hasNextPage: false, hasPreviousPage: false };
+      const serverTotalCount = data.totalCount || 0;
 
       setPageInfo(pageInfoData);
+      setTotalCount(serverTotalCount);
+
+      // Update page number
+      if (!cursor) {
+        setCurrentPage(1);
+      } else if (direction === 'next') {
+        setCurrentPage(prev => prev + 1);
+      } else {
+        setCurrentPage(prev => Math.max(1, prev - 1));
+      }
 
       // Transform data
       const transformedProducts = productsData.map(p => ({
@@ -92,31 +113,25 @@ const ProductsPage = () => {
         price: p.variants?.[0]?.price || '0.00',
         stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || 0,
         status: p.status === 'active' ? 'active' : 'archived',
-        image: p.image?.src || p.images?.[0]?.src || '📦',
+        image: p.images?.[0]?.src || '📦',
         revenue: 0,
         rating: 'N/A',
-      })); // Removed client-side sorting to respect server-side pagination order
+      }));
 
       setProducts(transformedProducts);
-      // We don't cache paginated results in the same simple way for now to avoid complexity
 
-      // Calculate stats (Note: This will only be for the current page, ideally stats come from a separate endpoint)
-      // For MVP, we'll accept this limitation or we should fetch holistic stats separately.
-      // Keeping it simple for now.
-      const total = transformedProducts.length;
+      // Calculate stats from current page data
       const active = transformedProducts.filter(p => p.stock >= 10).length;
       const outOfStock = transformedProducts.filter(p => p.stock === 0).length;
       const lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
-      const totalRevenue = transformedProducts.reduce((sum, p) => sum + (p.revenue || 0), 0);
-      const avgRating = 0;
 
       setProductStats({
-        total,
+        total: serverTotalCount || transformedProducts.length,
         active,
         outOfStock,
         lowStock,
-        totalRevenue,
-        avgRating
+        totalRevenue: 0,
+        avgRating: 0
       });
 
     } catch (err) {
@@ -124,6 +139,7 @@ const ProductsPage = () => {
       setError(err.message || 'Failed to load products');
     } finally {
       setLoading(false);
+      setPaginationLoading(false);
     }
   };
 
@@ -279,99 +295,121 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            <div id="products-table" className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <th className="text-left py-3 px-4 font-medium">{t('products.product')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('products.category')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('products.price')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('products.stock')}</th>
+            <div id="products-table" className="overflow-x-auto relative">
+              {/* Inline loading overlay for pagination */}
+              {paginationLoading && (
+                <div className="absolute inset-0 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Loading products...</span>
+                  </div>
+                </div>
+              )}
 
-                    <th className="text-left py-3 px-4 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product) => (
-                    <tr key={product.id} className={`border-b ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'}`}>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {product.image.startsWith('http') ? (
-                              <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-2xl">{product.image}</span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-medium">{product.name}</div>
-                            <div className={`text-xs px-2 py-1 rounded-full inline-block ${product.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                              product.status === 'low' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                              }`}>
-                              {product.status === 'active' ? t('products.inStock') : product.status === 'low' ? t('products.lowStock') : t('products.outOfStock')}
+              {filteredProducts.length === 0 && !paginationLoading ? (
+                <div className="py-12 text-center">
+                  <Package size={48} className="mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">No products found</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
+                    {searchTerm || category !== 'all'
+                      ? 'Try adjusting your search or filter criteria'
+                      : 'Your Shopify store has no products yet'}
+                  </p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <th className="text-left py-3 px-4 font-medium">{t('products.product')}</th>
+                      <th className="text-left py-3 px-4 font-medium">{t('products.category')}</th>
+                      <th className="text-left py-3 px-4 font-medium">{t('products.price')}</th>
+                      <th className="text-left py-3 px-4 font-medium">{t('products.stock')}</th>
+                      <th className="text-left py-3 px-4 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((product) => (
+                      <tr key={product.id} className={`border-b ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} transition-colors`}>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {product.image.startsWith('http') ? (
+                                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-2xl">{product.image}</span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium">{product.name}</div>
+                              <div className={`text-xs px-2 py-1 rounded-full inline-block ${product.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                product.status === 'low' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                  'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                }`}>
+                                {product.status === 'active' ? t('products.inStock') : product.status === 'low' ? t('products.lowStock') : t('products.outOfStock')}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`px-3 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
-                          }`}>
-                          {product.category}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 font-medium">${product.price}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-24 h-2 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`px-3 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
                             }`}>
-                            <div
-                              className={`h-2 rounded-full ${product.stock > 50 ? 'bg-green-500' :
-                                product.stock > 10 ? 'bg-yellow-500' : 'bg-red-500'
-                                }`}
-                              style={{ width: `${Math.min((product.stock / maxStock) * 100, 100)}%` }}
-                            ></div>
+                            {product.category}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 font-medium">${product.price}</td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-24 h-2 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                              }`}>
+                              <div
+                                className={`h-2 rounded-full ${product.stock > 50 ? 'bg-green-500' :
+                                  product.stock > 10 ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                style={{ width: `${Math.min((product.stock / maxStock) * 100, 100)}%` }}
+                              ></div>
+                            </div>
+                            <span>{product.stock}</span>
                           </div>
-                          <span>{product.stock}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                          <MoreVertical size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </td>
+                        <td className="py-4 px-4">
+                          <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                            <MoreVertical size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
-
 
             {/* Pagination Controls */}
             <div className={`px-6 py-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between`}>
               <button
                 onClick={() => fetchProducts(pageInfo.startCursor, 'prev')}
-                disabled={!pageInfo.hasPreviousPage || loading}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!pageInfo.hasPreviousPage || loading
+                disabled={!pageInfo.hasPreviousPage || paginationLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!pageInfo.hasPreviousPage || paginationLoading
                   ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
                   : 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600'
                   }`}
               >
-                Previous
+                ← Previous
               </button>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                {/* Page info textual display could go here if we tracked page numbers, but cursor pagination doesn't strictly have page numbers */}
-                Showing {products.length} products
+              <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                <span className="font-medium">Page {currentPage}</span>
+                {totalCount > 0 && (
+                  <span> · {totalCount} total products</span>
+                )}
               </div>
               <button
                 onClick={() => fetchProducts(pageInfo.endCursor, 'next')}
-                disabled={!pageInfo.hasNextPage || loading}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!pageInfo.hasNextPage || loading
+                disabled={!pageInfo.hasNextPage || paginationLoading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!pageInfo.hasNextPage || paginationLoading
                   ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
                   }`}
               >
-                Next
+                Next →
               </button>
             </div>
           </div>

@@ -13,13 +13,21 @@ export interface Notification {
     createdAt: string;
 }
 
+import { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
+import * as webpush from 'web-push';
+
+
 @Injectable()
 export class NotificationsService implements OnModuleInit {
     private notifications: Map<string, Notification> = new Map();
     private readonly filePath = path.join(process.cwd(), 'notifications.json');
     private mailer: nodemailer.Transporter;
 
-    constructor(private configService: ConfigService) {
+    constructor(
+        private readonly configService: ConfigService,
+        private readonly notificationsGateway: NotificationsGateway
+    ) {
         // Initialize Nodemailer - Using Ethereal for testing or real SMTP if configured
         const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.ethereal.email';
         const smtpPort = this.configService.get<number>('SMTP_PORT') || 587;
@@ -47,10 +55,6 @@ export class NotificationsService implements OnModuleInit {
             vapidPrivateKey
         );
     }
-
-    constructor(
-        private readonly notificationsGateway: NotificationsGateway
-    ) { }
 
     onModuleInit() {
         this.loadNotifications();
