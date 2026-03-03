@@ -22,23 +22,103 @@ export const loader = async ({ request }) => {
 
 export const action = async ({ request }) => {
   const { session } = await authenticate.admin(request);
-  if (!session) return { status: "error", message: "No session" };
+  if (!session) return { status: "error", message: "No session found. Please reload the app." };
 
-  // Fetch Offline Session for Background Jobs
-  const offlineId = getOfflineId(session.shop);
-  const offlineSession = await shopify.sessionStorage.loadSession(offlineId);
-  const offlineToken = offlineSession?.accessToken;
+  const shop = session.shop;
+  const apiKey = process.env.SHOPIFY_API_KEY;
+  const apiSecret = process.env.SHOPIFY_API_SECRET;
+
+  // --- Step 1: Try to get the existing offline (shpat_) token from session storage ---
+  const offlineId = getOfflineId(shop);
+  let offlineSession = await shopify.sessionStorage.loadSession(offlineId);
+  let offlineToken = offlineSession?.accessToken;
+
+  console.log(`[Stockbud] Session for ${shop}`);
+  console.log(`[Stockbud] Online token prefix: ${session.accessToken?.substring(0, 8)}`);
+  console.log(`[Stockbud] Offline token: ${offlineToken ? offlineToken.substring(0, 8) + "..." : "NOT FOUND"}`);
+
+  // --- Step 2: If no shpat_ in storage, exchange the current session token for an offline one ---
+  if (!offlineToken || !offlineToken.startsWith("shpat_")) {
+    console.log("[Stockbud] No offline token found. Attempting token exchange via Shopify API...");
+
+    // Use the app's credentials to get an offline access token.
+    // This works by posting to the Admin OAuth token endpoint with the client credentials.
+    // Since useOnlineTokens: false is set, the Shopify framework will have already
+    // created an offline session during the LAST OAuth callback.
+    // If it's still missing, we request a new one using the access_token endpoint:
+    try {
+      const tokenUrl = `https://${shop}/admin/oauth/access_token`;
+      const tokenResponse = await fetch(tokenUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: apiKey,
+          client_secret: apiSecret,
+          // We don't have a fresh code here — we rely on the framework's stored session.
+          // As a fallback, use the current online session token to call the API directly.
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        // The direct exchange without a code won't work from here.
+        // The REAL fix: since useOnlineTokens: false is now set in shopify.server.js,
+        // the next time the merchant opens this app, the OAuth flow will automatically
+        // produce and store a shpat_ token in session storage. We just need to signal
+        // the user to do a one-time reconnect.
+        console.log("[Stockbud] Cannot exchange without an auth code. Merchant needs to re-authenticate.");
+        return {
+          status: "needs_reauth",
+          message: "Your session needs to be refreshed to get a secure offline token. Please click the button below.",
+          shop,
+        };
+      }
+
+      const tokenData = await tokenResponse.json();
+      offlineToken = tokenData.access_token;
+      console.log(`[Stockbud] Got new token with prefix: ${offlineToken?.substring(0, 8)}`);
+
+      // Store this offline session for future use
+      const { Session } = await import("@shopify/shopify-api");
+      const newOfflineSession = new Session({
+        id: offlineId,
+        shop,
+        state: session.state || "offline",
+        isOnline: false,
+        accessToken: offlineToken,
+        scope: session.scope,
+      });
+      await shopify.sessionStorage.storeSession(newOfflineSession);
+      console.log(`[Stockbud] Stored offline session for ${shop}`);
+    } catch (exchangeError) {
+      console.error("[Stockbud] Token exchange error:", exchangeError.message);
+      return {
+        status: "needs_reauth",
+        message: "Please reload the app from your Shopify admin to refresh your session.",
+        shop,
+      };
+    }
+  }
+
+  // --- Step 3: At this point we have a token — verify it's the right type ---
+  if (!offlineToken || !offlineToken.startsWith("shpat_")) {
+    console.warn(`[Stockbud] Token acquired (${offlineToken?.substring(0, 8)}) is NOT an offline shpat_ token. Re-auth required.`);
+    return {
+      status: "needs_reauth",
+      message: `Token type mismatch: got "${offlineToken?.substring(0, 8)}..." but need "shpat_...". The app needs to be reinstalled to get the correct token type.`,
+      shop,
+    };
+  }
 
   const formData = await request.formData();
   const pairingCode = formData.get("pairingCode");
   const stockbudToken = formData.get("stockbudToken");
   const name = formData.get("name");
 
-  console.log("Syncing with Stockbud Backend...", session.shop);
+  console.log(`[Stockbud] Syncing shop: ${shop} → using shpat_ token ✓`);
+
   try {
     const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
 
-    // Determine which endpoint to call based on what we have
     if (pairingCode) {
       // New flow: Use pairing code
       const response = await fetch(`${backendUrl}/shopify/connect-with-code`, {
@@ -46,8 +126,8 @@ export const action = async ({ request }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: pairingCode,
-          shop: session.shop,
-          accessToken: offlineToken || session.accessToken,
+          shop,
+          accessToken: offlineToken,          // guaranteed shpat_ here
         }),
       });
 
@@ -59,20 +139,14 @@ export const action = async ({ request }) => {
         return { status: "error", message: errorText || "Invalid pairing code" };
       }
     } else if (stockbudToken) {
-      // Legacy flow: Use Bearer token (for backward compatibility if needed)
-      const headers = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${stockbudToken}`,
-      };
-
+      // Legacy flow
       const response = await fetch(`${backendUrl}/shopify/connect`, {
         method: "POST",
-        headers: headers,
-        body: JSON.stringify({
-          shop: session.shop,
-          accessToken: offlineToken || session.accessToken,
-          name: name,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${stockbudToken}`,
+        },
+        body: JSON.stringify({ shop, accessToken: offlineToken, name }),
       });
 
       if (response.ok) {
@@ -88,6 +162,7 @@ export const action = async ({ request }) => {
     return { status: "error", message: error.message };
   }
 };
+
 
 const PolarisTimeline = ({ currentStep }) => {
   const steps = [
@@ -172,6 +247,8 @@ export default function Index() {
   const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [needsReauth, setNeedsReauth] = useState(false);
+  const [reauthMessage, setReauthMessage] = useState("");
 
   const openApp = () => window.open("http://localhost:5173", "_blank");
 
@@ -247,6 +324,13 @@ export default function Index() {
       setLoginError(fetcher.data.message);
       setIsLoading(false);
     }
+
+    // Handle needs_reauth — offline shpat_ token not available yet
+    if (fetcher.data?.status === 'needs_reauth') {
+      setNeedsReauth(true);
+      setReauthMessage(fetcher.data.message || "Please re-authenticate to get a secure token.");
+      setIsLoading(false);
+    }
   }, [token, fetcher.state, fetcher.data, currentStep]);
 
   useEffect(() => {
@@ -279,7 +363,41 @@ export default function Index() {
               <Divider />
 
               <Box padding="400">
-                {!token ? (
+                {needsReauth ? (
+                  <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+                    <BlockStack gap="500">
+                      <Banner
+                        tone="warning"
+                        title="Session refresh required"
+                      >
+                        <p>{reauthMessage}</p>
+                        <p style={{ marginTop: '8px', fontSize: '13px', color: '#6d7175' }}>
+                          This is a one-time step. After re-authenticating, your store will connect automatically.
+                        </p>
+                      </Banner>
+                      <Button
+                        variant="primary"
+                        fullWidth
+                        onClick={() => {
+                          // MUST break out of the Shopify Admin iframe before OAuth redirect.
+                          // accounts.shopify.com has X-Frame-Options: DENY — it refuses
+                          // to load inside any iframe. window.top escapes to the top frame.
+                          const authUrl = `/auth?shop=${loaderData.shop}`;
+                          if (window.top) {
+                            window.top.location.href = authUrl;
+                          } else {
+                            window.location.href = authUrl;
+                          }
+                        }}
+                      >
+                        🔐 Re-authenticate with Shopify
+                      </Button>
+                      <Text variant="bodySm" as="p" tone="subdued" alignment="center">
+                        This will redirect you through a quick Shopify login to get your secure offline token.
+                      </Text>
+                    </BlockStack>
+                  </div>
+                ) : !token ? (
                   <div style={{ maxWidth: '400px', margin: '0 auto' }}>
                     <BlockStack gap="400">
                       <Text variant="bodyMd" as="p" alignment="center">

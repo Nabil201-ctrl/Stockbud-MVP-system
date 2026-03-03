@@ -16,6 +16,8 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
+  // Request offline tokens (shpat_) so background jobs can run without a user session
+  useOnlineTokens: false,
   future: {
     v3_webhookAdminContext: true,
   },

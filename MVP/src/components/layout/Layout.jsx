@@ -24,7 +24,7 @@ const Layout = ({ children }) => {
   useEffect(() => {
     const checkFeedback = () => {
       const lastFeedback = localStorage.getItem('lastFeedbackDate');
-      const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
       if (!lastFeedback) {
         // First visit? Maybe delay slightly so it doesn't pop up INSTANTLY on first load ever?
@@ -32,7 +32,7 @@ const Layout = ({ children }) => {
         setTimeout(() => setShowFeedback(true), 5000);
       } else {
         const timeSince = Date.now() - parseInt(lastFeedback, 10);
-        if (timeSince > ONE_WEEK_MS) {
+        if (timeSince > TWO_WEEKS_MS) {
           setShowFeedback(true);
         }
       }
@@ -52,7 +52,7 @@ const Layout = ({ children }) => {
         // Global Steps
         { element: '#app-sidebar', popover: { title: 'Navigation', description: 'Use the sidebar to navigate between different sections of the app.' } },
         { element: '#app-header', popover: { title: 'Header', description: 'Access your profile, notifications, and settings here.' } },
-        
+
         // Dashboard
         ...(location.pathname === '/dashboard' ? [
           { element: '#dashboard-stats', popover: { title: 'Overview Stats', description: 'Quick view of your key metrics.' } },
@@ -109,7 +109,7 @@ const Layout = ({ children }) => {
         ] : []),
       ]
     });
-    
+
     driverObj.drive();
   };
 

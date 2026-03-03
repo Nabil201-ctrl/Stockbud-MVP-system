@@ -79,13 +79,34 @@ const ReportsPage = () => {
         }
     };
 
+    // Retry-enabled payment verification (safe because backend is idempotent)
+    const verifyWithRetry = async (reference, maxRetries = 3) => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const response = await authenticatedFetch(`${API_URL}/payments/verify?reference=${reference}`);
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    return data;
+                }
+                return { success: false, message: data.message || 'Verification failed' };
+            } catch (error) {
+                console.warn(`[Payment] Verify attempt ${attempt}/${maxRetries} failed:`, error.message);
+                if (attempt < maxRetries) {
+                    await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt - 1)));
+                } else {
+                    localStorage.setItem('pending_payment_ref', reference);
+                    return { success: false, message: 'Network error. Your payment is safe — please refresh to retry.' };
+                }
+            }
+        }
+    };
+
     const verifyAndGenerate = async (reference) => {
         try {
-            const verifyRes = await authenticatedFetch(`${API_URL}/payments/verify?reference=${reference}`);
-            const verifyData = await verifyRes.json();
+            const result = await verifyWithRetry(reference);
 
-            if (!verifyRes.ok || !verifyData.success) {
-                alert('Payment verification failed.');
+            if (!result.success) {
+                alert(result.message || 'Payment verification failed.');
                 setGenerating(false);
                 return;
             }
@@ -117,24 +138,21 @@ const ReportsPage = () => {
             const handler = PaystackPop.setup({
                 key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
                 email: user.email,
-                amount: 2500 * 100, // 2500 NGN premium rate
+                amount: 2500 * 100,
                 metadata: {
                     userId: user.id,
                     type: 'instant_review_payment'
                 },
                 callback: async (transaction) => {
                     try {
-                        // Verify payment
-                        const verifyRes = await authenticatedFetch(`${API_URL}/payments/verify?reference=${transaction.reference}`);
-                        const verifyData = await verifyRes.json();
+                        const result = await verifyWithRetry(transaction.reference);
 
-                        if (!verifyRes.ok || !verifyData.success) {
-                            alert('Payment verification failed.');
+                        if (!result.success) {
+                            alert(result.message || 'Payment verification failed.');
                             setInstantGenerating(false);
                             return;
                         }
 
-                        // Generate instant review
                         const response = await authenticatedFetch(`${API_URL}/reports/instant-review`, {
                             method: 'POST',
                         });
@@ -330,19 +348,19 @@ const ReportsPage = () => {
 
         if (report.data.content) {
             return (
-                <div className={`max-w-4xl mx-auto p-4`}>
+                <div className={`max-w-4xl mx-auto`}>
                     <div className={`shadow-lg rounded-xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                        <div className={`h-2 ${report.type === 'monthly' ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
+                        <div className={`h-1.5 sm:h-2 ${report.type === 'monthly' ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
                             report.type === 'instant' ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
                                 report.type === 'welcome' ? 'bg-gradient-to-r from-orange-500 to-red-500' :
                                     isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
                             }`} />
 
-                        <div className="p-8 md:p-12">
-                            <div className="border-b border-gray-200 dark:border-gray-700 pb-6 mb-8">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <div className="flex items-center gap-3 mb-2">
+                        <div className="p-4 sm:p-8 md:p-12">
+                            <div className="border-b border-gray-200 dark:border-gray-700 pb-4 sm:pb-6 mb-6 sm:mb-8">
+                                <div className="flex justify-between items-start gap-3">
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                                             {getTypeBadge(report.type)}
                                             {report.emailSent && (
                                                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
@@ -351,27 +369,27 @@ const ReportsPage = () => {
                                                 </span>
                                             )}
                                         </div>
-                                        <h1 className="text-3xl font-bold dark:text-white mb-2">{report.title}</h1>
-                                        <p className="text-gray-500 dark:text-gray-400">Generated on {formatDate(report.createdAt)}</p>
+                                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold dark:text-white mb-1 sm:mb-2">{report.title}</h1>
+                                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Generated on {formatDate(report.createdAt)}</p>
                                     </div>
-                                    <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                    <div className={`hidden sm:block p-3 rounded-lg flex-shrink-0 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                                         {getTypeIcon(report.type)}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="prose prose-lg dark:prose-invert max-w-none">
+                            <div className="prose prose-sm sm:prose-lg dark:prose-invert max-w-none">
                                 <MarkdownRenderer content={report.data.content} isDarkMode={isDarkMode} />
                             </div>
 
                             {report.data.stats && (
-                                <div className={`mt-12 p-6 rounded-lg ${isDarkMode ? 'bg-gray-900/50' : 'bg-gray-50'}`}>
-                                    <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">{t('reports.keyMetrics')}</h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                <div className={`mt-8 sm:mt-12 p-4 sm:p-6 rounded-lg ${isDarkMode ? 'bg-gray-900/50' : 'bg-gray-50'}`}>
+                                    <h3 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">{t('reports.keyMetrics')}</h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
                                         {Object.entries(report.data.stats).map(([key, value]) => (
                                             <div key={key}>
-                                                <p className="text-xs text-gray-400 uppercase mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                                                <p className="text-lg font-mono font-medium dark:text-white">
+                                                <p className="text-[10px] sm:text-xs text-gray-400 uppercase mb-0.5 sm:mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                                                <p className="text-sm sm:text-lg font-mono font-medium dark:text-white">
                                                     {typeof value === 'number' ?
                                                         (key.toLowerCase().includes('revenue') || key.toLowerCase().includes('margin') ?
                                                             `$${value.toLocaleString()}` : value.toLocaleString())
