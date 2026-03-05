@@ -95,8 +95,8 @@ export class ShopifyController {
         // Note: shpss_ is the API Secret/Client Secret — NOT the access token.
         // The offline access token issued via OAuth always starts with shpat_
         console.log(`[Shopify] Received token prefix: ${dto.accessToken?.substring(0, 8)}...`);
-        if (!dto.accessToken || !dto.accessToken.startsWith('shpat_')) {
-            throw new HttpException(`Invalid Shopify Access Token. Must be an Offline Access Token starting with "shpat_". Got prefix: ${dto.accessToken?.substring(0, 8)}`, HttpStatus.BAD_REQUEST);
+        if (!dto.accessToken || (!dto.accessToken.startsWith('shpat_') && !dto.accessToken.startsWith('shpua_'))) {
+            throw new HttpException(`Invalid Shopify Access Token. Must be an Access Token starting with "shpat_" or "shpua_". Got prefix: ${dto.accessToken?.substring(0, 8)}`, HttpStatus.BAD_REQUEST);
         }
 
         const result = await this.shopifyService.connectWithCode(dto.code, dto.shop, dto.accessToken);

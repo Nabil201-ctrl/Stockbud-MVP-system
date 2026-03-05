@@ -32,7 +32,16 @@
     "title": "Report Ready",
     "message": "Your weekly report \"undefined\" has been successfully generated.",
     "type": "success",
-    "read": false,
+    "read": true,
     "createdAt": "2026-02-28T23:00:17.710Z"
+  },
+  {
+    "id": "44cmpof7f",
+    "userId": "113831482632022329688",
+    "title": "Report Ready",
+    "message": "Your welcome report \"Welcome Analysis — stockbud-test.myshopify.com\" has been generated.",
+    "type": "success",
+    "read": false,
+    "createdAt": "2026-03-05T01:43:08.370Z"
   }
 ]
