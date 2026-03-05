@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { storage } from '../utils/db';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -27,23 +28,41 @@ const ReportsPage = () => {
 
     const fetchReports = async () => {
         try {
+            const cacheKey = `reports_${user?.activeShopId || 'default'}`;
+            const cachedReports = await storage.get(cacheKey);
+            if (cachedReports) {
+                setReports(cachedReports);
+                setLoading(false);
+            } else {
+                setLoading(true);
+            }
+
             const response = await authenticatedFetch(`${API_URL}/reports`);
             if (response.ok) {
                 const data = await response.json();
                 setReports(data);
+                await storage.set(cacheKey, data);
             }
         } catch (error) {
             console.error('Failed to fetch reports:', error);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const fetchStats = async () => {
         try {
+            const cacheKey = `report_stats_${user?.activeShopId || 'default'}`;
+            const cachedStats = await storage.get(cacheKey);
+            if (cachedStats) {
+                setStats(cachedStats);
+            }
+
             const response = await authenticatedFetch(`${API_URL}/reports/stats`);
             if (response.ok) {
                 const data = await response.json();
                 setStats(data);
+                await storage.set(cacheKey, data);
             }
         } catch (error) {
             console.error('Failed to fetch stats:', error);
@@ -378,7 +397,7 @@ const ReportsPage = () => {
                                 </div>
                             </div>
 
-                            <div className="prose prose-sm sm:prose-lg dark:prose-invert max-w-none">
+                            <div className="prose prose-lg sm:prose-xl dark:prose-invert max-w-none">
                                 <MarkdownRenderer content={report.data.content} isDarkMode={isDarkMode} />
                             </div>
 
@@ -735,7 +754,7 @@ const ReportsPage = () => {
             {/* Preview Modal */}
             {previewReport && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-sm">
-                    <div className={`w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden rounded-t-2xl sm:rounded-2xl shadow-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                    <div className={`w-full sm:max-w-5xl xl:max-w-7xl h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl shadow-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
                         {/* Modal Header */}
                         <div className={`flex items-center justify-between p-3 sm:p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -759,7 +778,7 @@ const ReportsPage = () => {
                         </div>
 
                         {/* Modal Content */}
-                        <div className="p-4 sm:p-6 max-h-[65vh] sm:max-h-[60vh] overflow-y-auto">
+                        <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
                             {renderPreviewContent(previewReport)}
                         </div>
 

@@ -11,7 +11,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const SettingsPage = () => {
     const isOnline = useOnlineStatus();
-    const { isDarkMode } = useTheme();
+    const { isDarkMode, fontSize, changeFontSize } = useTheme();
     const { user, updateProfile, authenticatedFetch, refreshUser } = useAuth();
     const { t, language, changeLanguage, availableLanguages } = useLanguage();
     const location = useLocation();
@@ -481,6 +481,28 @@ const SettingsPage = () => {
                                     </option>
                                 ))}
                             </select>
+                        </div>
+
+                        {/* Font Size Selector */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center justify-between">
+                                <span>Text Size</span>
+                                <span className="text-blue-600 dark:text-blue-400 font-bold">{fontSize}%</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="80"
+                                max="150"
+                                step="5"
+                                value={fontSize}
+                                onChange={(e) => changeFontSize(Number(e.target.value))}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
+                            />
+                            <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>Smaller</span>
+                                <span>Default</span>
+                                <span>Larger</span>
+                            </div>
                         </div>
 
                         {profileMessage && (

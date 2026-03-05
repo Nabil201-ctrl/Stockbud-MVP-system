@@ -8,6 +8,8 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 const ChatPage = () => {
     const { isDarkMode } = useTheme();
     const { authenticatedFetch, user, refreshUser } = useAuth();
@@ -54,7 +56,7 @@ const ChatPage = () => {
 
     const loadChats = async () => {
         try {
-            const response = await authenticatedFetch('http://localhost:3000/chats');
+            const response = await authenticatedFetch(`${API_URL}/chats`);
             if (response.ok) {
                 const data = await response.json();
                 setChats(data);
@@ -69,7 +71,7 @@ const ChatPage = () => {
 
     const createNewChat = async () => {
         try {
-            const response = await authenticatedFetch('http://localhost:3000/chats', {
+            const response = await authenticatedFetch(`${API_URL}/chats`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: 'New Chat' })
@@ -89,7 +91,7 @@ const ChatPage = () => {
     const deleteChat = async (e, id) => {
         e.stopPropagation();
         try {
-            const response = await authenticatedFetch(`http://localhost:3000/chats/${id}`, {
+            const response = await authenticatedFetch(`${API_URL}/chats/${id}`, {
                 method: 'DELETE'
             });
 
@@ -114,7 +116,7 @@ const ChatPage = () => {
         let targetChatId = currentChatId;
         if (!targetChatId) {
             try {
-                const response = await authenticatedFetch('http://localhost:3000/chats', {
+                const response = await authenticatedFetch(`${API_URL}/chats`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title: input.slice(0, 30), firstMessage: input, language }) // Pass language
@@ -148,7 +150,7 @@ const ChatPage = () => {
         }));
 
         try {
-            const response = await authenticatedFetch(`http://localhost:3000/chats/${targetChatId}/messages`, {
+            const response = await authenticatedFetch(`${API_URL}/chats/${targetChatId}/messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: messageContent, language }) // Pass language

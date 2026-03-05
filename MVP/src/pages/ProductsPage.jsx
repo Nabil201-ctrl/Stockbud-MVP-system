@@ -12,7 +12,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const ProductsPage = () => {
   const { isDarkMode } = useTheme();
-  const { authenticatedFetch } = useAuth();
+  const { authenticatedFetch, user } = useAuth();
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
@@ -46,9 +46,19 @@ const ProductsPage = () => {
 
   const fetchProducts = async (cursor = null, direction = 'next') => {
     try {
-      // Use full-page loading only on initial load, inline loading for pagination
       if (!cursor) {
-        setLoading(true);
+        // PWA Offline Storage: Immediately load from IndexedDB
+        const cacheKey = `products_${user?.activeShopId || 'default'}`;
+        const cachedProducts = await storage.get(cacheKey);
+        if (cachedProducts) {
+          setProducts(cachedProducts.products);
+          setProductStats(cachedProducts.stats);
+          setPageInfo(cachedProducts.pageInfo);
+          setTotalCount(cachedProducts.totalCount);
+          setLoading(false); // Instant load
+        } else {
+          setLoading(true);
+        }
       } else {
         setPaginationLoading(true);
       }
@@ -125,18 +135,33 @@ const ProductsPage = () => {
       const outOfStock = transformedProducts.filter(p => p.stock === 0).length;
       const lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
 
-      setProductStats({
+      const statsData = {
         total: serverTotalCount || transformedProducts.length,
         active,
         outOfStock,
         lowStock,
         totalRevenue: 0,
         avgRating: 0
-      });
+      };
+
+      setProductStats(statsData);
+
+      // PWA Offline Storage: Cache new fresh data
+      if (!cursor) {
+        const cacheKey = `products_${user?.activeShopId || 'default'}`;
+        await storage.set(cacheKey, {
+          products: transformedProducts,
+          stats: statsData,
+          pageInfo: pageInfoData,
+          totalCount: serverTotalCount
+        });
+      }
 
     } catch (err) {
       console.error('Failed to fetch products:', err);
-      setError(err.message || 'Failed to load products');
+      if (!products.length && !cursor) {
+        setError(err.message || 'Failed to load products. You might be offline.');
+      }
     } finally {
       setLoading(false);
       setPaginationLoading(false);
@@ -243,10 +268,6 @@ const ProductsPage = () => {
               {t('products.subtitle')}
             </p>
           </div>
-          <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2">
-            <Package size={20} />
-            {t('products.addNew')}
-          </button>
         </div>
 
         {/* Stats Grid */}

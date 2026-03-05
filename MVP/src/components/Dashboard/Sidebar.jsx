@@ -12,24 +12,39 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, isOpen, onClose }) => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { t } = useLanguage();
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [showFeedbackWidget, setShowFeedbackWidget] = useState(false);
   const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  // Check feedback visibility on mount
+  // Check feedback visibility on mount and user change
   React.useEffect(() => {
+    if (!user) return;
+
+    // Check if account is at least 14 days old
+    // Fallback to allowing it if we can't determine creation date
+    const accountCreatedDate = user.createdAt ? new Date(user.createdAt).getTime() : 0;
+    const daysSinceCreation = accountCreatedDate ? (Date.now() - accountCreatedDate) / (1000 * 60 * 60 * 24) : 14;
+
+    if (daysSinceCreation < 14) {
+      setShowFeedbackWidget(false);
+      return;
+    }
+
     const lastSubmitted = localStorage.getItem('feedback_last_submitted');
     if (!lastSubmitted) {
       setShowFeedbackWidget(true);
     } else {
-      const daysSince = (Date.now() - parseInt(lastSubmitted)) / (1000 * 60 * 60 * 24);
-      if (daysSince >= 7) {
+      const daysSinceSubmit = (Date.now() - parseInt(lastSubmitted)) / (1000 * 60 * 60 * 24);
+      // Show again if 14 days have passed since last submit
+      if (daysSinceSubmit >= 14) {
         setShowFeedbackWidget(true);
+      } else {
+        setShowFeedbackWidget(false);
       }
     }
-  }, []);
+  }, [user]);
 
   const handleFeedbackSubmit = () => {
     localStorage.setItem('feedback_last_submitted', Date.now().toString());
