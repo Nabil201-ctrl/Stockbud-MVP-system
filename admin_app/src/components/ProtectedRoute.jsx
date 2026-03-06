@@ -7,11 +7,29 @@ export const ProtectedRoute = () => {
 
     useEffect(() => {
         const checkAuth = async () => {
+            // Check for a saved authentication state first for PWA offline capabilities
+            const offlineAuthState = localStorage.getItem('stockbud_admin_auth');
+
+            if (!navigator.onLine) {
+                // If the user is entirely offline, trust the locally cached state rather than forcefully logging them out.
+                setIsAuthenticated(offlineAuthState === 'true');
+                return;
+            }
+
             try {
-                await axios.get('/api/users/me');
+                // When online, ping the service
+                await axios.get('http://localhost:3000/users/me'); // Direct to backend instead of /api proxy since Dashboard uses :3000 directly
+                localStorage.setItem('stockbud_admin_auth', 'true');
                 setIsAuthenticated(true);
             } catch (error) {
-                setIsAuthenticated(false);
+                // Distinction between genuine 401 or a severe network failure/CORS problem where server is offline
+                if (error.response && error.response.status === 401) {
+                    localStorage.removeItem('stockbud_admin_auth');
+                    setIsAuthenticated(false);
+                } else {
+                    // Server is unreachable, rather than logging them out, fallback to last known state!
+                    setIsAuthenticated(offlineAuthState === 'true' ? true : false);
+                }
             }
         };
         checkAuth();

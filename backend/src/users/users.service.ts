@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { EncryptionService } from '../common/encryption.service';
+import axios from 'axios';
 
 export interface BotSettings {
     name: string;
@@ -49,6 +50,9 @@ export interface User {
     hasFreeReports?: boolean;
     language?: 'en' | 'fr';
     pushSubscription?: any;
+    ipAddress?: string;
+    location?: string;
+    currency?: string;
 }
 
 @Injectable()
@@ -143,7 +147,11 @@ export class UsersService implements OnModuleInit {
                 hasFreeReports: false,
                 language: 'en',
                 createdAt: new Date().toISOString(),
+                ipAddress: profile.ipAddress,
             };
+            if (profile.ipAddress) {
+                await this.fetchAndSetLocation(user.id, profile.ipAddress);
+            }
             this.users.set(user.id, user);
             this.saveUsers();
         }
@@ -166,8 +174,30 @@ export class UsersService implements OnModuleInit {
             hasFreeReports: false,
             language: 'en',
             createdAt: new Date().toISOString(),
+            ipAddress: email.includes('@') ? undefined : undefined // placeholder, passed from auth service later
         };
         this.users.set(user.id, user);
+        this.saveUsers();
+        return user;
+    }
+
+    async fetchAndSetLocation(userId: string, ip: string): Promise<User | undefined> {
+        const user = this.users.get(userId);
+        if (!user) return undefined;
+
+        user.ipAddress = ip;
+        try {
+            // Using precise ip address checking for all users via ipapi.co
+            const response = await axios.get(`https://ipapi.co/${ip}/json/`);
+            if (response.data && !response.data.error) {
+                user.location = response.data.country_name || response.data.city;
+                user.currency = response.data.currency;
+            }
+        } catch (error) {
+            console.error(`[UsersService] Failed to fetch IP location for ${ip}:`, error.message);
+        }
+
+        this.users.set(userId, user);
         this.saveUsers();
         return user;
     }
@@ -230,7 +260,7 @@ export class UsersService implements OnModuleInit {
 
         this.users.set(userId, user);
         this.saveUsers();
-        console.log(`[MultiShop] Added store ${shop} for user ${userId}. Total stores: ${user.shopifyStores.length}`);
+        console.log(`[MultiShop] Added store ${shop} for user ${userId}.Total stores: ${user.shopifyStores.length} `);
         return user;
     }
 
@@ -259,7 +289,7 @@ export class UsersService implements OnModuleInit {
 
         this.users.set(userId, user);
         this.saveUsers();
-        console.log(`[MultiShop] Removed store ${storeId} for user ${userId}. Total stores: ${user.shopifyStores.length}`);
+        console.log(`[MultiShop] Removed store ${storeId} for user ${userId}.Total stores: ${user.shopifyStores.length} `);
         return user;
     }
 
@@ -334,7 +364,7 @@ export class UsersService implements OnModuleInit {
             user.aiTokens = 500;
             user.reportTokens = 250;
         }
-        console.log(`[Tokens] User ${user.id} now has ${shopCount} shops, tokens: AI=${user.aiTokens}, Report=${user.reportTokens}`);
+        console.log(`[Tokens] User ${user.id} now has ${shopCount} shops, tokens: AI = ${user.aiTokens}, Report = ${user.reportTokens} `);
     }
 
     async getDecryptedShopifyToken(userId: string): Promise<string | undefined> {
@@ -482,7 +512,7 @@ export class UsersService implements OnModuleInit {
         user.storeLimit = (user.storeLimit || 2) + 1;
         this.users.set(userId, user);
         this.saveUsers();
-        console.log(`[Limits] User ${userId} increased store limit to ${user.storeLimit}`);
+        console.log(`[Limits] User ${userId} increased store limit to ${user.storeLimit} `);
         return user;
     }
     async extendRetention(userId: string, months: number): Promise<User> {
@@ -492,7 +522,7 @@ export class UsersService implements OnModuleInit {
         user.retentionMonths = (user.retentionMonths || 3) + months;
         this.users.set(userId, user);
         this.saveUsers();
-        console.log(`[Retention] User ${userId} extended retention by ${months} months. New limit: ${user.retentionMonths}`);
+        console.log(`[Retention] User ${userId} extended retention by ${months} months.New limit: ${user.retentionMonths} `);
         return user;
     }
 
@@ -502,7 +532,7 @@ export class UsersService implements OnModuleInit {
         user.hasFreeReports = enable;
         this.users.set(userId, user);
         this.saveUsers();
-        console.log(`[Admin] Set free reports for user ${userId} to ${enable}`);
+        console.log(`[Admin] Set free reports for user ${userId} to ${enable} `);
         return user;
     }
 
@@ -514,7 +544,7 @@ export class UsersService implements OnModuleInit {
             count++;
         }
         this.saveUsers();
-        console.log(`[Admin] Set free reports for ALL ${count} users to ${enable}`);
+        console.log(`[Admin] Set free reports for ALL ${count} users to ${enable} `);
         return count;
     }
 

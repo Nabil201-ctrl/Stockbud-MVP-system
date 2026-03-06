@@ -3,10 +3,11 @@ import { DashboardService } from '../dashboard/dashboard.service';
 import { ShopifyService } from '../shopify/shopify.service';
 import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GeminiService } from '../common/gemini.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
+import { EmailBatchService } from '../email/email-batch.service';
 import { DocxGeneratorService } from '../email/docx-generator.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -27,8 +28,6 @@ export interface Report {
 @Injectable()
 export class ReportsService {
     private reportsFilePath = path.join(__dirname, '../../data/reports.json');
-    private genAI: GoogleGenerativeAI;
-    private model: any;
 
     constructor(
         private readonly dashboardService: DashboardService,
@@ -38,15 +37,10 @@ export class ReportsService {
         private readonly notificationsService: NotificationsService,
         private readonly configService: ConfigService,
         private readonly emailService: EmailService,
+        private readonly emailBatchService: EmailBatchService,
         private readonly docxGeneratorService: DocxGeneratorService,
+        private readonly geminiService: GeminiService,
     ) {
-        const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-        if (apiKey) {
-            this.genAI = new GoogleGenerativeAI(apiKey);
-            this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        } else {
-            console.warn('GEMINI_API_KEY is not set. Reports will use templates.');
-        }
         this.ensureDataFile();
     }
 
@@ -357,19 +351,50 @@ export class ReportsService {
         if (!user?.email || !docxBase64) return false;
 
         try {
-            switch (type) {
-                case 'weekly':
-                case 'sales':
-                    return await this.emailService.sendWeeklyReport(user.email, user.name || 'User', report.title, docxBase64);
-                case 'monthly':
-                    return await this.emailService.sendMonthlyReview(user.email, user.name || 'User', report.title, docxBase64);
-                case 'welcome':
-                    return await this.emailService.sendWelcomeReport(user.email, user.name || 'User', user.shopifyShop || 'Your Store', docxBase64);
-                case 'instant':
-                    return await this.emailService.sendInstantReview(user.email, user.name || 'User', report.title, docxBase64);
-                default:
-                    return false;
+            let subject = '';
+            let htmlContent = '';
+            let attachmentName = '';
+            let priority = 3;
+
+            if (type === 'weekly' || type === 'sales') {
+                subject = `📊 Your Weekly Store Report — ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+                htmlContent = this.emailService.buildWeeklyEmailHtml(user.name || 'User', report.title, new Date().toLocaleDateString('en-US'));
+                attachmentName = `StockBud_Weekly_Report_${new Date().toISOString().slice(0, 10)}.docx`;
+                priority = 3;
+            } else if (type === 'monthly') {
+                subject = `📈 Your Monthly Business Review — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+                htmlContent = this.emailService.buildMonthlyEmailHtml(user.name || 'User', report.title, new Date().toLocaleDateString('en-US'));
+                attachmentName = `StockBud_Monthly_Review_${new Date().toISOString().slice(0, 7)}.docx`;
+                priority = 2;
+            } else if (type === 'welcome') {
+                subject = `🎉 Welcome to StockBud! Your First Store Analysis is Ready`;
+                htmlContent = this.emailService.buildWelcomeEmailHtml(user.name || 'User', user.shopifyShop || 'Your Store');
+                attachmentName = `StockBud_Welcome_Analysis_${(user.shopifyShop || 'Your Store').replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+                priority = 1;
+            } else if (type === 'instant') {
+                subject = `⚡ Your Instant System Review — ${report.title}`;
+                htmlContent = this.emailService.buildInstantReviewEmailHtml(user.name || 'User', report.title);
+                attachmentName = `StockBud_Instant_Review_${new Date().toISOString().slice(0, 10)}.docx`;
+                priority = 1;
+            } else {
+                return false;
             }
+
+            await this.emailBatchService.queueEmail({
+                type: type as any,
+                priority,
+                options: {
+                    to: [{ email: user.email, name: user.name || 'User' }],
+                    subject,
+                    htmlContent,
+                    attachment: {
+                        name: attachmentName,
+                        content: docxBase64,
+                    },
+                }
+            });
+
+            return true;
         } catch (err) {
             console.error(`[Reports] Failed to send ${type} email:`, err.message);
             return false;
@@ -518,12 +543,14 @@ export class ReportsService {
     // ────────────── AI Prompt Builders ──────────────
 
     private async generateAIContent(prompt: string): Promise<string> {
-        if (!this.model) {
+        if (!this.geminiService.hasKeys()) {
             return "## AI Not Configured\n\nPlease configure the GEMINI_API_KEY to enable AI-generated reports.";
         }
 
         try {
-            const result = await this.model.generateContent(prompt);
+            const result = await this.geminiService.executeWithRetry("gemini-2.0-flash", async (model) => {
+                return await model.generateContent(prompt);
+            });
             return result.response.text();
         } catch (err) {
             console.error("AI Generation failed:", err.message);

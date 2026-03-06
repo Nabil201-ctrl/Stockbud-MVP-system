@@ -17,12 +17,12 @@ const UsersPage = () => {
   };
 
   const userData = [
-    { id: 1, name: 'Alex Johnson', email: 'alex@example.com', status: 'active', plan: 'Premium', lastActive: '2 hours ago', location: 'New York', signupDate: '2024-01-15', avatar: 'AJ' },
-    { id: 2, name: 'Sarah Wilson', email: 'sarah@example.com', status: 'active', plan: 'Pro', lastActive: '5 minutes ago', location: 'London', signupDate: '2024-01-10', avatar: 'SW' },
-    { id: 3, name: 'Mike Brown', email: 'mike@example.com', status: 'inactive', plan: 'Free', lastActive: '2 days ago', location: 'Toronto', signupDate: '2023-12-20', avatar: 'MB' },
-    { id: 4, name: 'Emma Davis', email: 'emma@example.com', status: 'active', plan: 'Premium', lastActive: '1 hour ago', location: 'Sydney', signupDate: '2024-01-05', avatar: 'ED' },
-    { id: 5, name: 'James Wilson', email: 'james@example.com', status: 'active', plan: 'Enterprise', lastActive: 'Just now', location: 'San Francisco', signupDate: '2024-01-12', avatar: 'JW' },
-    { id: 6, name: 'Lisa Chen', email: 'lisa@example.com', status: 'inactive', plan: 'Free', lastActive: '1 week ago', location: 'Singapore', signupDate: '2023-11-30', avatar: 'LC' }
+    { id: 1, name: 'Alex Johnson', email: 'alex@example.com', status: 'active', plan: 'Premium', lastActive: '2 hours ago', location: 'New York', currency: 'USD', signupDate: '2024-01-15', avatar: 'AJ' },
+    { id: 2, name: 'Sarah Wilson', email: 'sarah@example.com', status: 'active', plan: 'Pro', lastActive: '5 minutes ago', location: 'London', currency: 'GBP', signupDate: '2024-01-10', avatar: 'SW' },
+    { id: 3, name: 'Mike Brown', email: 'mike@example.com', status: 'inactive', plan: 'Free', lastActive: '2 days ago', location: 'Toronto', currency: 'CAD', signupDate: '2023-12-20', avatar: 'MB' },
+    { id: 4, name: 'Emma Davis', email: 'emma@example.com', status: 'active', plan: 'Premium', lastActive: '1 hour ago', location: 'Sydney', currency: 'AUD', signupDate: '2024-01-05', avatar: 'ED' },
+    { id: 5, name: 'James Wilson', email: 'james@example.com', status: 'active', plan: 'Enterprise', lastActive: 'Just now', location: 'San Francisco', currency: 'USD', signupDate: '2024-01-12', avatar: 'JW' },
+    { id: 6, name: 'Lisa Chen', email: 'lisa@example.com', status: 'inactive', plan: 'Free', lastActive: '1 week ago', location: 'Singapore', currency: 'SGD', signupDate: '2023-11-30', avatar: 'LC' }
   ];
 
   const planDistribution = [
@@ -106,6 +106,7 @@ const UsersPage = () => {
                     <th className="text-left py-3 px-4 font-medium">Status</th>
                     <th className="text-left py-3 px-4 font-medium">Plan</th>
                     <th className="text-left py-3 px-4 font-medium">Location</th>
+                    <th className="text-left py-3 px-4 font-medium">Currency</th>
                     <th className="text-left py-3 px-4 font-medium">Last Active</th>
                     <th className="text-left py-3 px-4 font-medium"></th>
                   </tr>
@@ -125,21 +126,19 @@ const UsersPage = () => {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          user.status === 'active'
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.status === 'active'
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                             : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                        }`}>
+                          }`}>
                           {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          user.plan === 'Premium' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
-                          user.plan === 'Pro' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                          user.plan === 'Enterprise' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.plan === 'Premium' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
+                            user.plan === 'Pro' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                              user.plan === 'Enterprise' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                          }`}>
                           {user.plan}
                         </span>
                       </td>
@@ -147,6 +146,11 @@ const UsersPage = () => {
                         <div className="flex items-center gap-2">
                           <Globe size={14} className="text-gray-400" />
                           <span>{user.location}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <span className="font-medium text-xs border rounded px-1">{user.currency}</span>
                         </div>
                       </td>
                       <td className="py-4 px-4">
@@ -223,11 +227,10 @@ const UsersPage = () => {
                     <button
                       key={period}
                       onClick={() => setTimeframe(period)}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        timeframe === period
+                      className={`px-3 py-1 rounded-full text-sm ${timeframe === period
                           ? 'bg-blue-600 text-white'
                           : isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
-                      }`}
+                        }`}
                     >
                       {period}
                     </button>

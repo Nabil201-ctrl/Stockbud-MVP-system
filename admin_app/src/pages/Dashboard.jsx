@@ -143,6 +143,8 @@ export const Dashboard = () => {
                             <tr className="border-b border-gray-100">
                                 <th className="pb-3 text-sm font-medium text-gray-500">User</th>
                                 <th className="pb-3 text-sm font-medium text-gray-500">Email</th>
+                                <th className="pb-3 text-sm font-medium text-gray-500">Location</th>
+                                <th className="pb-3 text-sm font-medium text-gray-500">Currency</th>
                                 <th className="pb-3 text-sm font-medium text-gray-500">Free Reports</th>
                                 <th className="pb-3 text-sm font-medium text-gray-500">Actions</th>
                             </tr>
@@ -157,6 +159,8 @@ export const Dashboard = () => {
                                         <span className="text-sm font-medium text-gray-800">{user.name}</span>
                                     </td>
                                     <td className="py-3 text-sm text-gray-600">{user.email}</td>
+                                    <td className="py-3 text-sm text-gray-600">{user.location || 'Unknown'}</td>
+                                    <td className="py-3 text-sm text-gray-600">{user.currency || 'USD'}</td>
                                     <td className="py-3">
                                         {user.hasFreeReports ? (
                                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -172,8 +176,8 @@ export const Dashboard = () => {
                                         <button
                                             onClick={() => toggleFreeReports(user.id, user.hasFreeReports)}
                                             className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${user.hasFreeReports
-                                                    ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                                                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                                ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                                                 }`}
                                         >
                                             {user.hasFreeReports ? 'Revoke Access' : 'Grant Access'}

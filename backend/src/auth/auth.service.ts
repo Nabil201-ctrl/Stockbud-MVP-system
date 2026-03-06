@@ -59,17 +59,25 @@ export class AuthService {
         throw new UnauthorizedException('Invalid admin credentials');
     }
 
-    async register(email: string, pass: string, name: string) {
+    async register(email: string, pass: string, name: string, ip?: string) {
         const hashedPassword = await bcrypt.hash(pass, 10);
-        return this.usersService.createUser(email, name, hashedPassword);
+        const user = await this.usersService.createUser(email, name, hashedPassword);
+        if (ip && user) {
+            await this.usersService.fetchAndSetLocation(user.id, ip);
+        }
+        return user;
     }
 
-    async login(user: any) {
+    async login(user: any, ip?: string) {
         const payload = { email: user.email, sub: user.id };
         const accessToken = this.jwtService.sign(payload, { expiresIn: '24h' });
         const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
 
         await this.usersService.setRefreshToken(user.id, refreshToken);
+
+        if (ip) {
+            await this.usersService.fetchAndSetLocation(user.id, ip);
+        }
 
         return {
             access_token: accessToken,

@@ -14,6 +14,7 @@ export const Login = () => {
         try {
             const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
             await axios.post(`${baseURL}/auth/admin/login`, { email, password });
+            localStorage.setItem('stockbud_admin_auth', 'true');
             // Redirect to dashboard on success
             navigate('/');
         } catch (err) {

@@ -2,8 +2,8 @@ import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { ReportsService } from '../reports/reports.service';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
+import { GeminiService } from '../common/gemini.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -25,24 +25,15 @@ export interface Chat {
 @Injectable()
 export class ChatService implements OnModuleInit {
     private chats: Map<string, Chat> = new Map();
-    private genAI: GoogleGenerativeAI;
-    private model: any;
     private readonly filePath = path.join(process.cwd(), 'chats.json');
 
     constructor(
         private readonly usersService: UsersService,
         private readonly dashboardService: DashboardService,
         private readonly configService: ConfigService,
-        private readonly reportsService: ReportsService
-    ) {
-        const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-        if (apiKey) {
-            this.genAI = new GoogleGenerativeAI(apiKey);
-            this.model = this.genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-        } else {
-            console.warn('GEMINI_API_KEY is not set. Chat will use mock responses.');
-        }
-    }
+        private readonly reportsService: ReportsService,
+        private readonly geminiService: GeminiService
+    ) {}
 
     async onModuleInit() {
         this.loadChats();
@@ -271,7 +262,7 @@ export class ChatService implements OnModuleInit {
         systemInstruction += `Use this data to answer questions accurately. If asked about metric definitions (e.g. "What is AOV?"), explain them simply.`;
         systemInstruction += ` Keep responses concise and helpful.`;
 
-        if (this.model) {
+        if (this.geminiService.hasKeys()) {
             try {
                 // Get history excluding the latest message which we just added
                 const apiHistory = history.slice(0, -1).map(msg => ({
@@ -279,15 +270,17 @@ export class ChatService implements OnModuleInit {
                     parts: [{ text: msg.content }]
                 }));
 
-                const chat = this.model.startChat({
-                    history: [
-                        { role: 'user', parts: [{ text: systemInstruction }] }, // System instruction as first user message
-                        { role: 'model', parts: [{ text: `Understood. I am ${name}, ready to assist.` }] }, // Ack
-                        ...apiHistory
-                    ],
+                const result = await this.geminiService.executeWithRetry("gemini-flash-latest", async (model) => {
+                    const chat = model.startChat({
+                        history: [
+                            { role: 'user', parts: [{ text: systemInstruction }] }, // System instruction as first user message
+                            { role: 'model', parts: [{ text: `Understood. I am ${name}, ready to assist.` }] }, // Ack
+                            ...apiHistory
+                        ],
+                    });
+                    return await chat.sendMessage(userMessage);
                 });
-
-                const result = await chat.sendMessage(userMessage);
+                
                 responseContent = result.response.text();
 
             } catch (error) {

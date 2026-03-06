@@ -18,7 +18,12 @@ export class AuthController {
     @Get('google/callback')
     @UseGuards(AuthGuard('google'))
     async googleAuthRedirect(@Req() req, @Res() res: Response) {
-        const { access_token, refresh_token, user } = await this.authService.login(req.user);
+        let ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip;
+        if (Array.isArray(ip)) ip = ip[0];
+
+        const details = { ...req.user, ipAddress: ip };
+        const user = await this.authService.validateUser(details);
+        const { access_token, refresh_token } = await this.authService.login(user);
 
         // Set Cookies
         res.cookie('access_token', access_token, {
@@ -81,7 +86,9 @@ export class AuthController {
     @UseGuards(AuthGuard('local'))
     @Post('login')
     async login(@Req() req, @Res({ passthrough: true }) res: Response) {
-        const { access_token, refresh_token, user } = await this.authService.login(req.user);
+        let ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip;
+        if (Array.isArray(ip)) ip = ip[0];
+        const { access_token, refresh_token, user } = await this.authService.login(req.user, ip);
 
         res.cookie('access_token', access_token, {
             httpOnly: true,
@@ -114,8 +121,10 @@ export class AuthController {
     }
 
     @Post('register')
-    async register(@Body() body: any) {
-        return this.authService.register(body.email, body.password, body.name);
+    async register(@Req() req, @Body() body: any) {
+        let ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip;
+        if (Array.isArray(ip)) ip = ip[0];
+        return this.authService.register(body.email, body.password, body.name, ip);
     }
 
     @Post('change-password')

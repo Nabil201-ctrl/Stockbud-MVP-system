@@ -1,0 +1,29 @@
+import { authenticate } from "../shopify.server";
+import db from "../db.server";
+
+export const action = async ({ request }) => {
+    const { shop, payload, topic } = await authenticate.webhook(request);
+
+    console.log(`Received SHOP_REDACT webhook for ${shop}`);
+
+    // Delete all database records connected to this shop
+    try {
+        await db.session.deleteMany({ where: { shop } });
+    } catch (e) {
+        console.error(`Failed to clear session DB during SHOP_REDACT for ${shop}:`, e);
+    }
+
+    // Wipe data from our main backend database.
+    try {
+        const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
+        await fetch(`${backendUrl}/shopify/webhook/uninstall`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ shop }),
+        });
+    } catch (err) {
+        console.error(`Failed to notify Stockbud Backend of shop redact for ${shop}:`, err);
+    }
+
+    return new Response("OK", { status: 200 });
+};

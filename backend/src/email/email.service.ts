@@ -5,159 +5,159 @@ import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class EmailService {
-    private readonly apiKey: string;
-    private readonly senderEmail: string;
-    private readonly senderName: string;
-    private readonly apiUrl = 'https://api.brevo.com/v3/smtp/email';
+  private readonly apiKey: string;
+  private readonly senderEmail: string;
+  private readonly senderName: string;
+  private readonly apiUrl = 'https://api.brevo.com/v3/smtp/email';
 
-    constructor(
-        private readonly configService: ConfigService,
-        private readonly httpService: HttpService,
-    ) {
-        this.apiKey = this.configService.get<string>('BREVO_API_KEY') || '';
-        this.senderEmail = this.configService.get<string>('BREVO_SENDER_EMAIL') || 'reports@stockbud.com';
-        this.senderName = this.configService.get<string>('BREVO_SENDER_NAME') || 'StockBud Reports';
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
+  ) {
+    this.apiKey = this.configService.get<string>('BREVO_API_KEY') || '';
+    this.senderEmail = this.configService.get<string>('BREVO_SENDER_EMAIL') || 'reports@stockbud.com';
+    this.senderName = this.configService.get<string>('BREVO_SENDER_NAME') || 'StockBud Reports';
 
-        if (!this.apiKey) {
-            console.warn('[EmailService] BREVO_API_KEY not set. Email sending will be disabled.');
-        } else {
-            console.log('[EmailService] Brevo email service initialized.');
-        }
+    if (!this.apiKey) {
+      console.warn('[EmailService] BREVO_API_KEY not set. Email sending will be disabled.');
+    } else {
+      console.log('[EmailService] Brevo email service initialized.');
+    }
+  }
+
+  /**
+   * Send an email with optional DOCX attachment via Brevo API
+   */
+  async sendEmail(options: {
+    to: { email: string; name?: string }[];
+    subject: string;
+    htmlContent: string;
+    attachment?: { name: string; content: string }; // base64 encoded content
+  }): Promise<boolean> {
+    if (!this.apiKey) {
+      console.warn('[EmailService] Skipping email — BREVO_API_KEY not configured.');
+      return false;
     }
 
-    /**
-     * Send an email with optional DOCX attachment via Brevo API
-     */
-    async sendEmail(options: {
-        to: { email: string; name?: string }[];
-        subject: string;
-        htmlContent: string;
-        attachment?: { name: string; content: string }; // base64 encoded content
-    }): Promise<boolean> {
-        if (!this.apiKey) {
-            console.warn('[EmailService] Skipping email — BREVO_API_KEY not configured.');
-            return false;
-        }
+    const payload: any = {
+      sender: {
+        name: this.senderName,
+        email: this.senderEmail,
+      },
+      to: options.to.map(t => ({
+        email: t.email,
+        name: t.name || t.email,
+      })),
+      subject: options.subject,
+      htmlContent: options.htmlContent,
+    };
 
-        const payload: any = {
-            sender: {
-                name: this.senderName,
-                email: this.senderEmail,
-            },
-            to: options.to.map(t => ({
-                email: t.email,
-                name: t.name || t.email,
-            })),
-            subject: options.subject,
-            htmlContent: options.htmlContent,
-        };
-
-        // Attach DOCX if provided
-        if (options.attachment) {
-            payload.attachment = [
-                {
-                    name: options.attachment.name,
-                    content: options.attachment.content,
-                },
-            ];
-        }
-
-        try {
-            const response = await firstValueFrom(
-                this.httpService.post(this.apiUrl, payload, {
-                    headers: {
-                        'api-key': this.apiKey,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                    },
-                    timeout: 30000,
-                }),
-            );
-
-            console.log(`[EmailService] Email sent successfully to ${options.to.map(t => t.email).join(', ')}. MessageId: ${response.data?.messageId}`);
-            return true;
-        } catch (error) {
-            console.error('[EmailService] Failed to send email:', {
-                message: error.message,
-                status: error.response?.status,
-                data: error.response?.data,
-            });
-            return false;
-        }
+    // Attach DOCX if provided
+    if (options.attachment) {
+      payload.attachment = [
+        {
+          name: options.attachment.name,
+          content: options.attachment.content,
+        },
+      ];
     }
 
-    /**
-     * Send a weekly report email with DOCX attachment
-     */
-    async sendWeeklyReport(userEmail: string, userName: string, reportTitle: string, docxBase64: string): Promise<boolean> {
-        const weekDate = new Date().toLocaleDateString('en-US', {
-            month: 'long', day: 'numeric', year: 'numeric',
-        });
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(this.apiUrl, payload, {
+          headers: {
+            'api-key': this.apiKey,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          timeout: 30000,
+        }),
+      );
 
-        return this.sendEmail({
-            to: [{ email: userEmail, name: userName }],
-            subject: `📊 Your Weekly Store Report — ${weekDate}`,
-            htmlContent: this.buildWeeklyEmailHtml(userName, reportTitle, weekDate),
-            attachment: {
-                name: `StockBud_Weekly_Report_${new Date().toISOString().slice(0, 10)}.docx`,
-                content: docxBase64,
-            },
-        });
+      console.log(`[EmailService] Email sent successfully to ${options.to.map(t => t.email).join(', ')}. MessageId: ${response.data?.messageId}`);
+      return true;
+    } catch (error) {
+      console.error('[EmailService] Failed to send email:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      return false;
     }
+  }
 
-    /**
-     * Send a monthly review email with DOCX attachment
-     */
-    async sendMonthlyReview(userEmail: string, userName: string, reportTitle: string, docxBase64: string): Promise<boolean> {
-        const monthDate = new Date().toLocaleDateString('en-US', {
-            month: 'long', year: 'numeric',
-        });
+  /**
+   * Send a weekly report email with DOCX attachment
+   */
+  async sendWeeklyReport(userEmail: string, userName: string, reportTitle: string, docxBase64: string): Promise<boolean> {
+    const weekDate = new Date().toLocaleDateString('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric',
+    });
 
-        return this.sendEmail({
-            to: [{ email: userEmail, name: userName }],
-            subject: `📈 Your Monthly Business Review — ${monthDate}`,
-            htmlContent: this.buildMonthlyEmailHtml(userName, reportTitle, monthDate),
-            attachment: {
-                name: `StockBud_Monthly_Review_${new Date().toISOString().slice(0, 7)}.docx`,
-                content: docxBase64,
-            },
-        });
-    }
+    return this.sendEmail({
+      to: [{ email: userEmail, name: userName }],
+      subject: `📊 Your Weekly Store Report — ${weekDate}`,
+      htmlContent: this.buildWeeklyEmailHtml(userName, reportTitle, weekDate),
+      attachment: {
+        name: `StockBud_Weekly_Report_${new Date().toISOString().slice(0, 10)}.docx`,
+        content: docxBase64,
+      },
+    });
+  }
 
-    /**
-     * Send welcome/first-connection report email
-     */
-    async sendWelcomeReport(userEmail: string, userName: string, shopName: string, docxBase64: string): Promise<boolean> {
-        return this.sendEmail({
-            to: [{ email: userEmail, name: userName }],
-            subject: `🎉 Welcome to StockBud! Your First Store Analysis is Ready`,
-            htmlContent: this.buildWelcomeEmailHtml(userName, shopName),
-            attachment: {
-                name: `StockBud_Welcome_Analysis_${shopName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`,
-                content: docxBase64,
-            },
-        });
-    }
+  /**
+   * Send a monthly review email with DOCX attachment
+   */
+  async sendMonthlyReview(userEmail: string, userName: string, reportTitle: string, docxBase64: string): Promise<boolean> {
+    const monthDate = new Date().toLocaleDateString('en-US', {
+      month: 'long', year: 'numeric',
+    });
 
-    /**
-     * Send instant paid review email
-     */
-    async sendInstantReview(userEmail: string, userName: string, reportTitle: string, docxBase64: string): Promise<boolean> {
-        return this.sendEmail({
-            to: [{ email: userEmail, name: userName }],
-            subject: `⚡ Your Instant System Review — ${reportTitle}`,
-            htmlContent: this.buildInstantReviewEmailHtml(userName, reportTitle),
-            attachment: {
-                name: `StockBud_Instant_Review_${new Date().toISOString().slice(0, 10)}.docx`,
-                content: docxBase64,
-            },
-        });
-    }
+    return this.sendEmail({
+      to: [{ email: userEmail, name: userName }],
+      subject: `📈 Your Monthly Business Review — ${monthDate}`,
+      htmlContent: this.buildMonthlyEmailHtml(userName, reportTitle, monthDate),
+      attachment: {
+        name: `StockBud_Monthly_Review_${new Date().toISOString().slice(0, 7)}.docx`,
+        content: docxBase64,
+      },
+    });
+  }
 
-    // ────────────── HTML Email Templates ──────────────
+  /**
+   * Send welcome/first-connection report email
+   */
+  async sendWelcomeReport(userEmail: string, userName: string, shopName: string, docxBase64: string): Promise<boolean> {
+    return this.sendEmail({
+      to: [{ email: userEmail, name: userName }],
+      subject: `🎉 Welcome to StockBud! Your First Store Analysis is Ready`,
+      htmlContent: this.buildWelcomeEmailHtml(userName, shopName),
+      attachment: {
+        name: `StockBud_Welcome_Analysis_${shopName.replace(/[^a-zA-Z0-9]/g, '_')}.docx`,
+        content: docxBase64,
+      },
+    });
+  }
 
-    private buildWeeklyEmailHtml(userName: string, reportTitle: string, weekDate: string): string {
-        return `
+  /**
+   * Send instant paid review email
+   */
+  async sendInstantReview(userEmail: string, userName: string, reportTitle: string, docxBase64: string): Promise<boolean> {
+    return this.sendEmail({
+      to: [{ email: userEmail, name: userName }],
+      subject: `⚡ Your Instant System Review — ${reportTitle}`,
+      htmlContent: this.buildInstantReviewEmailHtml(userName, reportTitle),
+      attachment: {
+        name: `StockBud_Instant_Review_${new Date().toISOString().slice(0, 10)}.docx`,
+        content: docxBase64,
+      },
+    });
+  }
+
+  // ────────────── HTML Email Templates ──────────────
+
+  public buildWeeklyEmailHtml(userName: string, reportTitle: string, weekDate: string): string {
+    return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -189,10 +189,10 @@ export class EmailService {
   </table>
 </body>
 </html>`;
-    }
+  }
 
-    private buildMonthlyEmailHtml(userName: string, reportTitle: string, monthDate: string): string {
-        return `
+  public buildMonthlyEmailHtml(userName: string, reportTitle: string, monthDate: string): string {
+    return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -220,10 +220,10 @@ export class EmailService {
   </table>
 </body>
 </html>`;
-    }
+  }
 
-    private buildWelcomeEmailHtml(userName: string, shopName: string): string {
-        return `
+  public buildWelcomeEmailHtml(userName: string, shopName: string): string {
+    return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -258,10 +258,10 @@ export class EmailService {
   </table>
 </body>
 </html>`;
-    }
+  }
 
-    private buildInstantReviewEmailHtml(userName: string, reportTitle: string): string {
-        return `
+  public buildInstantReviewEmailHtml(userName: string, reportTitle: string): string {
+    return `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -288,5 +288,5 @@ export class EmailService {
   </table>
 </body>
 </html>`;
-    }
+  }
 }
