@@ -21,9 +21,7 @@ export class AuthController {
         let ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip;
         if (Array.isArray(ip)) ip = ip[0];
 
-        const details = { ...req.user, ipAddress: ip };
-        const user = await this.authService.validateUser(details);
-        const { access_token, refresh_token } = await this.authService.login(user);
+        const { access_token, refresh_token } = await this.authService.login(req.user, ip);
 
         // Set Cookies
         res.cookie('access_token', access_token, {

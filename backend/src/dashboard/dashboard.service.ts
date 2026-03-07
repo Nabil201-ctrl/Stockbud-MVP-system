@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ShopifyService } from '../shopify/shopify.service';
+import axios from 'axios';
 
 @Injectable()
 export class DashboardService {
+    private cachedRates: Record<string, { rates: any, timestamp: number }> = {};
+
     constructor(private readonly shopifyService: ShopifyService) { }
 
-    async getStats(shop?: string, token?: string) {
+    async getStats(shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD') {
         let totalRevenue = 0;
         let revenueChange = 0;
         let revenueData = [];
@@ -28,12 +31,32 @@ export class DashboardService {
                 // We're not using products for now as order line items differ from product objects
                 // const products = await this.shopifyService.getProducts(shop, token); 
 
+                // Resolve currency and exchange rate
+                let exchangeRate = 1;
+                if (orders.length > 0) {
+                    const shopCurrency = orders[0].currency || 'USD';
+                    if (shopCurrency !== targetCurrency) {
+                        if (!this.cachedRates[shopCurrency] || Date.now() - this.cachedRates[shopCurrency].timestamp > 3600000) {
+                            try {
+                                const response = await axios.get(`https://open.er-api.com/v6/latest/${shopCurrency}`);
+                                if (response.data && response.data.rates) {
+                                    this.cachedRates[shopCurrency] = { rates: response.data.rates, timestamp: Date.now() };
+                                }
+                            } catch (e) {
+                                console.error('Failed to fetch exchange rates', e.message);
+                            }
+                        }
+                        exchangeRate = this.cachedRates[shopCurrency]?.rates[targetCurrency] || 1;
+                    }
+                }
+
                 // 1. Calculate Total Revenue & Lost Revenue
                 orders.forEach(order => {
+                    const amount = Number(order.total_price) * exchangeRate;
                     if (order.financial_status === 'voided' || order.cancelled_at) {
-                        lostRevenue += Number(order.total_price);
+                        lostRevenue += amount;
                     } else {
-                        totalRevenue += Number(order.total_price);
+                        totalRevenue += amount;
                     }
                 });
 
@@ -47,14 +70,14 @@ export class DashboardService {
                         const date = new Date(o.created_at);
                         return date >= oneWeekAgo && !o.cancelled_at;
                     })
-                    .reduce((sum, o) => sum + Number(o.total_price), 0);
+                    .reduce((sum, o) => sum + (Number(o.total_price) * exchangeRate), 0);
 
                 const lastWeekRevenue = orders
                     .filter(o => {
                         const date = new Date(o.created_at);
                         return date >= twoWeeksAgo && date < oneWeekAgo && !o.cancelled_at;
                     })
-                    .reduce((sum, o) => sum + Number(o.total_price), 0);
+                    .reduce((sum, o) => sum + (Number(o.total_price) * exchangeRate), 0);
 
                 if (lastWeekRevenue > 0) {
                     revenueChange = Math.round(((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100);
@@ -75,15 +98,17 @@ export class DashboardService {
                 revenueData = last7Days.map(date => {
                     const dayRevenue = orders
                         .filter(o => o.created_at.startsWith(date) && !o.cancelled_at)
-                        .reduce((sum, o) => sum + Number(o.total_price), 0);
+                        .reduce((sum, o) => sum + (Number(o.total_price) * exchangeRate), 0);
 
                     const dateObj = new Date(date);
                     const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
 
+                    const dailyTarget = targetType === 'monthly' ? targetValue / 30 : targetValue / 7;
+
                     return {
                         date: formattedDate,
                         revenue: dayRevenue,
-                        target: 0 // No mock target
+                        target: Math.round(dailyTarget)
                     };
                 });
 
@@ -122,7 +147,7 @@ export class DashboardService {
 
                     return {
                         name: `${first} ${last}`.trim(),
-                        amount: Number(o.total_price),
+                        amount: Math.round(Number(o.total_price) * exchangeRate),
                         avatar: initials.toUpperCase(),
                         color: this.getRandomColor()
                     };
@@ -154,6 +179,10 @@ export class DashboardService {
                 change: revenueChange,
                 chartData: revenueData,
                 lost: lostRevenue
+            },
+            targetDetails: {
+                type: targetType,
+                value: targetValue
             },
             source: sourceData,
             heatmap: heatmapData,

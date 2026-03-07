@@ -24,6 +24,8 @@ export interface ShopifyStore {
     name?: string;        // Display name (optional)
     addedAt: string;      // ISO timestamp
     botSettings?: BotSettings; // Shop-specific bot settings
+    targetType?: 'weekly' | 'monthly';
+    targetValue?: number;
 }
 
 export interface User {
@@ -387,6 +389,8 @@ export class UsersService implements OnModuleInit {
             if (data.reportTokens !== undefined) user.reportTokens = data.reportTokens;
             if (data.botSettings !== undefined) user.botSettings = data.botSettings;
             if (data.language !== undefined) user.language = data.language as 'en' | 'fr';
+            if (data.currency !== undefined) user.currency = data.currency;
+            if (data.location !== undefined) user.location = data.location;
 
             this.users.set(userId, user);
             this.saveUsers();
@@ -496,10 +500,25 @@ export class UsersService implements OnModuleInit {
             ...settings
         };
 
+        this.saveUsers();
+        return store;
+    }
+
+    async setStoreTarget(userId: string, storeId: string, type: 'weekly' | 'monthly', value: number): Promise<ShopifyStore> {
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+
+        const store = user.shopifyStores?.find(s => s.id === storeId);
+        if (!store) throw new Error('Store not found');
+
+        store.targetType = type;
+        store.targetValue = value;
+
         this.users.set(userId, user);
         this.saveUsers();
         return store;
     }
+
     async getAiTokens(userId: string): Promise<number> {
         const user = this.users.get(userId);
         return user?.aiTokens || 0;
