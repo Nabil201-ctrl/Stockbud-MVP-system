@@ -22,10 +22,26 @@ const Dashboard = () => {
   const { isDarkMode, toggleTheme } = useTheme();
   const { t } = useLanguage();
 
+  // Target Settings State
+  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [targetType, setTargetType] = useState('monthly');
+  const [targetValue, setTargetValue] = useState(0);
+
   // New State for Data
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const { authenticatedFetch, user } = useAuth(); // Import authenticatedFetch and user
+
+  // Resolve Currency Symbol
+  const userCurrency = user?.currency || 'USD';
+  const getCurrencySymbol = (currency) => {
+    try {
+      return (0).toLocaleString(undefined, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).replace(/\d/g, '').trim();
+    } catch (e) {
+      return '$';
+    }
+  };
+  const currencySymbol = getCurrencySymbol(userCurrency);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -57,6 +73,11 @@ const Dashboard = () => {
 
         const data = await response.json();
 
+        if (data && data.targetDetails) {
+          setTargetType(data.targetDetails.type);
+          setTargetValue(data.targetDetails.value);
+        }
+
         // 3. Update state and cache
         setStats(data);
         await storage.set(cacheKey, data);
@@ -73,6 +94,38 @@ const Dashboard = () => {
       fetchStats();
     }
   }, [authenticatedFetch, user?.activeShopId]);
+
+  const saveTarget = async () => {
+    try {
+      const response = await authenticatedFetch('http://localhost:3000/dashboard/target', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: targetType, value: targetValue }),
+      });
+
+      if (response.ok) {
+        setIsTargetModalOpen(false);
+        // Refetch to see updated target on charts immediately
+        // Just trigger standard refetch without recreating fn
+        if (user?.activeShopId) {
+          setLoading(true);
+          const fresh = await authenticatedFetch('http://localhost:3000/dashboard/stats');
+          if (fresh.ok) {
+            const freshData = await fresh.json();
+            setStats(freshData);
+            await storage.set(`dashboard_stats_${user.activeShopId}`, freshData);
+          }
+          setLoading(false);
+        }
+      } else {
+        console.error('Failed to save target.');
+      }
+    } catch (error) {
+      console.error('Network error saving target', error);
+    }
+  };
 
   return (
     <div className={`flex h-screen min-h-screen ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
@@ -99,27 +152,34 @@ const Dashboard = () => {
                     <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dashboard.totalRevenue')}</div>
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold">
-                        {stats?.revenue ? `$ ${stats.revenue.total.toLocaleString()}` : '$ 0.00'}
+                        {stats?.revenue ? `${currencySymbol} ${stats.revenue.total.toLocaleString()}` : `${currencySymbol} 0.00`}
                       </span>
                       <span className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs px-2 py-1 rounded">
                         +{stats?.revenue?.change}%
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                      <span className="text-gray-500 dark:text-gray-400">{t('dashboard.currentWeek')}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
-                      <span className="text-gray-500 dark:text-gray-400">{t('dashboard.lastWeek')}</span>
+                  <div className="flex flex-col items-end gap-2">
+                    <button
+                      onClick={() => setIsTargetModalOpen(true)}
+                      className="text-xs bg-blue-100 text-blue-600 px-3 py-1 rounded-full dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/30 transition-colors font-medium">
+                      Set Target
+                    </button>
+                    <div className="flex gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                        <span className="text-gray-500 dark:text-gray-400">{t('dashboard.currentWeek')}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
+                        <span className="text-gray-500 dark:text-gray-400">{t('dashboard.lastWeek')}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div className="h-64 min-h-[256px] w-full">
                   <Suspense fallback={<ChartLoading type="line" />}>
-                    <RevenueChart />
+                    <RevenueChart data={stats?.revenue?.chartData || []} currencySymbol={currencySymbol} />
                   </Suspense>
                 </div>
               </div>
@@ -151,7 +211,7 @@ const Dashboard = () => {
                 <SalesHeatmap isDarkMode={isDarkMode} />
               </div>
               <div className="lg:col-span-1">
-                <SalesHistory isDarkMode={isDarkMode} />
+                <SalesHistory isDarkMode={isDarkMode} currencySymbol={currencySymbol} />
               </div>
             </div>
           )}
@@ -160,6 +220,54 @@ const Dashboard = () => {
           <div className="h-6"></div>
         </div>
       </div>
+
+      {/* Target Setup Modal */}
+      {isTargetModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className={`w-full max-w-sm rounded-xl p-6 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} shadow-2xl transition-all`}>
+            <h2 className="text-xl font-bold mb-4">Set Goal Target</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 opacity-80">Target Timeframe</label>
+                <select
+                  value={targetType}
+                  onChange={(e) => setTargetType(e.target.value)}
+                  className={`w-full px-4 py-2.5 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 focus:border-blue-500 text-white' : 'bg-gray-50 border-gray-300 focus:border-blue-500'} focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 opacity-80">Target Amount ({currencySymbol})</label>
+                <input
+                  type="number"
+                  value={targetValue || ''}
+                  onChange={(e) => setTargetValue(Number(e.target.value))}
+                  placeholder="e.g. 5000"
+                  className={`w-full px-4 py-2.5 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600 focus:border-blue-500 text-white' : 'bg-gray-50 border-gray-300 focus:border-blue-500'} focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+                  min="0"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-8">
+              <button
+                onClick={() => setIsTargetModalOpen(false)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'} transition-colors`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveTarget}
+                className="px-6 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95"
+              >
+                Save Target
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

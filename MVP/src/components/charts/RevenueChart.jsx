@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { useTheme } from '../../context/ThemeContext';
 
-const RevenueChart = ({ data }) => {
+const RevenueChart = ({ data, currencySymbol = '$' }) => {
   const { isDarkMode } = useTheme();
 
   // Use passed data or empty array if not provided
@@ -21,7 +21,7 @@ const RevenueChart = ({ data }) => {
           <p className="font-medium">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: ${entry.value.toLocaleString()}
+              {entry.name}: {currencySymbol}{entry.value.toLocaleString()}
             </p>
           ))}
         </div>
@@ -53,7 +53,7 @@ const RevenueChart = ({ data }) => {
           fontSize={12}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(value) => `$${value / 1000}k`}
+          tickFormatter={(value) => `${currencySymbol}${value / 1000}k`}
         />
         <Tooltip content={<CustomTooltip />} />
         <Legend

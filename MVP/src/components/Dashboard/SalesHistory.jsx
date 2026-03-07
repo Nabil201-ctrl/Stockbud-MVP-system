@@ -1,7 +1,7 @@
 // components/Dashboard/SalesHistory.jsx
 import React from 'react';
 
-const SalesHistory = ({ isDarkMode, data }) => {
+const SalesHistory = ({ isDarkMode, data, currencySymbol = '$' }) => {
   const salesHistory = data || [];
 
   return (
@@ -25,7 +25,7 @@ const SalesHistory = ({ isDarkMode, data }) => {
               </div>
               <span className="text-sm">{sale.name}</span>
             </div>
-            <span className="font-semibold">${sale.amount}</span>
+            <span className="font-semibold">{currencySymbol}{sale.amount}</span>
           </div>
         ))}
       </div>

@@ -20,6 +20,7 @@ const SettingsPage = () => {
     const [profileData, setProfileData] = useState({
         name: user?.name || '',
         email: user?.email || '',
+        currency: user?.currency || 'USD',
     });
     const [profileLoading, setProfileLoading] = useState(false);
     const [profileMessage, setProfileMessage] = useState(null);
@@ -480,6 +481,29 @@ const SettingsPage = () => {
                                         {lang.nativeName} ({lang.name})
                                     </option>
                                 ))}
+                            </select>
+                        </div>
+
+                        {/* Currency Selector */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2">
+                                <span className="w-4 h-4 flex items-center justify-center font-bold text-xs">$</span>
+                                Currency
+                            </label>
+                            <select
+                                value={profileData.currency}
+                                onChange={(e) => setProfileData({ ...profileData, currency: e.target.value })}
+                                className="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
+                            >
+                                <option value="USD">USD ($)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="GBP">GBP (£)</option>
+                                <option value="NGN">NGN (₦)</option>
+                                <option value="CAD">CAD ($)</option>
+                                <option value="AUD">AUD ($)</option>
+                                <option value="JPY">JPY (¥)</option>
+                                <option value="INR">INR (₹)</option>
+                                <option value="ZAR">ZAR (R)</option>
                             </select>
                         </div>
 
