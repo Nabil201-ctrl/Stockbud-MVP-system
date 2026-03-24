@@ -13,12 +13,12 @@ const ForgotPassword = () => {
 
         // Call backend API
         try {
-            await fetch('http://localhost:3000/auth/forgot-password', {
+            await fetch('http:
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             });
-            // Always show success for security/UX
+            
             setSubmitted(true);
         } catch (error) {
             console.error(error);

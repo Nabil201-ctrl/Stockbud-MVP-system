@@ -1,4 +1,4 @@
-// components/charts/VisitorAreaChart.jsx
+
 import React from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 

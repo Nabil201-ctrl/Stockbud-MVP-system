@@ -12,7 +12,7 @@ const LinkShop = () => {
     const [success, setSuccess] = useState(false);
     const [selectedPlatform, setSelectedPlatform] = useState(null);
 
-    // Pairing Code State
+    
     const [pairingCode, setPairingCode] = useState(null);
     const [codeLoading, setCodeLoading] = useState(false);
     const [codeError, setCodeError] = useState(null);
@@ -46,17 +46,17 @@ const LinkShop = () => {
     const handlePlatformSelect = (platformId) => {
         if (platformId === 'shopify') {
             setSelectedPlatform('shopify');
-            // Generate code immediately when Shopify is selected
+            
             handleGeneratePairingCode();
         } else {
-            // For other platforms, simulate connection
+            
             handleConnect(platformId);
         }
     };
 
     const handleConnect = async (platformId) => {
         setConnecting(platformId);
-        // Simulate connection for non-Shopify platforms
+        
         setTimeout(async () => {
             await completeOnboarding();
             setSuccess(true);
@@ -67,7 +67,7 @@ const LinkShop = () => {
     };
 
     const handleSkipOrComplete = async () => {
-        // User can skip if they want to connect later
+        
         await completeOnboarding();
         navigate('/dashboard');
     };

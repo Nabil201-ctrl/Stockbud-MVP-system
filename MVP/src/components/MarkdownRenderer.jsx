@@ -1,15 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 
-/**
- * A simple markdown renderer that converts common markdown to HTML.
- * Supports: headers, bold, italic, lists, code blocks, and links.
- * Also renders Mermaid diagrams if present.
- */
 const MarkdownRenderer = ({ content, isDarkMode = false }) => {
     const mermaidRef = useRef(null);
 
     useEffect(() => {
-        // Initialize Mermaid if there are any mermaid blocks
+        
         if (content?.includes('```mermaid') && window.mermaid) {
             window.mermaid.init(undefined, mermaidRef.current?.querySelectorAll('.mermaid'));
         }
@@ -17,17 +12,17 @@ const MarkdownRenderer = ({ content, isDarkMode = false }) => {
 
     if (!content) return null;
 
-    // Parse markdown to HTML
+    
     const parseMarkdown = (text) => {
         let html = text;
 
-        // Escape HTML to prevent XSS
+        
         html = html
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
 
-        // Code blocks with language (including mermaid)
+        
         html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
             if (lang === 'mermaid') {
                 return `<div class="mermaid my-4">${code.trim()}</div>`;
@@ -35,7 +30,7 @@ const MarkdownRenderer = ({ content, isDarkMode = false }) => {
             return `<pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto my-3 text-sm"><code class="language-${lang || 'text'}">${code.trim()}</code></pre>`;
         });
 
-        // Inline code
+        
         html = html.replace(/`([^`]+)`/g, '<code class="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>');
 
         // Headers (## Header)

@@ -1,7 +1,7 @@
-// components/pages/Products.jsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical, Store, AlertCircle } from 'lucide-react';
+import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical, Store, AlertCircle, Bell, X } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +17,7 @@ const ProductsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
 
-  // State for data
+  
   const [products, setProducts] = useState([]);
   const [pageInfo, setPageInfo] = useState({
     hasNextPage: false,
@@ -40,9 +40,61 @@ const ProductsPage = () => {
   const [shopifyNotConnected, setShopifyNotConnected] = useState(false);
   const [error, setError] = useState(null);
 
+  
+  const [thresholds, setThresholds] = useState({});
+  const [showThresholdModal, setShowThresholdModal] = useState(null);
+  const [thresholdInput, setThresholdInput] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    const loadThresholds = async () => {
+      const saved = await storage.get(`product_thresholds_${user?.activeShopId || 'default'}`);
+      if (saved) {
+        setThresholds(saved);
+      }
+    };
+    loadThresholds();
+  }, [user?.activeShopId]);
+
   useEffect(() => {
     fetchProducts();
   }, [authenticatedFetch]);
+
+  // Update notifications when products or thresholds change
+  useEffect(() => {
+    if (products.length > 0 && Object.keys(thresholds).length > 0) {
+      const newNotifications = [];
+      products.forEach(p => {
+        const t = thresholds[p.id];
+        if (t !== undefined && p.stock <= t) {
+          newNotifications.push({ id: p.id, name: p.name, stock: p.stock, threshold: t });
+        }
+      });
+      setNotifications(newNotifications);
+      if (newNotifications.length > 0) setShowNotifications(true);
+    } else {
+      setNotifications([]);
+    }
+  }, [products, thresholds]);
+
+  const handleSaveThreshold = async () => {
+    if (!showThresholdModal) return;
+    const value = parseInt(thresholdInput, 10);
+    const newThresholds = { ...thresholds };
+
+    if (isNaN(value) || value < 0) {
+      delete newThresholds[showThresholdModal.id];
+    } else {
+      newThresholds[showThresholdModal.id] = value;
+    }
+
+    setThresholds(newThresholds);
+    await storage.set(`product_thresholds_${user?.activeShopId || 'default'}`, newThresholds);
+
+    setShowThresholdModal(null);
+    setThresholdInput('');
+  };
 
   const fetchProducts = async (cursor = null, direction = 'next') => {
     try {
@@ -123,7 +175,7 @@ const ProductsPage = () => {
         price: p.variants?.[0]?.price || '0.00',
         stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || 0,
         status: p.status === 'active' ? 'active' : 'archived',
-        image: p.images?.[0]?.src || '📦',
+        image: p.images?.[0]?.src || '',
         revenue: 0,
         rating: 'N/A',
       }));
@@ -234,7 +286,7 @@ const ProductsPage = () => {
     );
   }
 
-  // Show error state
+  
   if (error) {
     return (
       <div className={`p-6 min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -260,7 +312,7 @@ const ProductsPage = () => {
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">{t('products.title')}</h1>
@@ -270,7 +322,7 @@ const ProductsPage = () => {
           </div>
         </div>
 
-        {/* Stats Grid */}
+        {}
         <div id="products-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
             { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total, change: '+12%', color: 'bg-blue-500' },
@@ -294,7 +346,7 @@ const ProductsPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Product List */}
+          {}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold">{t('products.catalog')}</h2>
@@ -317,7 +369,7 @@ const ProductsPage = () => {
             </div>
 
             <div id="products-table" className="overflow-x-auto relative">
-              {/* Inline loading overlay for pagination */}
+              {}
               {paginationLoading && (
                 <div className="absolute inset-0 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
                   <div className="flex items-center gap-3">
@@ -345,6 +397,7 @@ const ProductsPage = () => {
                       <th className="text-left py-3 px-4 font-medium">{t('products.category')}</th>
                       <th className="text-left py-3 px-4 font-medium">{t('products.price')}</th>
                       <th className="text-left py-3 px-4 font-medium">{t('products.stock')}</th>
+                      <th className="text-left py-3 px-4 font-medium">Threshold</th>
                       <th className="text-left py-3 px-4 font-medium"></th>
                     </tr>
                   </thead>
@@ -393,8 +446,20 @@ const ProductsPage = () => {
                           </div>
                         </td>
                         <td className="py-4 px-4">
-                          <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                            <MoreVertical size={18} />
+                          <div className={`text-sm ${thresholds[product.id] !== undefined && product.stock <= thresholds[product.id] ? 'text-red-500 font-bold' : ''}`}>
+                            {thresholds[product.id] !== undefined ? thresholds[product.id] : 'Not Set'}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 flex gap-2">
+                          <button
+                            onClick={() => {
+                              setShowThresholdModal(product);
+                              setThresholdInput(thresholds[product.id] !== undefined ? thresholds[product.id].toString() : '');
+                            }}
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-blue-500"
+                            title="Set Threshold"
+                          >
+                            <Bell size={18} />
                           </button>
                         </td>
                       </tr>
@@ -435,9 +500,9 @@ const ProductsPage = () => {
             </div>
           </div>
 
-          {/* Right Column - Analytics */}
+          {}
           <div className="space-y-6">
-            {/* Categories */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.categories')}</h3>
               <div className="space-y-3">
@@ -460,7 +525,7 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            {/* Stock Status */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.stockStatus')}</h3>
               <div className="space-y-4">
@@ -488,13 +553,13 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            {/* Top Performing */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.topPerforming')}</h3>
               <div className="space-y-4">
-                {products.slice(0, 3).map((product, idx) => (
+                {products.slice(0, 3).map((product) => (
                   <div key={product.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
                       <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden flex-shrink-0">
                         {product.image.startsWith('http') ? (
                           <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
@@ -502,16 +567,16 @@ const ProductsPage = () => {
                           <span className="text-xl">{product.image}</span>
                         )}
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="font-medium truncate">{product.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
                           ${(product.revenue || 0).toLocaleString()} revenue
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Star size={14} className="text-yellow-500" />
-                      <span>{product.rating}</span>
+                      <span className="text-sm font-medium">{product.rating}</span>
                     </div>
                   </div>
                 ))}
@@ -520,6 +585,87 @@ const ProductsPage = () => {
           </div>
         </div>
       </div>
+
+      {}
+      {showThresholdModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-sm rounded-xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`p-4 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <Bell size={20} className="text-blue-500" />
+                Set Stock Threshold
+              </h3>
+              <button
+                onClick={() => setShowThresholdModal(null)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Alert me when stock for <strong>{showThresholdModal.name}</strong> falls to or below:
+              </p>
+              <input
+                type="number"
+                min="0"
+                value={thresholdInput}
+                onChange={(e) => setThresholdInput(e.target.value)}
+                placeholder="e.g. 10"
+                className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-shadow ${isDarkMode
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                  }`}
+              />
+              <p className="text-xs text-gray-500 mt-2">Leave blank to clear threshold.</p>
+            </div>
+            <div className={`p-4 border-t flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+              <button
+                onClick={() => setShowThresholdModal(null)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
+                  }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveThreshold}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Save Threshold
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {}
+      {showNotifications && notifications.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-40 max-w-sm w-full space-y-3">
+          <div className={`p-4 rounded-xl shadow-xl flex items-start gap-4 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+            }`}>
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <AlertCircle size={20} className="text-red-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-red-500 mb-1">Low Stock Alerts</h4>
+              <div className="max-h-32 overflow-y-auto pr-2 space-y-2">
+                {notifications.map((n, i) => (
+                  <p key={i} className={`text-sm ${n.stock === 0 ? 'text-red-500 font-bold' : 'text-gray-600 dark:text-gray-300'}`}>
+                    <span className="font-medium text-gray-900 dark:text-white truncate block">{n.name} - {n.stock === 0 ? 'Out of Stock' : 'Low Stock'}</span>
+                    <span className="text-xs">Stock: {n.stock} (Threshold: {n.threshold})</span>
+                  </p>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowNotifications(false)}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
     </div >
   );
 };

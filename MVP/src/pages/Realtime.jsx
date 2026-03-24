@@ -1,4 +1,4 @@
-// components/pages/Realtime.jsx
+
 import React, { useState, useEffect } from 'react';
 import { Clock, Users, Eye, MousePointer, Globe, Cpu, Activity, Zap, TrendingUp, AlertCircle } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -11,7 +11,7 @@ const Realtime = () => {
   const [conversionRate, setConversionRate] = useState(3.2);
 
   useEffect(() => {
-    // Simulate real-time data updates
+    
     const interval = setInterval(() => {
       setActiveUsers(prev => prev + Math.floor(Math.random() * 10 - 5));
       setPageViews(prev => prev + Math.floor(Math.random() * 50));
@@ -31,11 +31,11 @@ const Realtime = () => {
   ];
 
   const countries = [
-    { name: 'United States', users: 420, percentage: 27, flag: '🇺🇸' },
-    { name: 'Germany', users: 280, percentage: 18, flag: '🇩🇪' },
-    { name: 'United Kingdom', users: 195, percentage: 12, flag: '🇬🇧' },
-    { name: 'India', users: 168, percentage: 11, flag: '🇮🇳' },
-    { name: 'Canada', users: 142, percentage: 9, flag: '🇨🇦' }
+    { name: 'United States', users: 420, percentage: 27, flag: '' },
+    { name: 'Germany', users: 280, percentage: 18, flag: '' },
+    { name: 'United Kingdom', users: 195, percentage: 12, flag: '' },
+    { name: 'India', users: 168, percentage: 11, flag: '' },
+    { name: 'Canada', users: 142, percentage: 9, flag: '' }
   ];
 
   const devices = [
@@ -47,7 +47,7 @@ const Realtime = () => {
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8" id="realtime-header">
           <div>
             <h1 className="text-3xl font-bold mb-2">Realtime Analytics</h1>
@@ -61,7 +61,7 @@ const Realtime = () => {
           </div>
         </div>
 
-        {/* Stats Grid */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="realtime-stats">
           {[
             { icon: <Users size={24} />, label: 'Active Users', value: activeUsers.toLocaleString(), change: '+2.1%', color: 'bg-blue-500' },
@@ -85,7 +85,7 @@ const Realtime = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Live Events */}
+          {}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="realtime-activity">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold">Live Activity Stream</h2>
@@ -104,9 +104,9 @@ const Realtime = () => {
                         event.type === 'signup' ? 'bg-purple-100 dark:bg-purple-900/30' :
                           'bg-gray-100 dark:bg-gray-700'
                       }`}>
-                      {event.type === 'purchase' && <span className="text-green-600 dark:text-green-400">💰</span>}
-                      {event.type === 'cart' && <span className="text-blue-600 dark:text-blue-400">🛒</span>}
-                      {event.type === 'signup' && <span className="text-purple-600 dark:text-purple-400">👤</span>}
+                      {event.type === 'purchase' && <span className="text-green-600 dark:text-green-400"></span>}
+                      {event.type === 'cart' && <span className="text-blue-600 dark:text-blue-400"></span>}
+                      {event.type === 'signup' && <span className="text-purple-600 dark:text-purple-400"></span>}
                       {event.type === 'view' && <Eye size={18} className="text-gray-600 dark:text-gray-400" />}
                       {event.type === 'click' && <MousePointer size={18} className="text-gray-600 dark:text-gray-400" />}
                     </div>
@@ -122,7 +122,7 @@ const Realtime = () => {
               ))}
             </div>
 
-            {/* Live Map Simulation */}
+            {}
             <div className="mt-8">
               <h3 className="text-lg font-semibold mb-4">Live User Locations</h3>
               <div className={`rounded-lg p-4 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} relative h-64 overflow-hidden`}>
@@ -144,9 +144,9 @@ const Realtime = () => {
             </div>
           </div>
 
-          {/* Right Column - Analytics */}
+          {}
           <div className="space-y-6" id="realtime-analytics">
-            {/* Geographic Distribution */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">User Distribution</h3>
               <div className="space-y-4">
@@ -170,7 +170,7 @@ const Realtime = () => {
               </div>
             </div>
 
-            {/* Device Breakdown */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">Device Usage</h3>
               <div className="space-y-4">
@@ -191,7 +191,7 @@ const Realtime = () => {
               </div>
             </div>
 
-            {/* System Status */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">System Status</h3>
               <div className="space-y-3">
@@ -214,7 +214,7 @@ const Realtime = () => {
               </div>
             </div>
 
-            {/* Alerts */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center gap-3 mb-4">
                 <AlertCircle className="text-yellow-500" />

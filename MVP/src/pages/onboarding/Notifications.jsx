@@ -7,7 +7,7 @@ const Notifications = () => {
     const navigate = useNavigate();
 
     const handleContent = (allowed) => {
-        // Logic to request notification permission would go here
+        
         console.log(`Notifications ${allowed ? 'Allowed' : 'Skipped'}`);
         navigate('/onboarding/shop-access');
     };

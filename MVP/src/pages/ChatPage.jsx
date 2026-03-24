@@ -45,7 +45,7 @@ const ChatPage = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // Load chats on mount
+    
     useEffect(() => {
         loadChats();
     }, []);
@@ -111,15 +111,15 @@ const ChatPage = () => {
         e.preventDefault();
         if (!input.trim()) return;
 
-        // If no chat selected/exists, create one first or handle error. 
-        // Logic: if no currentChatId, create one then send.
+        
+        
         let targetChatId = currentChatId;
         if (!targetChatId) {
             try {
                 const response = await authenticatedFetch(`${API_URL}/chats`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: input.slice(0, 30), firstMessage: input, language }) // Pass language
+                    body: JSON.stringify({ title: input.slice(0, 30), firstMessage: input, language }) 
                 });
                 if (response.ok) {
                     const newChat = await response.json();
@@ -153,7 +153,7 @@ const ChatPage = () => {
             const response = await authenticatedFetch(`${API_URL}/chats/${targetChatId}/messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: messageContent, language }) // Pass language
+                body: JSON.stringify({ content: messageContent, language }) 
             });
 
             if (response.ok) {
@@ -171,7 +171,7 @@ const ChatPage = () => {
     return (
         <div className={`flex h-[calc(100vh-64px)] overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
 
-            {/* Mobile Overlay */}
+            {}
             {sidebarOpen && (
                 <div
                     className="md:hidden fixed inset-0 z-20 bg-black/50"
@@ -179,7 +179,7 @@ const ChatPage = () => {
                 />
             )}
 
-            {/* Sidebar - ChatGPT Style */}
+            {}
             <div className={`
         fixed md:static inset-y-0 left-0 z-30
         w-[260px] flex-shrink-0 flex flex-col transition-transform duration-300 transform
@@ -224,7 +224,7 @@ const ChatPage = () => {
                                         {chat.title}
                                     </div>
 
-                                    {/* Delete Button (visible on hover or active) */}
+                                    {}
                                     {(currentChatId === chat.id || true) && (
                                         <div className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
@@ -240,7 +240,7 @@ const ChatPage = () => {
                         </div>
                     </div>
 
-                    {/* User Profile / Settings at bottom */}
+                    {}
                     <div className={`p-3 border-t flex items-center gap-3 cursor-pointer rounded-md m-2 ${isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-100'}`}>
                         {user?.picture ? (
                             <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-sm object-cover" />
@@ -255,9 +255,9 @@ const ChatPage = () => {
                 </div>
             </div>
 
-            {/* Main Chat Area */}
+            {}
             <div className="flex-1 flex flex-col h-full relative w-full">
-                {/* Header (Mobile Toggle & Model Name) */}
+                {}
                 <div className={`
           flex items-center justify-between p-2 md:p-4 border-b 
           ${isDarkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}
@@ -274,7 +274,7 @@ const ChatPage = () => {
                     </div>
                 </div>
 
-                {/* Messages */}
+                {}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth">
                     <div className="max-w-3xl mx-auto flex flex-col gap-6 pb-24">
                         {currentChat?.messages.length === 0 ? (
@@ -332,7 +332,7 @@ const ChatPage = () => {
                     </div>
                 </div>
 
-                {/* Input Area */}
+                {}
                 <div className={`
           absolute bottom-0 left-0 right-0 p-4 
           ${isDarkMode ? 'bg-gradient-to-t from-gray-900 via-gray-900 to-transparent' : 'bg-gradient-to-t from-white via-white to-transparent'}

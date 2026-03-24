@@ -244,6 +244,34 @@
             "securityTitle": "Sécurisé et fiable",
             "securityDesc": "Une sécurité de niveau entreprise protège les données de votre entreprise."
         },
+        "pricing": {
+            "title": "Développez votre boutique Shopify",
+            "subtitle": "Plans d'intelligence des stocks alimentés par l'IA adaptés à votre croissance.",
+            "monthly": "Mensuel",
+            "yearly": "Annuel",
+            "starter": "Essentiel",
+            "starterPrice": "Gratuit",
+            "pro": "Pro Croissance",
+            "proPrice": "29$",
+            "enterprise": "Entreprise",
+            "enterprisePrice": "Sur mesure",
+            "current": "Plan actuel",
+            "getStarted": "Commencer",
+            "contactSales": "Contacter les ventes",
+            "features": {
+                "oneStore": "Connexion à 1 boutique Shopify",
+                "basicReports": "Rapports d'inventaire hebdomadaires",
+                "starterTokens": "500 requêtes IA / mois",
+                "threeStores": "Jusqu'à 2 boutiques Shopify",
+                "dailyReports": "Rapports journaliers avancés",
+                "proTokens": "5 000 requêtes IA / mois",
+                "stockoutAlerts": "Prédictions de rupture de stock",
+                "unlimitedStores": "Connexions de boutiques illimitées",
+                "unlimitedTokens": "Requêtes IA et rapports illimités",
+                "customRetention": "Conservation des données sur mesure",
+                "restockAutomation": "Automatisation des réassorts et alertes"
+            }
+        },
         "footer": "© 2026 Stockbud. Tous droits réservés."
     }
 }

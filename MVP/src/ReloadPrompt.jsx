@@ -8,7 +8,7 @@ function ReloadPrompt() {
         updateServiceWorker,
     } = useRegisterSW({
         onRegistered(r) {
-            // onRegisteredSW(r)
+            
             console.log('SW Registered: ' + r)
         },
         onRegisterError(error) {

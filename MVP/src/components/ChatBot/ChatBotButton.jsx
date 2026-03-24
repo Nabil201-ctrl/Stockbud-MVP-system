@@ -1,4 +1,4 @@
-// components/ChatBot/ChatBotButton.jsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, Loader2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -11,23 +11,23 @@ const ChatBotButton = () => {
   const { language, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Initialize messages with translation (use effect to update when language changes if needed, 
-  // but for now simple init is fine for MVP, or better yet, translate on render for static ones if they weren't state)
-  // Since they are state, we might want to reset them or just let them be. 
-  // For MVP, we will initialize them with the current language t() calls.
-  // However, t() might not be available immediately if context loads async, but context is synchronous provider.
+  
+  
+  
+  
+  
   const [messages, setMessages] = useState([
     { id: 1, text: t('chat.initialMessage1', {}, "Hello! I'm your AI assistant. How can I help you today?"), isBot: true, time: "Just now" },
     { id: 2, text: t('chat.initialMessage2', {}, "Try asking me about your dashboard metrics or data insights!"), isBot: true, time: "Just now" }
   ]);
 
-  // Reset messages when language changes (Optional, but good for "internalize" goal)
+  
   useEffect(() => {
     setMessages([
       { id: 1, text: t('chat.initialMessage1', {}, "Hello! I'm your AI assistant. How can I help you today?"), isBot: true, time: "Just now" },
       { id: 2, text: t('chat.initialMessage2', {}, "Try asking me about your dashboard metrics or data insights!"), isBot: true, time: "Just now" }
     ]);
-  }, [language]); // Depend on language to refresh initial greeting
+  }, [language]); 
 
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -47,7 +47,7 @@ const ChatBotButton = () => {
 
     const userMessageText = inputText;
 
-    // Add user message
+    
     const userMessage = {
       id: Date.now(),
       text: userMessageText,
@@ -69,7 +69,7 @@ const ChatBotButton = () => {
       const response = await authenticatedFetch('http://localhost:3000/chats/quick', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: userMessageText, history, language }) // Pass language
+        body: JSON.stringify({ content: userMessageText, history, language }) 
       });
 
       if (response.ok) {
@@ -119,7 +119,7 @@ const ChatBotButton = () => {
 
   return (
     <>
-      {/* Floating Button */}
+      {}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 z-50 ${isDarkMode
@@ -131,13 +131,13 @@ const ChatBotButton = () => {
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
 
-      {/* Chat Window */}
+      {}
       {isOpen && (
         <div className={`fixed bottom-0 right-0 w-full h-[100dvh] sm:h-[700px] sm:w-[500px] sm:bottom-24 sm:right-6 sm:rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${isDarkMode
           ? 'bg-gray-800 border-t sm:border border-gray-700'
           : 'bg-white border-t sm:border border-gray-200'
           }`}>
-          {/* Header */}
+          {}
           <div className={`p-4 sm:rounded-t-2xl flex items-center justify-between ${isDarkMode ? 'bg-gray-900' : 'bg-white border-b border-gray-100'
             }`}>
             <div className="flex items-center gap-3">
@@ -164,7 +164,7 @@ const ChatBotButton = () => {
             </button>
           </div>
 
-          {/* Messages Container */}
+          {}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
             {messages.map((message) => (
               <div
@@ -197,7 +197,7 @@ const ChatBotButton = () => {
               </div>
             ))}
 
-            {/* Typing Indicator */}
+            {}
             {isTyping && (
               <div className="flex justify-start">
                 <div className={`max-w-[80%] rounded-2xl p-3 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
@@ -212,7 +212,7 @@ const ChatBotButton = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Suggested Questions */}
+          {}
           <div className="px-4 pb-3">
             <p className={`text-xs mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Suggested questions:
@@ -233,7 +233,7 @@ const ChatBotButton = () => {
             </div>
           </div>
 
-          {/* Input Area */}
+          {}
           <div className={`p-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <input

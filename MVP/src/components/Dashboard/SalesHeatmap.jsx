@@ -1,17 +1,17 @@
-// components/Dashboard/SalesHeatmap.jsx
+
 import React from 'react';
 
 const SalesHeatmap = ({ isDarkMode, data }) => {
-  // Construct 5x7 grid from data
+  
   const heatmapData = React.useMemo(() => {
     if (!data || data.length === 0) {
-      // Return clear grid
+      
       return [
         [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]
       ];
     }
 
-    // Map data to levels. Assuming full 35 day history or sparse.
+    
     const flatLevels = data.map(d => d.level);
     while (flatLevels.length < 35) flatLevels.push(0);
 

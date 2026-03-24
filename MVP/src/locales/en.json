@@ -244,6 +244,34 @@
             "securityTitle": "Secure & Reliable",
             "securityDesc": "Enterprise-grade security keeps your business data safe."
         },
+        "pricing": {
+            "title": "Scale Your Shopify Store",
+            "subtitle": "AI-powered stock intelligence plans tailored to your growth.",
+            "monthly": "Monthly",
+            "yearly": "Yearly",
+            "starter": "Essential",
+            "starterPrice": "Free",
+            "pro": "Growth Pro",
+            "proPrice": "$29",
+            "enterprise": "Enterprise",
+            "enterprisePrice": "Custom",
+            "current": "Current Plan",
+            "getStarted": "Get Started",
+            "contactSales": "Contact Sales",
+            "features": {
+                "oneStore": "1 Shopify Store Connection",
+                "basicReports": "Weekly Inventory Reports",
+                "starterTokens": "500 AI Chat Tokens / mo",
+                "threeStores": "Up to 2 Shopify Stores",
+                "dailyReports": "Advanced Daily Reports",
+                "proTokens": "5,000 AI Chat Tokens / mo",
+                "stockoutAlerts": "AI Stockout Predictions",
+                "unlimitedStores": "Unlimited Store Connections",
+                "unlimitedTokens": "Unlimited AI Queries & Reports",
+                "customRetention": "Custom Data Retention",
+                "restockAutomation": "Restock Automation & Alerts"
+            }
+        },
         "footer": "© 2026 Stockbud. All rights reserved."
     }
 }

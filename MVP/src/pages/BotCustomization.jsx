@@ -1,4 +1,4 @@
-// components/pages/BotCustomization.jsx
+
 import React, { useState, useEffect } from 'react';
 import { Bot, MessageSquare, Settings, Palette, Zap, Shield, Globe, Brain } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -32,7 +32,7 @@ const BotCustomization = () => {
           ...activeShop.botSettings
         }));
       } else if (user.botSettings) {
-        // Fallback to legacy global settings if shop settings missing (during migration phase)
+        
         setBotSettings(prev => ({
           ...prev,
           ...user.botSettings
@@ -67,21 +67,13 @@ const BotCustomization = () => {
         });
 
         if (response.ok) {
-          // We need to refresh the user context to see the changes reflected locally if we depend on it
-          // Ideally AuthContext should provide a way to reload user, or we optimistically update.
-          // For now, let's assume we might need to reload. 
-          // But actually, updateProfile refetch logic in AuthContext might be useful.
-          // Let's manually trigger a profile refresh if possible.
-          // Since we don't have direct access to refreshUser from here (unless we destructure it), let's assume valid.
-          // Since we don't have direct access to refreshUser from here (unless we destructure it), let's assume valid.
           setSaveStatus(t('bot.success'));
           setTimeout(() => setSaveStatus(''), 3000);
-          // Trigger a user refresh if the function is available in AuthContext (it is: refreshUser)
         } else {
           setSaveStatus(t('bot.error'));
         }
       } else {
-        // Fallback for legacy (shouldn't happen with new logic)
+        
         const result = await updateProfile({ botSettings });
         if (result.success) {
           setSaveStatus(t('bot.success'));
@@ -100,10 +92,10 @@ const BotCustomization = () => {
   };
 
   const personalityOptions = [
-    { id: 'professional', label: 'Professional', icon: '👔', description: 'Formal and business-like responses' },
-    { id: 'friendly', label: 'Friendly', icon: '😊', description: 'Warm and approachable tone' },
-    { id: 'technical', label: 'Technical', icon: '💻', description: 'Detailed and data-focused' },
-    { id: 'concise', label: 'Concise', icon: '⚡', description: 'Short and to-the-point responses' }
+    { id: 'professional', label: 'Professional', icon: '', description: 'Formal and business-like responses' },
+    { id: 'friendly', label: 'Friendly', icon: '', description: 'Warm and approachable tone' },
+    { id: 'technical', label: 'Technical', icon: '', description: 'Detailed and data-focused' },
+    { id: 'concise', label: 'Concise', icon: '', description: 'Short and to-the-point responses' }
   ];
 
   const themeOptions = [
@@ -116,7 +108,7 @@ const BotCustomization = () => {
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {}
         <div className="mb-8" id="bot-header">
           <h1 className="text-3xl font-bold mb-2">{t('bot.title')}</h1>
           <p className="text-gray-500 dark:text-gray-400">
@@ -125,7 +117,7 @@ const BotCustomization = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Bot Preview */}
+          {}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="bot-preview-card">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-4 w-full sm:w-auto">
@@ -153,7 +145,7 @@ const BotCustomization = () => {
               </div>
             </div>
 
-            {/* Preview Chat */}
+            {}
             <div className={`rounded-lg p-4 mb-6 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <div className="text-sm font-medium mb-2">{t('bot.previewChat')}</div>
               <div className="space-y-3">
@@ -172,7 +164,7 @@ const BotCustomization = () => {
                   <div className={`rounded-lg p-3 max-w-[70%] ${isDarkMode ? 'bg-gray-600' : 'bg-white'}`}>
                     <p className="text-sm">
                       {botSettings.personality === 'Friendly'
-                        ? "Hey there! 😊 Your revenue today is $40,256.92 with a 2.94% increase from yesterday. Great job!"
+                        ? "Hey there!  Your revenue today is $40,256.92 with a 2.94% increase from yesterday. Great job!"
                         : botSettings.personality === 'Technical'
                           ? "Revenue analysis: $40,256.92 as of current time. This represents a 2.94% increase from previous period. Data sourced from multiple revenue streams."
                           : botSettings.personality === 'Concise'
@@ -185,7 +177,7 @@ const BotCustomization = () => {
               </div>
             </div>
 
-            {/* Bot Capabilities */}
+            {}
             <div>
               <h3 className="text-lg font-semibold mb-4">{t('bot.capabilities')}</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -215,12 +207,12 @@ const BotCustomization = () => {
             </div>
           </div>
 
-          {/* Right Column - Settings */}
+          {}
           <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="bot-settings-card">
             <h2 className="text-xl font-bold mb-6">{t('bot.configSettings')}</h2>
 
             <div className="space-y-6">
-              {/* Bot Name */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.botName')}</label>
                 <input
@@ -231,7 +223,7 @@ const BotCustomization = () => {
                 />
               </div>
 
-              {/* Personality */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.personalityType')}</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -254,7 +246,7 @@ const BotCustomization = () => {
                 </div>
               </div>
 
-              {/* Response Speed */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.responseSpeed')}</label>
                 <div className="flex gap-2">
@@ -273,7 +265,7 @@ const BotCustomization = () => {
                 </div>
               </div>
 
-              {/* Theme Color */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.themeColor')}</label>
                 <div className="flex gap-3">
@@ -292,7 +284,7 @@ const BotCustomization = () => {
                 </div>
               </div>
 
-              {/* Language */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.language')}</label>
                 <select
@@ -308,7 +300,7 @@ const BotCustomization = () => {
                 </select>
               </div>
 
-              {/* Toggles */}
+              {}
               <div className="space-y-4">
                 {[
                   { label: 'bot.enableNotifications', setting: 'notifications', icon: <MessageSquare size={16} /> },
@@ -342,7 +334,7 @@ const BotCustomization = () => {
                 ))}
               </div>
 
-              {/* Data Access */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.dataAccess')}</label>
                 <select
@@ -357,7 +349,7 @@ const BotCustomization = () => {
                 </select>
               </div>
 
-              {/* Save Button */}
+              {}
               {saveStatus && (
                 <div className={`mb-4 p-3 rounded-lg text-sm ${saveStatus.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                   {saveStatus}

@@ -1,4 +1,4 @@
-// components/Dashboard/Sidebar.jsx
+
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -18,12 +18,12 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
   const [showFeedbackWidget, setShowFeedbackWidget] = useState(false);
   const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  // Check feedback visibility on mount and user change
+  
   React.useEffect(() => {
     if (!user) return;
 
-    // Check if account is at least 14 days old
-    // Fallback to allowing it if we can't determine creation date
+    
+    
     const accountCreatedDate = user.createdAt ? new Date(user.createdAt).getTime() : 0;
     const daysSinceCreation = accountCreatedDate ? (Date.now() - accountCreatedDate) / (1000 * 60 * 60 * 24) : 14;
 
@@ -37,7 +37,7 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
       setShowFeedbackWidget(true);
     } else {
       const daysSinceSubmit = (Date.now() - parseInt(lastSubmitted)) / (1000 * 60 * 60 * 24);
-      // Show again if 14 days have passed since last submit
+      
       if (daysSinceSubmit >= 14) {
         setShowFeedbackWidget(true);
       } else {
@@ -69,7 +69,7 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
       `}>
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-center">
-            <img src={FulLogo} alt="StockBud Logo" className="h-10 w-auto object-contain" />
+            <img src={FulLogo} alt="StockBud Logo" className="h-32 w-auto object-contain" />
           </div>
         </div>
 
@@ -107,7 +107,7 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
             </button>
           </div>
 
-          {/* Feedback Widget */}
+          {}
           {showFeedbackWidget && (
             <div className="bg-blue-600 rounded-lg p-3 text-white">
               <h4 className="text-xs font-medium mb-2 opacity-90">Help us improve</h4>

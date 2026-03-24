@@ -108,9 +108,9 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
         body: JSON.stringify({ storeId })
       });
       if (response.ok) {
-        await refreshUser(); // Reload user to get new active shop and settings
+        await refreshUser(); 
         setShowShopMenu(false);
-        // reload the page to refresh all data if needed, or rely on context
+        
         window.location.reload();
       }
     } catch (error) {
@@ -194,7 +194,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
 
-          {/* AI Token Display */}
+
           <div
             id="ai-tokens"
             onClick={() => navigate('/settings', { state: { activeTab: 'usage' } })}
@@ -333,7 +333,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
               <ChevronDown size={16} className={`transition-transform duration-200 ${isDarkMode ? 'text-gray-400' : 'text-slate-400'} ${showProfileMenu ? 'rotate-180' : ''}`} />
             </div>
 
-            {/* Dropdown Menu */}
+            {}
             {showProfileMenu && (
               <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} z-50`}>
                 <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 md:hidden">

@@ -1,4 +1,4 @@
-// components/Dashboard/DashboardStats.jsx
+
 import React from 'react';
 import { Calendar } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
@@ -6,15 +6,15 @@ import { useLanguage } from '../../context/LanguageContext';
 const DashboardStats = ({ isDarkMode }) => {
   const { t } = useLanguage();
 
-  // Dynamic Date Logic
+  
   const currentDate = new Date();
   const currentMonth = currentDate.toLocaleString('default', { month: 'long' }).toUpperCase();
   const currentYear = currentDate.getFullYear();
 
-  // Calculate days in current month
+  
   const daysInMonth = new Date(currentYear, currentDate.getMonth() + 1, 0).getDate();
   const dateRangeString = `${currentMonth} 01 - ${daysInMonth} (${daysInMonth} DAYS)`;
-  const monthYearString = `${currentMonth.charAt(0) + currentMonth.slice(1).toLowerCase()} ${currentYear}`; // "January 2024"
+  const monthYearString = `${currentMonth.charAt(0) + currentMonth.slice(1).toLowerCase()} ${currentYear}`; 
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">

@@ -16,12 +16,12 @@ export const useLanguage = () => {
 
 export const LanguageProvider = ({ children }) => {
     const [language, setLanguage] = useState(() => {
-        // Check for saved preference or browser language
+        
         const saved = localStorage.getItem('language');
         if (saved && translations[saved]) {
             return saved;
         }
-        // Auto-detect from browser
+        
         const browserLang = navigator.language.split('-')[0];
         return translations[browserLang] ? browserLang : 'en';
     });
@@ -31,13 +31,7 @@ export const LanguageProvider = ({ children }) => {
         document.documentElement.lang = language;
     }, [language]);
 
-    /**
-     * Translate a key like 'settings.title' to the localized string.
-     * @param {string} key - Dot-notation key like 'nav.dashboard'
-     * @param {object} params - Optional interpolation params (future use)
-     * @returns {string} Translated string or the key if not found
-     */
-    const t = (key, params = {}) => {
+        const t = (key, params = {}) => {
         const keys = key.split('.');
         let value = translations[language];
 
@@ -46,11 +40,11 @@ export const LanguageProvider = ({ children }) => {
                 value = value[k];
             } else {
                 console.warn(`Translation missing: ${key} for language: ${language}`);
-                return key; // Fallback to key
+                return key; 
             }
         }
 
-        // Simple interpolation (e.g., {count} in string)
+        
         if (typeof value === 'string' && Object.keys(params).length > 0) {
             return value.replace(/{(\w+)}/g, (_, paramKey) => params[paramKey] || `{${paramKey}}`);
         }

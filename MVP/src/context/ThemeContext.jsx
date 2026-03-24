@@ -12,7 +12,7 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check for saved theme preference or system preference
+    
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       return savedTheme === 'dark';
@@ -22,11 +22,11 @@ export const ThemeProvider = ({ children }) => {
 
   const [fontSize, setFontSize] = useState(() => {
     const savedFontSize = localStorage.getItem('fontSize');
-    return savedFontSize ? parseInt(savedFontSize) : 100; // default 100%
+    return savedFontSize ? parseInt(savedFontSize) : 100; 
   });
 
   useEffect(() => {
-    // Update localStorage and document class when theme changes
+    
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 
     if (isDarkMode) {
@@ -46,7 +46,7 @@ export const ThemeProvider = ({ children }) => {
   };
 
   const changeFontSize = (newSize) => {
-    // Constrain the font size between 80% and 150%
+    
     setFontSize(Math.max(80, Math.min(150, newSize)));
   };
 

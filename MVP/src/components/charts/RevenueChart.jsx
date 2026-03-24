@@ -1,4 +1,4 @@
-// components/charts/RevenueChart.jsx
+
 import React from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -9,7 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 const RevenueChart = ({ data, currencySymbol = '$' }) => {
   const { isDarkMode } = useTheme();
 
-  // Use passed data or empty array if not provided
+  
   const revenueData = data && data.length > 0 ? data : [
     { date: '', revenue: 0, target: 0 }
   ];

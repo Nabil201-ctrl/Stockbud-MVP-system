@@ -13,7 +13,7 @@ const Signup = () => {
     const [error, setError] = useState('');
 
     const handleGoogleLogin = () => {
-        window.location.href = 'http://localhost:3000/auth/google';
+        window.location.href = 'http:
     };
 
     const handleSubmit = async (e) => {
@@ -23,7 +23,7 @@ const Signup = () => {
 
         const result = await register(name, email, password);
         if (result.success) {
-            navigate('/onboarding/notifications'); // Go to onboarding
+            navigate('/onboarding/notifications'); 
         } else {
             setError(result.error || 'Registration failed');
         }

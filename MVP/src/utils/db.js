@@ -29,7 +29,7 @@ export const storage = {
     },
 };
 
-// Migration helper
+
 export async function migrateLocalStorage() {
     const keysToMigrate = ['theme', 'shopifyShop', 'shopifyToken'];
 
@@ -38,8 +38,8 @@ export async function migrateLocalStorage() {
             const val = localStorage.getItem(key);
             if (val !== null) {
                 await storage.set(key, val);
-                // We can choose to remove it from localStorage to enforce usage of DB
-                // localStorage.removeItem(key); 
+                
+                
                 console.log(`Migrated ${key} to IndexedDB`);
             }
         }

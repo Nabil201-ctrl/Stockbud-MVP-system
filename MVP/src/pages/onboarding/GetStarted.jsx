@@ -7,7 +7,7 @@ const GetStarted = () => {
     const navigate = useNavigate();
 
     const handleGoogleLogin = () => {
-        // Redirect to backend Google Auth endpoint
+        
         window.location.href = 'http://localhost:3000/auth/google';
     };
 

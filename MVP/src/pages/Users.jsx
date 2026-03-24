@@ -1,6 +1,6 @@
-// components/pages/Users.jsx
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, UserCheck, UserX, TrendingUp, Calendar, Filter, Search, MoreVertical, Mail, Phone, Globe, Award } from 'lucide-react';
+import { Users, UserPlus, UserCheck, UserX, TrendingUp, Calendar, Filter, Search, MoreVertical, Mail, Phone, Globe, Award, Zap } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -11,22 +11,63 @@ const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [userData, setUserData] = useState([]);
+  const [chartData, setChartData] = useState([]);
   const [userStats, setUserStats] = useState({
     total: 0,
     active: 0,
     new: 0,
     inactive: 0,
-    growth: 0
+    growth: 0,
+    totalSignIns: 0,
+    signInsToday: 0
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('http://localhost:3000/users');
+        const response = await fetch('http:
         const data = await response.json();
-        setUserData(data.users);
-        setUserStats(data.stats);
+
+        const usersList = Array.isArray(data) ? data : (data.users || []);
+        setUserData(usersList);
+
+        const total = usersList.length;
+        const today = new Date().toISOString().split('T')[0];
+        const newToday = usersList.filter(u => u.createdAt?.startsWith(today)).length;
+        const totalSignIns = usersList.reduce((sum, u) => sum + (u.signInCount || 0), 0);
+        const signInsToday = usersList.reduce((sum, u) => {
+          return sum + (u.loginDates ? u.loginDates.filter(d => d === today).length : 0);
+        }, 0);
+
+        setUserStats({
+          total,
+          active: Math.max(0, total - 2), 
+          new: newToday,
+          inactive: Math.min(2, total),
+          growth: 12.4,
+          totalSignIns,
+          signInsToday
+        });
+
+        const chartMap = {};
+        usersList.forEach(user => {
+          if (user.createdAt) {
+            const date = user.createdAt.split('T')[0];
+            if (date !== 'Unknown') {
+              if (!chartMap[date]) chartMap[date] = { date, signups: 0, signins: 0 };
+              chartMap[date].signups += 1;
+            }
+          }
+          if (user.loginDates && Array.isArray(user.loginDates)) {
+            user.loginDates.forEach(date => {
+              if (!chartMap[date]) chartMap[date] = { date, signups: 0, signins: 0 };
+              chartMap[date].signins += 1;
+            });
+          }
+        });
+        const cData = Object.values(chartMap).sort((a, b) => a.date.localeCompare(b.date));
+        setChartData(cData);
       } catch (error) {
         console.error('Failed to fetch users:', error);
       } finally {
@@ -55,7 +96,7 @@ const UsersPage = () => {
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8" id="users-header">
           <div>
             <h1 className="text-3xl font-bold mb-2">{t('users.title')}</h1>
@@ -69,13 +110,12 @@ const UsersPage = () => {
           </button>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="users-stats">
           {[
-            { icon: <Users size={24} />, label: t('users.totalUsers'), value: userStats.total.toLocaleString(), change: `+${userStats.growth}%`, color: 'bg-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
-            { icon: <UserCheck size={24} />, label: t('users.activeUsers'), value: userStats.active.toLocaleString(), change: '+8.2%', color: 'bg-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
-            { icon: <UserPlus size={24} />, label: t('users.newUsers'), value: userStats.new.toLocaleString(), change: '+15.3%', color: 'bg-purple-500', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
-            { icon: <UserX size={24} />, label: t('users.inactiveUsers'), value: userStats.inactive.toLocaleString(), change: '-2.1%', color: 'bg-red-500', bgColor: 'bg-red-100 dark:bg-red-900/30' }
+            { icon: <Users size={24} />, label: t('users.totalUsers'), value: (userStats.total || 0).toLocaleString(), change: `+${userStats.growth || 0}%`, color: 'bg-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
+            { icon: <UserPlus size={24} />, label: t('users.newUsers'), value: (userStats.new || 0).toLocaleString(), change: '+15.3%', color: 'bg-purple-500', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
+            { icon: <Zap size={24} />, label: 'Total Sign-ins', value: (userStats.totalSignIns || 0).toLocaleString(), change: '+8.2%', color: 'bg-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+            { icon: <UserCheck size={24} />, label: 'Sign-ins Today', value: (userStats.signInsToday || 0).toLocaleString(), change: '+5.1%', color: 'bg-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/30' }
           ].map((stat, idx) => (
             <div key={idx} className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center justify-between mb-4">
@@ -95,7 +135,7 @@ const UsersPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - User Table */}
+          {}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="users-table">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold">{t('users.listTitle')}</h2>
@@ -183,7 +223,7 @@ const UsersPage = () => {
               </table>
             </div>
 
-            {/* Pagination */}
+            {}
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Showing 6 of {userStats.total.toLocaleString()} users
@@ -208,9 +248,9 @@ const UsersPage = () => {
             </div>
           </div>
 
-          {/* Right Column - Analytics */}
+          {}
           <div className="space-y-6">
-            {/* Plan Distribution */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('users.planDistribution')}</h3>
               <div className="space-y-4">
@@ -231,39 +271,33 @@ const UsersPage = () => {
               </div>
             </div>
 
-            {/* User Growth Chart */}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                <h3 className="text-lg font-semibold">{t('users.userGrowth')}</h3>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  {['7d', '30d', '90d'].map((period) => (
-                    <button
-                      key={period}
-                      onClick={() => setTimeframe(period)}
-                      className={`flex-1 sm:flex-none px-3 py-1 rounded-full text-sm ${timeframe === period
-                        ? 'bg-blue-600 text-white'
-                        : isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
-                        }`}
-                    >
-                      {period}
-                    </button>
-                  ))}
-                </div>
+                <h3 className="text-lg font-semibold">User Signups & Sign-ins Trend</h3>
               </div>
-              <div className="h-48 flex items-end gap-1">
-                {[45, 52, 48, 60, 55, 70, 65, 80, 75, 85, 82, 92].map((height, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center">
-                    <div
-                      className="w-full bg-blue-500 rounded-t transition-all duration-300"
-                      style={{ height: `${height}%` }}
-                    ></div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{idx + 1}</div>
-                  </div>
-                ))}
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#374151' : '#e5e7eb'} />
+                    <XAxis dataKey="date" stroke={isDarkMode ? '#9ca3af' : '#6b7280'} tick={{ fontSize: 12 }} />
+                    <YAxis allowDecimals={false} stroke={isDarkMode ? '#9ca3af' : '#6b7280'} tick={{ fontSize: 12 }} />
+                    <RechartsTooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: 'none',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                        backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                        color: isDarkMode ? '#f3f4f6' : '#111827'
+                      }}
+                    />
+                    <Bar dataKey="signups" name="Signups" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="signins" name="Sign-Ins" fill="#10B981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Quick Actions */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('users.quickActions')}</h3>
               <div className="space-y-3">
@@ -284,7 +318,7 @@ const UsersPage = () => {
               </div>
             </div>
 
-            {/* User Segments */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('users.userSegments')}</h3>
               <div className="space-y-3">

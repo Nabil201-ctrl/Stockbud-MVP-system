@@ -14,15 +14,15 @@ export const AuthProvider = ({ children }) => {
     const authenticatedFetch = async (url, options = {}) => {
         let response = await fetch(url, {
             ...options,
-            credentials: 'include', //  Send cookies
+            credentials: 'include', 
             headers: {
                 ...options.headers,
-                // No Authorization header needed
+                
             }
         });
 
         if (response.status === 401) {
-            // Try refresh
+            
             try {
                 const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
                     method: 'POST',
@@ -30,13 +30,13 @@ export const AuthProvider = ({ children }) => {
                 });
 
                 if (refreshResponse.ok) {
-                    // Retry original request
+                    
                     response = await fetch(url, {
                         ...options,
                         credentials: 'include'
                     });
                 } else {
-                    // Refresh failed, logout
+                    
                     setUser(null);
                 }
             } catch (error) {
@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }) => {
 
     const checkAuth = async () => {
         try {
-            // We use users/me to check if we are logged in (cookie is valid)
+            
             const response = await authenticatedFetch(`${API_URL}/users/me?t=${Date.now()}`);
             if (response.ok) {
                 const userData = await response.json();
@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         if (response.ok) {
-            // Auto login after register
+            
             return loginLocal(email, password);
         } else {
             const data = await response.json();

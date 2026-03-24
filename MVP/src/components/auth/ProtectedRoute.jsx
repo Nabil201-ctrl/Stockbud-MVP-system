@@ -22,13 +22,13 @@ const ProtectedRoute = ({ children }) => {
         return <Navigate to="/auth/login" state={{ from: location }} replace />;
     }
 
-    // If user is authenticated but hasn't completed onboarding
-    // AND they are trying to access a non-onboarding route
+    
+    
     if (user && !user.isOnboardingComplete && !location.pathname.startsWith('/onboarding') && location.pathname !== '/get-started') {
         return <Navigate to="/get-started" replace />;
     }
 
-    // If user has completed onboarding AND they are trying to access onboarding pages 
+    
     if (user && user.isOnboardingComplete && (location.pathname.startsWith('/onboarding') || location.pathname === '/get-started')) {
         return <Navigate to="/dashboard" replace />;
     }

@@ -8,11 +8,11 @@ const OfflineBanner = () => {
     const [hasLoaded, setHasLoaded] = useState(false);
 
     useEffect(() => {
-        // Show banner when status changes
+        
         setIsVisible(true);
         setHasLoaded(true);
 
-        // Auto-hide after 1 minute (60000ms)
+        
         const timer = setTimeout(() => {
             setIsVisible(false);
         }, 60000);
@@ -20,13 +20,13 @@ const OfflineBanner = () => {
         return () => clearTimeout(timer);
     }, [isOnline]);
 
-    if (!isVisible && hasLoaded) return null; // Keep hidden after user close or timeout
-    // If we want it to show on initial load too:
+    if (!isVisible && hasLoaded) return null; 
+    
     if (!isVisible && !hasLoaded) {
-        // It will enter the effect and setVisible(true) immediately, so this is fine.
-        // But actually the effect runs after render. Initial render -> effect -> rerender(visible).
-        // If we want to hide "Online" state on initial load if it's the default, we could do check.
-        // User asked "show if user is offline or online".
+        
+        
+        
+        
     }
 
     return (

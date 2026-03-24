@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, BarChart2, Shield, Zap, Globe } from 'lucide-react';
+import { ArrowRight, BarChart2, Shield, Zap, Globe, Check } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import Slogo from '../assets/Slogo.png';
@@ -18,7 +18,7 @@ const LandingPage = () => {
     return (
         <div className={`min-h-screen flex flex-col ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-slate-50 text-slate-800'}`}>
 
-            {/* Navbar */}
+            {}
             <nav className={`px-6 py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md ${isDarkMode ? 'bg-gray-900/80 border-b border-gray-800' : 'bg-slate-50/80 border-b border-slate-200'}`}>
                 <div className="flex items-center gap-2">
                     <img src={Slogo} alt="Stockbud Logo" className="w-10 h-10 object-contain" />
@@ -32,6 +32,12 @@ const LandingPage = () => {
                     >
                         <Globe size={20} />
                         <span className="text-sm font-medium uppercase">{language}</span>
+                    </button>
+                    <button
+                        onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+                        className={`hidden md:block px-4 py-2 text-sm font-medium rounded-lg transition-colors ${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'}`}
+                    >
+                        Pricing
                     </button>
                     <button
                         onClick={() => navigate('/auth/login')}
@@ -48,7 +54,7 @@ const LandingPage = () => {
                 </div>
             </nav>
 
-            {/* Hero Section */}
+            {}
             <main className="flex-1 flex flex-col items-center justify-center px-6 text-center py-20">
                 <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-medium mb-4">
@@ -97,7 +103,7 @@ const LandingPage = () => {
                     </div>
                 </div>
 
-                {/* Features Grid */}
+                {}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto mt-24">
                     {[
                         {
@@ -125,9 +131,113 @@ const LandingPage = () => {
                         </div>
                     ))}
                 </div>
+
+                {}
+                <div id="pricing" className="w-full max-w-6xl mx-auto mt-32 mb-16 px-4">
+                    <div className="text-center max-w-2xl mx-auto mb-16">
+                        <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+                            {t('landing.pricing.title', 'Simple, Transparent Pricing')}
+                        </h2>
+                        <p className={`text-xl ${isDarkMode ? 'text-gray-400' : 'text-slate-600'}`}>
+                            {t('landing.pricing.subtitle', 'Choose the perfect plan for your business needs. No hidden fees.')}
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {}
+                        <div className={`rounded-3xl p-8 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} transition-all hover:shadow-2xl flex flex-col`}>
+                            <h3 className="text-2xl font-bold mb-2">{t('landing.pricing.starter', 'Starter')}</h3>
+                            <div className="flex items-baseline gap-2 mb-6">
+                                <span className="text-5xl font-extrabold">{t('landing.pricing.starterPrice', 'Free')}</span>
+                            </div>
+                            <ul className="space-y-4 mb-8 flex-1">
+                                {[
+                                    t('landing.pricing.features.oneStore', '1 Shopify Store Connection'),
+                                    t('landing.pricing.features.basicReports', 'Weekly Inventory Reports'),
+                                    t('landing.pricing.features.starterTokens', '500 AI Chat Tokens / mo')
+                                ].map((feature, i) => (
+                                    <li key={i} className="flex items-center gap-3">
+                                        <div className="p-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shrink-0">
+                                            <Check size={16} strokeWidth={3} />
+                                        </div>
+                                        <span className={isDarkMode ? 'text-gray-300' : 'text-slate-700'}>{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <button
+                                onClick={() => navigate('/auth/signup')}
+                                className={`w-full py-4 font-bold rounded-xl transition-all border-2 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700 text-white' : 'border-slate-200 hover:bg-slate-50 text-slate-800'}`}
+                            >
+                                {t('landing.pricing.getStarted', 'Get Started')}
+                            </button>
+                        </div>
+
+                        {}
+                        <div className="rounded-3xl p-8 border border-blue-500 bg-gradient-to-b from-blue-600 to-blue-800 text-white transform md:-translate-y-4 shadow-2xl relative flex flex-col">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-cyan-400 to-blue-400 text-blue-900 px-4 py-1 rounded-full text-sm font-bold tracking-wide uppercase shadow-lg">
+                                Most Popular
+                            </div>
+                            <h3 className="text-2xl font-bold mb-2 text-white">{t('landing.pricing.pro', 'Professional')}</h3>
+                            <div className="flex items-baseline gap-2 mb-6">
+                                <span className="text-5xl font-extrabold text-white">{t('landing.pricing.proPrice', '$29')}</span>
+                                <span className="text-blue-200 font-medium">/mo</span>
+                            </div>
+                            <ul className="space-y-4 mb-8 flex-1">
+                                {[
+                                    t('landing.pricing.features.threeStores', 'Up to 2 Shopify Stores'),
+                                    t('landing.pricing.features.dailyReports', 'Advanced Daily Reports'),
+                                    t('landing.pricing.features.proTokens', '5,000 AI Chat Tokens / mo'),
+                                    t('landing.pricing.features.stockoutAlerts', 'AI Stockout Predictions')
+                                ].map((feature, i) => (
+                                    <li key={i} className="flex items-center gap-3">
+                                        <div className="p-1 rounded-full bg-white/20 text-white shrink-0">
+                                            <Check size={16} strokeWidth={3} />
+                                        </div>
+                                        <span className="text-blue-50">{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <button
+                                onClick={() => navigate('/auth/signup')}
+                                className="w-full py-4 font-bold rounded-xl transition-all border border-transparent bg-white text-blue-700 hover:bg-blue-50 shadow-xl"
+                            >
+                                {t('landing.pricing.getStarted', 'Get Started')}
+                            </button>
+                        </div>
+
+                        {}
+                        <div className={`rounded-3xl p-8 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} transition-all hover:shadow-2xl flex flex-col`}>
+                            <h3 className="text-2xl font-bold mb-2">{t('landing.pricing.enterprise', 'Enterprise')}</h3>
+                            <div className="flex items-baseline gap-2 mb-6">
+                                <span className="text-5xl font-extrabold">{t('landing.pricing.enterprisePrice', 'Custom')}</span>
+                            </div>
+                            <ul className="space-y-4 mb-8 flex-1">
+                                {[
+                                    t('landing.pricing.features.unlimitedStores', 'Unlimited Store Connections'),
+                                    t('landing.pricing.features.unlimitedTokens', 'Unlimited AI Queries & Reports'),
+                                    t('landing.pricing.features.customRetention', 'Custom Data Retention'),
+                                    t('landing.pricing.features.restockAutomation', 'Restock Automation & Alerts')
+                                ].map((feature, i) => (
+                                    <li key={i} className="flex items-center gap-3">
+                                        <div className="p-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shrink-0">
+                                            <Check size={16} strokeWidth={3} />
+                                        </div>
+                                        <span className={isDarkMode ? 'text-gray-300' : 'text-slate-700'}>{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <button
+                                onClick={() => navigate('/auth/signup')}
+                                className={`w-full py-4 font-bold rounded-xl transition-all border-2 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700 text-white' : 'border-slate-200 hover:bg-slate-50 text-slate-800'}`}
+                            >
+                                {t('landing.pricing.contactSales', 'Contact Sales')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </main>
 
-            {/* Footer */}
+            {}
             <footer className={`py-8 text-center text-sm ${isDarkMode ? 'text-gray-500' : 'text-slate-400'}`}>
                 {t('landing.footer')}
             </footer>

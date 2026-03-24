@@ -12,22 +12,22 @@ const AuthSuccess = () => {
         const loginSuccess = searchParams.get('login_success');
         const accessToken = searchParams.get('access_token');
 
-        // Handle Popup Communication (for Shopify App)
+        
         if (window.opener && accessToken) {
             window.opener.postMessage({
                 type: 'STOCKBUD_AUTH_SUCCESS',
                 token: accessToken
-            }, '*'); // In prod, specify the exact origin of the Shopify App
+            }, '*'); 
             window.close();
             return;
         }
 
-        // Normal Flow
-        // If we have a user (meaning cookies worked), proceed
+        
+        
         if (!loading && user) {
             navigate('/onboarding/notifications');
         } else if (!loading && !user) {
-            // ... (existing logic)
+            
             if (!loginSuccess) {
                 navigate('/');
             }
