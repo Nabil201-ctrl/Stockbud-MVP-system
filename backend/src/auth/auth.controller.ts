@@ -23,22 +23,22 @@ export class AuthController {
 
         const { access_token, refresh_token } = await this.authService.login(req.user, ip);
 
-        // Set Cookies
+        
         res.cookie('access_token', access_token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax', // or 'none' if cross-domain in prod
-            maxAge: 15 * 60 * 1000 // 15 mins
+            sameSite: 'lax', 
+            maxAge: 15 * 60 * 1000 
         });
 
         res.cookie('refresh_token', refresh_token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
-        // Use a simple redirect, query params are just for fallback or indication
+        
         const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
         res.redirect(`${frontendUrl}/auth/success?login_success=true&access_token=${access_token}`);
     }
@@ -75,7 +75,7 @@ export class AuthController {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: 24 * 60 * 60 * 1000 
         });
 
         return { user, access_token };

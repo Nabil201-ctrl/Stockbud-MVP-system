@@ -1,4 +1,4 @@
-// components/Dashboard/Sidebar.jsx
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -101,10 +101,10 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode }) 
           ))}
         </div>
 
-        {/* Calendar Widget */}
+        {}
         {isCalendarOpen && (
           <div className="bg-blue-600 rounded-lg p-4 text-white">
-            {/* ... calendar widget code ... */}
+            {}
           </div>
         )}
       </nav>

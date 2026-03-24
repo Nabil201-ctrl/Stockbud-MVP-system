@@ -23,7 +23,7 @@ export class PaymentsService {
     private readonly logger = new Logger(PaymentsService.name);
     private readonly paymentsFilePath: string;
     private processedPayments: Map<string, ProcessedPayment> = new Map();
-    private processingLocks: Set<string> = new Set(); // In-memory mutex for concurrent requests
+    private processingLocks: Set<string> = new Set(); 
 
     constructor(
         private readonly httpService: HttpService,
@@ -35,7 +35,7 @@ export class PaymentsService {
         this.loadPayments();
     }
 
-    // ─── Persistence ──────────────────────────────────────────────
+
 
     private loadPayments(): void {
         try {
@@ -68,7 +68,7 @@ export class PaymentsService {
         }
     }
 
-    // ─── Initialize ───────────────────────────────────────────────
+
 
     async initializeTransaction(user: any, amount: number, tokenCount: number, callbackUrl: string) {
         if (!this.paystackSecretKey) {
@@ -114,14 +114,14 @@ export class PaymentsService {
         }
     }
 
-    // ─── Idempotent Verify ────────────────────────────────────────
+
 
     async verifyTransaction(reference: string) {
         if (!this.paystackSecretKey) {
             throw new HttpException('Paystack is not configured', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        // 1. Check if already processed — return cached result immediately
+        
         const existing = this.processedPayments.get(reference);
         if (existing && existing.status === 'success') {
             this.logger.log(`[Idempotent] Payment ${reference} already processed. Returning cached result.`);
@@ -133,13 +133,13 @@ export class PaymentsService {
         }
         if (existing && existing.status === 'failed') {
             this.logger.log(`[Idempotent] Payment ${reference} previously failed. Allowing retry.`);
-            // Allow retry for failed payments — fall through
+            
         }
 
-        // 2. In-memory lock to prevent concurrent processing of the same reference
+        
         if (this.processingLocks.has(reference)) {
             this.logger.warn(`[Idempotent] Payment ${reference} is currently being processed. Waiting...`);
-            // Wait briefly and return — the first request will handle it
+            
             await new Promise(resolve => setTimeout(resolve, 2000));
             const result = this.processedPayments.get(reference);
             if (result && result.status === 'success') {
@@ -148,11 +148,11 @@ export class PaymentsService {
             return { success: false, message: 'Payment is still being processed. Please try again shortly.' };
         }
 
-        // 3. Acquire lock
+        
         this.processingLocks.add(reference);
 
         try {
-            // 4. Verify with Paystack
+            
             const response = await firstValueFrom(
                 this.httpService.get(
                     `https://api.paystack.co/transaction/verify/${reference}`,
@@ -197,13 +197,13 @@ export class PaymentsService {
                         result = { success: true, message: 'Payment verified (no action required)' };
                     }
 
-                    // 5. Record as successfully processed
+                    
                     this.recordPayment(reference, 'success', type, userId, result, data.status, data.amount || 0);
                     this.logger.log(`[Payment] Successfully processed ${reference} (type: ${type}) for user ${userId}`);
                     return result;
 
                 } catch (sideEffectError) {
-                    // Side effect failed (e.g., user not found) — record as failed so it can be retried
+                    
                     this.logger.error(`[Payment] Side effect failed for ${reference}:`, sideEffectError.message);
                     const failResult = { success: false, message: `Payment verified but action failed: ${sideEffectError.message}` };
                     this.recordPayment(reference, 'failed', type, userId, failResult, data.status, data.amount || 0);
@@ -211,7 +211,7 @@ export class PaymentsService {
                 }
             }
 
-            // Transaction not successful on Paystack's side
+            
             const failResult = { success: false, message: `Transaction status: ${data.status}` };
             this.recordPayment(reference, 'failed', 'unknown', data.metadata?.userId || '', failResult, data.status, data.amount || 0);
             return failResult;
@@ -226,7 +226,7 @@ export class PaymentsService {
         }
     }
 
-    // ─── Record Payment ───────────────────────────────────────────
+
 
     private recordPayment(
         reference: string,
@@ -250,7 +250,7 @@ export class PaymentsService {
         this.savePayments();
     }
 
-    // ─── Admin: Get Payment History ───────────────────────────────
+
 
     getPaymentHistory(): ProcessedPayment[] {
         return Array.from(this.processedPayments.values())

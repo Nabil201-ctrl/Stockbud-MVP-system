@@ -1,4 +1,4 @@
-// components/ChatBot/ChatBotButton.jsx
+
 import React, { useState } from 'react';
 import { MessageCircle, X, Send, Bot } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -24,7 +24,7 @@ const ChatBotButton = () => {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    // Add bot response
+    
     const botResponse = {
       id: messages.length + 2,
       text: getBotResponse(inputText),
@@ -50,7 +50,7 @@ const ChatBotButton = () => {
     } else if (input.includes('help') || input.includes('support')) {
       return "I can help you with: Revenue insights, Visitor statistics, Country data, Purchase sources, and general dashboard questions.";
     } else if (input.includes('hello') || input.includes('hi')) {
-      return "Hello! 👋 How can I assist you with your dashboard analytics today?";
+      return "Hello!  How can I assist you with your dashboard analytics today?";
     } else {
       return "I understand you're asking about \"" + userInput + "\". For specific analytics insights, try asking about revenue, visitors, countries, or purchase sources.";
     }
@@ -69,7 +69,7 @@ const ChatBotButton = () => {
 
   return (
     <>
-      {/* Floating Button */}
+      {}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 z-50 ${
@@ -82,14 +82,14 @@ const ChatBotButton = () => {
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
 
-      {/* Chat Window */}
+      {}
       {isOpen && (
         <div className={`fixed bottom-24 right-6 w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${
           isDarkMode 
             ? 'bg-gray-800 border border-gray-700' 
             : 'bg-white border border-gray-200'
         }`}>
-          {/* Header */}
+          {}
           <div className={`p-4 rounded-t-2xl flex items-center justify-between ${
             isDarkMode ? 'bg-gray-900' : 'bg-blue-50'
           }`}>
@@ -119,7 +119,7 @@ const ChatBotButton = () => {
             </button>
           </div>
 
-          {/* Messages Container */}
+          {}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((message) => (
               <div
@@ -154,7 +154,7 @@ const ChatBotButton = () => {
             ))}
           </div>
 
-          {/* Suggested Questions */}
+          {}
           <div className="px-4 pb-3">
             <p className={`text-xs mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Suggested questions:
@@ -176,7 +176,7 @@ const ChatBotButton = () => {
             </div>
           </div>
 
-          {/* Input Area */}
+          {}
           <div className={`p-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <input

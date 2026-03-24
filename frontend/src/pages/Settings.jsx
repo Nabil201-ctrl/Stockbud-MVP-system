@@ -15,7 +15,7 @@ const Settings = () => {
     useEffect(() => {
         if (!shopUrl || !isConnecting) return;
 
-        const socket = io('http://localhost:3000/shopify');
+        const socket = io('http:
 
         socket.on('connect', () => {
             console.log('Connected to Shopify Gateway');
@@ -41,13 +41,9 @@ const Settings = () => {
 
         try {
             await axios.delete('http://localhost:3000/users/shopify-credentials', {
-                headers: { Authorization: `Bearer ${token}` } // Assuming auth token logic is handled by interception or cookie, but explicit headers might be safer if custom. 
-                // Actually the current axios logic relies on auth module. 
-                // Wait, the Login flow sets cookies. Axios should send cookies if 'withCredentials: true' is set globally or per request.
-                // The main.ts says: credentials: true in CORS.
-                // So I should ensure axios sends credentials.
+                headers: { Authorization: `Bearer ${token}` }
             });
-            // Reset state
+            
             setShopUrl('');
             setToken('');
             setIsConnected(false);
@@ -135,15 +131,12 @@ const Settings = () => {
                     </div>
                 </div>
 
-                {/* Timeline Visualization */}
+                {}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden">
                     {!isConnecting && !isConnected ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-[2px] z-10 p- text-center">
                             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                                {/* Fixed missing import or usage of Server icon if not imported, assuming Server is meant to be here but not in imports? 
-                                    Ah, line 133 had <Server ... /> but it was not imported in line 3.
-                                    I will import Server or remove it. Let's fix line 3 import too if I can.
-                                */}
+                                {}
                                 <ShoppingBag className="w-8 h-8 text-gray-400" />
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Waiting to Connect</h3>

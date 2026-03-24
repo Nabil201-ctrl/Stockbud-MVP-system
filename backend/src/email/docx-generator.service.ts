@@ -29,15 +29,12 @@ export interface DocxReportData {
 @Injectable()
 export class DocxGeneratorService {
 
-    /**
-     * Generate a DOCX buffer from report data, return as base64 string
-     */
-    async generateDocx(data: DocxReportData): Promise<string> {
+        async generateDocx(data: DocxReportData): Promise<string> {
         const sections = this.parseMarkdownToDocx(data.content);
 
         const children: any[] = [];
 
-        // Title
+        
         children.push(
             new Paragraph({
                 children: [
@@ -70,7 +67,7 @@ export class DocxGeneratorService {
             }),
         );
 
-        // Metadata line
+        
         children.push(
             new Paragraph({
                 children: [
@@ -106,7 +103,7 @@ export class DocxGeneratorService {
             );
         }
 
-        // Horizontal rule
+        
         children.push(
             new Paragraph({
                 border: {
@@ -116,10 +113,10 @@ export class DocxGeneratorService {
             }),
         );
 
-        // Content sections from markdown
+        
         children.push(...sections);
 
-        // Stats appendix
+        
         if (data.stats && Object.keys(data.stats).length > 0) {
             children.push(
                 new Paragraph({
@@ -145,7 +142,7 @@ export class DocxGeneratorService {
                 }),
             );
 
-            // Stats as table
+            
             const statsRows = Object.entries(data.stats).map(([key, value]) => {
                 const formattedKey = key.replace(/([A-Z])/g, ' $1').trim();
                 const formattedValue = typeof value === 'number'
@@ -183,12 +180,12 @@ export class DocxGeneratorService {
             }
         }
 
-        // Footer
+        
         children.push(
             new Paragraph({
                 children: [
                     new TextRun({
-                        text: `\n\n© ${new Date().getFullYear()} StockBud — Smart Inventory Intelligence`,
+                        text: `\n\n ${new Date().getFullYear()} StockBud — Smart Inventory Intelligence`,
                         size: 16,
                         color: '9CA3AF',
                         italics: true,
@@ -211,10 +208,7 @@ export class DocxGeneratorService {
         return buffer.toString('base64');
     }
 
-    /**
-     * Parse markdown content into docx paragraphs
-     */
-    private parseMarkdownToDocx(content: string): Paragraph[] {
+        private parseMarkdownToDocx(content: string): Paragraph[] {
         if (!content) return [];
 
         const paragraphs: Paragraph[] = [];
@@ -228,7 +222,7 @@ export class DocxGeneratorService {
                 continue;
             }
 
-            // Heading 1
+            
             if (trimmed.startsWith('# ')) {
                 paragraphs.push(new Paragraph({
                     children: [new TextRun({
@@ -244,7 +238,7 @@ export class DocxGeneratorService {
                 continue;
             }
 
-            // Heading 2
+            
             if (trimmed.startsWith('## ')) {
                 paragraphs.push(new Paragraph({
                     children: [new TextRun({
@@ -260,7 +254,7 @@ export class DocxGeneratorService {
                 continue;
             }
 
-            // Heading 3
+            
             if (trimmed.startsWith('### ')) {
                 paragraphs.push(new Paragraph({
                     children: [new TextRun({
@@ -276,7 +270,7 @@ export class DocxGeneratorService {
                 continue;
             }
 
-            // Bullet point
+            
             if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
                 const bulletContent = trimmed.replace(/^[-*]\s+/, '');
                 paragraphs.push(new Paragraph({
@@ -298,7 +292,7 @@ export class DocxGeneratorService {
                 continue;
             }
 
-            // Regular paragraph
+            
             paragraphs.push(new Paragraph({
                 children: this.parseInlineFormatting(trimmed),
                 spacing: { after: 120 },
@@ -308,12 +302,9 @@ export class DocxGeneratorService {
         return paragraphs;
     }
 
-    /**
-     * Parse inline bold/italic formatting from markdown  
-     */
-    private parseInlineFormatting(text: string): TextRun[] {
+        private parseInlineFormatting(text: string): TextRun[] {
         const runs: TextRun[] = [];
-        // Simple regex to handle **bold** and *italic*
+        
         const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
 
         for (const part of parts) {

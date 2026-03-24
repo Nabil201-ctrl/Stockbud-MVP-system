@@ -9,7 +9,7 @@ export class EncryptionService {
     private readonly ivLength = 16;
 
     constructor(private readonly configService: ConfigService) {
-        // Ensure key is 32 bytes for AES-256
+        
         const key = this.configService.get<string>('ENCRYPTION_KEY') || '12345678901234567890123456789012';
         this.encryptionKey = key.padEnd(32, '0').slice(0, 32);
     }

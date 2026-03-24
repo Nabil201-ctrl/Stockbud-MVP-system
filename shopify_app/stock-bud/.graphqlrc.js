@@ -19,7 +19,7 @@ function getConfig() {
   try {
     extensions = fs.readdirSync("./extensions");
   } catch {
-    // ignore if no extensions
+    
   }
   for (const entry of extensions) {
     const extensionPath = `./extensions/${entry}`;

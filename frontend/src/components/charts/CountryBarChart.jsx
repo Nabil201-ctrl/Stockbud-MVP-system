@@ -1,4 +1,4 @@
-// components/charts/CountryBarChart.jsx
+
 import React from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 

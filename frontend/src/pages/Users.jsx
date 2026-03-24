@@ -1,4 +1,4 @@
-// components/pages/Users.jsx
+
 import React, { useState } from 'react';
 import { Users, UserPlus, UserCheck, UserX, TrendingUp, Calendar, Filter, Search, MoreVertical, Mail, Phone, Globe, Award } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -36,7 +36,7 @@ const UsersPage = () => {
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">User Management</h1>
@@ -50,7 +50,7 @@ const UsersPage = () => {
           </button>
         </div>
 
-        {/* Stats Grid */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
             { icon: <Users size={24} />, label: 'Total Users', value: userStats.total.toLocaleString(), change: `+${userStats.growth}%`, color: 'bg-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
@@ -76,7 +76,7 @@ const UsersPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - User Table */}
+          {}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold">User List</h2>
@@ -170,7 +170,7 @@ const UsersPage = () => {
               </table>
             </div>
 
-            {/* Pagination */}
+            {}
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Showing 6 of {userStats.total.toLocaleString()} users
@@ -195,9 +195,9 @@ const UsersPage = () => {
             </div>
           </div>
 
-          {/* Right Column - Analytics */}
+          {}
           <div className="space-y-6">
-            {/* Plan Distribution */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">Plan Distribution</h3>
               <div className="space-y-4">
@@ -218,7 +218,7 @@ const UsersPage = () => {
               </div>
             </div>
 
-            {/* User Growth Chart */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold">User Growth</h3>
@@ -250,7 +250,7 @@ const UsersPage = () => {
               </div>
             </div>
 
-            {/* Quick Actions */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
               <div className="space-y-3">
@@ -271,7 +271,7 @@ const UsersPage = () => {
               </div>
             </div>
 
-            {/* User Segments */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">User Segments</h3>
               <div className="space-y-3">

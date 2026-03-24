@@ -6,7 +6,7 @@ import fetch, { Headers, Request, Response } from 'node-fetch';
 async function run() {
     console.log('Starting Gemini Verification (Final Check)...');
 
-    // Load .env
+    
     const result = dotenv.config({ path: path.join(__dirname, '.env') });
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -15,14 +15,14 @@ async function run() {
         process.exit(1);
     }
 
-    // Polyfill
-    // @ts-ignore
+    
+    
     global.fetch = fetch;
-    // @ts-ignore
+    
     global.Headers = Headers;
-    // @ts-ignore
+    
     global.Request = Request;
-    // @ts-ignore
+    
     global.Response = Response;
 
     const genAI = new GoogleGenerativeAI(apiKey);

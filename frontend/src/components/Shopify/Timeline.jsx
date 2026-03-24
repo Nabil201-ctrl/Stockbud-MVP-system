@@ -4,7 +4,7 @@ import { Check, Loader2, Server, ShieldCheck, RefreshCw, Database } from 'lucide
 const Timeline = ({ startAnimation, currentStepOverride }) => {
     const [internalStep, setInternalStep] = useState(0);
 
-    // Use override if provided, otherwise fallback to internal automated state
+    
     const currentStep = currentStepOverride !== undefined ? currentStepOverride : internalStep;
 
     const steps = [
@@ -46,11 +46,11 @@ const Timeline = ({ startAnimation, currentStepOverride }) => {
     ];
 
     useEffect(() => {
-        // Only run internal animation if no override is provided
+        
         if (!startAnimation || currentStepOverride !== undefined) return;
 
         let totalDelay = 0;
-        setInternalStep(1); // Start with step 1 immediately
+        setInternalStep(1); 
 
         steps.forEach((step, index) => {
             if (index < steps.length - 1) {
@@ -99,7 +99,7 @@ const Timeline = ({ startAnimation, currentStepOverride }) => {
                                 </p>
                             </div>
 
-                            {/* Status Indicator */}
+                            {}
                             {isCompleted && (
                                 <div className="absolute right-0 top-3 text-green-500 animate-in fade-in slide-in-from-left-2">
                                     <Check className="w-5 h-5" />

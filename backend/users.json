@@ -8,7 +8,7 @@
     "aiTokens": 500,
     "reportTokens": 250,
     "createdAt": "2026-01-18T07:31:13.145Z",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3NzI4OTE4MzgsImV4cCI6MTc3NTQ4MzgzOH0.k3uv7wj-CYWcAv0QeBR6LeDnx_K0CT0nvA1LZjSK8mk",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiIxMTM4MzE0ODI2MzIwMjIzMjk2ODgiLCJpYXQiOjE3NzM2NTE0NTYsImV4cCI6MTc3NjI0MzQ1Nn0.lUL4xF0ifsVOido_cSZsd8kld1uRho9crpIGU8XIRmo",
     "shopifyStores": [
       {
         "id": "4b591e16",

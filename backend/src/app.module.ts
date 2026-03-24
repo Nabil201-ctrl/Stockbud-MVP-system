@@ -13,6 +13,7 @@ import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import { EmailModule } from './email/email.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import { EmailModule } from './email/email.module';
             isGlobal: true,
         }),
         ScheduleModule.forRoot(),
+        PrismaModule,
         EmailModule,
         DashboardModule,
         ProductsModule,

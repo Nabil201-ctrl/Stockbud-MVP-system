@@ -6,14 +6,14 @@ export const action = async ({ request }) => {
 
     console.log(`Received SHOP_REDACT webhook for ${shop}`);
 
-    // Delete all database records connected to this shop
+    
     try {
         await db.session.deleteMany({ where: { shop } });
     } catch (e) {
         console.error(`Failed to clear session DB during SHOP_REDACT for ${shop}:`, e);
     }
 
-    // Wipe data from our main backend database.
+    
     try {
         const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
         await fetch(`${backendUrl}/shopify/webhook/uninstall`, {

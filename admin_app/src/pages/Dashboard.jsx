@@ -7,38 +7,48 @@ import { Layout } from '../components/Layout';
 export const Dashboard = () => {
     const [users, setUsers] = useState([]);
     const [chartData, setChartData] = useState([]);
-    const [stats, setStats] = useState({ total: 0, newToday: 0 });
+    const [stats, setStats] = useState({ total: 0, newToday: 0, totalSignIns: 0, signInsToday: 0 });
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Assuming backend runs on 3000 and proxy handles /api -> http://localhost:3000
-                // Or /users if controller is at root /users. The code says /api/users. 
-                // Wait, UsersController is at 'users'. So it should be /users usually, or /api/users if global prefix.
-                // I will use /users based on typical setup or respect existing /api/users if that works.
-                // But looking at code, let's assume /users if /api/users fails?
-                // The existing code used /api/users. I will stick to it.
-                const response = await axios.get('http://localhost:3000/users'); // Direct URL for MVP or configured proxy
+                const response = await axios.get('http://localhost:3000/users'); 
                 const userList = response.data;
                 setUsers(userList);
 
-                // Process data for stats
+                
                 const total = userList.length;
                 const today = new Date().toISOString().split('T')[0];
                 const newToday = userList.filter(u => u.createdAt?.startsWith(today)).length;
-                setStats({ total, newToday });
+                const totalSignIns = userList.reduce((sum, u) => sum + (u.signInCount || 0), 0);
+                const signInsToday = userList.reduce((sum, u) => {
+                    return sum + (u.loginDates ? u.loginDates.filter(d => d === today).length : 0);
+                }, 0);
+                setStats({ total, newToday, totalSignIns, signInsToday });
 
-                // Process data for Chart (Group by Date)
-                const groups = userList.reduce((acc, user) => {
-                    const date = user.createdAt ? user.createdAt.split('T')[0] : 'Unknown';
-                    acc[date] = (acc[date] || 0) + 1;
-                    return acc;
-                }, {});
+                
+                const chartMap = {};
 
-                const data = Object.keys(groups).sort().map(date => ({
-                    date,
-                    count: groups[date]
-                }));
+                userList.forEach(user => {
+                    
+                    if (user.createdAt) {
+                        const date = user.createdAt.split('T')[0];
+                        if (date !== 'Unknown') {
+                            if (!chartMap[date]) chartMap[date] = { date, signups: 0, signins: 0 };
+                            chartMap[date].signups += 1;
+                        }
+                    }
+
+                    
+                    if (user.loginDates && Array.isArray(user.loginDates)) {
+                        user.loginDates.forEach(date => {
+                            if (!chartMap[date]) chartMap[date] = { date, signups: 0, signins: 0 };
+                            chartMap[date].signins += 1;
+                        });
+                    }
+                });
+
+                const data = Object.values(chartMap).sort((a, b) => a.date.localeCompare(b.date));
                 setChartData(data);
 
             } catch (error) {
@@ -76,7 +86,7 @@ export const Dashboard = () => {
                 <p className="text-gray-600">Welcome back, Admin</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between">
                         <div>
@@ -99,10 +109,32 @@ export const Dashboard = () => {
                         </div>
                     </div>
                 </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-gray-500 mb-1">Total Sign-ins</p>
+                            <h3 className="text-2xl font-bold text-gray-800">{stats.totalSignIns}</h3>
+                        </div>
+                        <div className="bg-purple-50 p-3 rounded-lg">
+                            <Zap className="text-purple-600" size={24} />
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-gray-500 mb-1">Sign-ins Today</p>
+                            <h3 className="text-2xl font-bold text-gray-800">{stats.signInsToday}</h3>
+                        </div>
+                        <div className="bg-orange-50 p-3 rounded-lg">
+                            <Users className="text-orange-600" size={24} />
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-800 mb-6">User Signups Trend</h3>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+                <h3 className="text-lg font-bold text-gray-800 mb-6">User Signups & Sign-ins Trend</h3>
                 <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData}>
@@ -112,7 +144,8 @@ export const Dashboard = () => {
                             <Tooltip
                                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             />
-                            <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="signups" name="Signups" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="signins" name="Sign-Ins" fill="#10B981" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>

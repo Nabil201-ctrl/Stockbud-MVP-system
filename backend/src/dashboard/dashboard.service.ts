@@ -28,10 +28,10 @@ export class DashboardService {
                 } else {
                     orders = ordersData.orders;
                 }
-                // We're not using products for now as order line items differ from product objects
-                // const products = await this.shopifyService.getProducts(shop, token); 
+                
+                
 
-                // Resolve currency and exchange rate
+                
                 let exchangeRate = 1;
                 if (orders.length > 0) {
                     const shopCurrency = orders[0].currency || 'USD';
@@ -50,7 +50,7 @@ export class DashboardService {
                     }
                 }
 
-                // 1. Calculate Total Revenue & Lost Revenue
+                
                 orders.forEach(order => {
                     const amount = Number(order.total_price) * exchangeRate;
                     if (order.financial_status === 'voided' || order.cancelled_at) {
@@ -60,7 +60,7 @@ export class DashboardService {
                     }
                 });
 
-                // 2. Revenue Change (This Week vs Last Week)
+                
                 const now = new Date();
                 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                 const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -88,11 +88,11 @@ export class DashboardService {
                 }
 
 
-                // 3. Prepare Revenue Chart Data (Last 7 Days)
+                
                 const last7Days = [...Array(7)].map((_, i) => {
                     const d = new Date();
                     d.setDate(d.getDate() - (6 - i));
-                    return d.toISOString().split('T')[0]; // YYYY-MM-DD
+                    return d.toISOString().split('T')[0]; 
                 });
 
                 revenueData = last7Days.map(date => {
@@ -112,7 +112,7 @@ export class DashboardService {
                     };
                 });
 
-                // 4. Source Data
+                
                 const sources = {};
                 orders.forEach(o => {
                     const source = o.source_name || 'direct';
@@ -126,7 +126,7 @@ export class DashboardService {
                     color: this.getColorForSource(name)
                 }));
 
-                // 5. Heatmap Data
+                
                 const heatMapCounts = {};
                 orders.forEach(o => {
                     const date = o.created_at.split('T')[0];
@@ -139,7 +139,7 @@ export class DashboardService {
                     level: Math.min(4, Math.ceil(Number(count) / 2))
                 }));
 
-                // 6. Sales History
+                
                 salesHistoryData = orders.slice(0, 5).map(o => {
                     const first = o.customer?.first_name || 'Guest';
                     const last = o.customer?.last_name || '';

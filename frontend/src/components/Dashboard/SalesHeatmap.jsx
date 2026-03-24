@@ -1,4 +1,4 @@
-// components/Dashboard/SalesHeatmap.jsx
+
 import React from 'react';
 
 const SalesHeatmap = ({ isDarkMode }) => {

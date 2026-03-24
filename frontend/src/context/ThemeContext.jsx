@@ -12,7 +12,7 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check for saved theme preference or system preference
+    
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       return savedTheme === 'dark';
@@ -21,7 +21,7 @@ export const ThemeProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    // Update localStorage and document class when theme changes
+    
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
     
     if (isDarkMode) {

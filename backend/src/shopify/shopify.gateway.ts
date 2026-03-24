@@ -41,7 +41,7 @@ export class ShopifyGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         }
     }
 
-    // Method to emit status updates to a specific shop room
+    
     emitStatusUpdate(shop: string, step: number, status: string) {
         this.server.to(shop).emit('statusUpdate', { step, status });
         console.log(`Emitted status update for ${shop}: Step ${step} - ${status}`);

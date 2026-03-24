@@ -19,14 +19,14 @@ export class DashboardController {
         const fullUser = await this.usersService.findById(user.id);
         const userCurrency = fullUser?.currency || 'USD';
 
-        // Fetch active shop properly
+        
         const shopStore = await this.usersService.getActiveShop(user.id);
         const shop = shopStore?.shop;
         const targetType = shopStore?.targetType || 'monthly';
         const targetValue = shopStore?.targetValue || 0;
         const token = shopStore?.token ? await this.usersService.getDecryptedShopifyToken(user.id) : undefined;
 
-        return this.dashboardService.getStats(shop, token, targetType, targetValue, userCurrency);
+        return this.dashboardService.getStats(shop, token, targetType as 'weekly' | 'monthly', targetValue, userCurrency);
     }
 
     @Post('target')

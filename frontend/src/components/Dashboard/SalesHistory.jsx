@@ -1,4 +1,4 @@
-// components/Dashboard/SalesHistory.jsx
+
 import React from 'react';
 
 const SalesHistory = ({ isDarkMode }) => {

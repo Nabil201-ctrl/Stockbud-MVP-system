@@ -25,10 +25,7 @@ export class ReportsController {
         return this.reportsService.getReportById(req.user.id, id);
     }
 
-    /**
-     * Download a report as DOCX file
-     */
-    @Get(':id/download')
+        @Get(':id/download')
     @UseGuards(AuthGuard('jwt'))
     async downloadReport(@Req() req, @Param('id') id: string, @Res() res: Response) {
         const docxBase64 = await this.reportsService.getReportDocx(req.user.id, id);
@@ -48,10 +45,7 @@ export class ReportsController {
         res.send(buffer);
     }
 
-    /**
-     * Generate a report (free types: sales, inventory, revenue)
-     */
-    @Post('generate')
+        @Post('generate')
     @UseGuards(AuthGuard('jwt'))
     async generateReport(
         @Req() req,
@@ -60,11 +54,7 @@ export class ReportsController {
         return this.reportsService.generateReport(req.user.id, body.type);
     }
 
-    /**
-     * Generate an instant paid system review
-     * This endpoint should be called AFTER payment verification
-     */
-    @Post('instant-review')
+        @Post('instant-review')
     @UseGuards(AuthGuard('jwt'))
     async generateInstantReview(@Req() req) {
         return this.reportsService.generateInstantReview(req.user.id);

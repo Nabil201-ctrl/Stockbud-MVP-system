@@ -10,12 +10,7 @@ export class PaymentsController {
     @Post('initialize')
     async initialize(@Req() req, @Body() body: { amount: number; tokenCount: number; callbackUrl: string }) {
         const user = req.user;
-        // Validation logic
-        // 100 tokens = 20.00 USD
-        // ...
-        // We trust frontend for now or we can strictly enforce:
-        // const expectedPrice = (body.tokenCount / 100) * 2000;
-        // if (Math.abs(expectedPrice - body.amount) > 0.01) ...
+
 
         return this.paymentsService.initializeTransaction(user, body.amount, body.tokenCount, body.callbackUrl);
     }

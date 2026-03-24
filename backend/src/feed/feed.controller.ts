@@ -8,7 +8,7 @@ export class FeedController {
     constructor(private readonly feedService: FeedService) { }
 
     @Post('feedback')
-    // @UseGuards(AuthGuard('jwt'))
+    
     async submitFeedback(@Req() req, @Body() body: { rating: number; category: string; message: string; email?: string }) {
         const userId = req.user?.id || 'anonymous';
         const userName = req.user?.name || 'Anonymous User';
@@ -24,7 +24,7 @@ export class FeedController {
     }
 
     @Get('feedback')
-    // @UseGuards(AuthGuard('jwt')) // Optional: restrict to admin later
+    
     async getAllFeedback() {
         return this.feedService.findAll();
     }

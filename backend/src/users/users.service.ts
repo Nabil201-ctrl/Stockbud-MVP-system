@@ -1,9 +1,9 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
 import * as crypto from 'crypto';
 import { EncryptionService } from '../common/encryption.service';
 import axios from 'axios';
+import { PrismaService } from '../prisma/prisma.service';
+import { User, ShopifyStore } from '@prisma/client';
 
 export interface BotSettings {
     name: string;
@@ -17,119 +17,21 @@ export interface BotSettings {
     autoRespond: boolean;
 }
 
-export interface ShopifyStore {
-    id: string;           // Unique ID for this store connection
-    shop: string;         // e.g., "my-store.myshopify.com"
-    token: string;        // Encrypted access token
-    name?: string;        // Display name (optional)
-    addedAt: string;      // ISO timestamp
-    botSettings?: BotSettings; // Shop-specific bot settings
-    targetType?: 'weekly' | 'monthly';
-    targetValue?: number;
-}
-
-export interface User {
-    id: string;
-    email: string;
-    name: string;
-    password?: string; // Hashed password
-    picture?: string;
-    // Legacy fields (kept for migration)
-    shopifyShop?: string;
-    shopifyToken?: string;
-    // New multi-shop fields
-    shopifyStores?: ShopifyStore[];
-    activeShopId?: string;
-    storeLimit?: number; // Max allowed shops
-    retentionMonths?: number; // Data retention period in months
-    createdAt?: string;
-    isOnboardingComplete?: boolean;
-    refreshToken?: string;
-    aiTokens?: number;
-    reportTokens?: number;
-    botSettings?: BotSettings; // Legacy global settings (migration source)
-    lastTokenReset?: number;
-    hasFreeReports?: boolean;
-    language?: 'en' | 'fr';
-    pushSubscription?: any;
-    ipAddress?: string;
-    location?: string;
-    currency?: string;
-}
-
 @Injectable()
 export class UsersService implements OnModuleInit {
-    private users: Map<string, User> = new Map();
-    private readonly filePath = path.join(process.cwd(), 'users.json');
     constructor(
-        private readonly encryptionService: EncryptionService
+        private readonly encryptionService: EncryptionService,
+        private prisma: PrismaService
     ) { }
 
-    onModuleInit() {
-        this.loadUsers();
+    async onModuleInit() {
     }
 
-    private loadUsers() {
-        if (fs.existsSync(this.filePath)) {
-            try {
-                const data = fs.readFileSync(this.filePath, 'utf8');
-                const usersArray = JSON.parse(data);
-                this.users = new Map(usersArray.map((user: User) => {
-                    // Migration: Ensure new fields exist
-                    if (user.aiTokens === undefined) user.aiTokens = 500;
-                    if (user.reportTokens === undefined) user.reportTokens = 250;
-                    if (user.storeLimit === undefined) user.storeLimit = 2; // Default limit
-                    if (user.retentionMonths === undefined) user.retentionMonths = 3; // Default retention
-                    if (user.lastTokenReset === undefined) user.lastTokenReset = user.createdAt ? new Date(user.createdAt).getTime() : Date.now();
-
-                    // Migration: Convert legacy single-shop to multi-shop format
-                    if (user.shopifyShop && user.shopifyToken && !user.shopifyStores) {
-                        const storeId = crypto.randomBytes(4).toString('hex');
-                        user.shopifyStores = [{
-                            id: storeId,
-                            shop: user.shopifyShop,
-                            token: user.shopifyToken,
-                            addedAt: user.createdAt || new Date().toISOString(),
-                            botSettings: user.botSettings // Move global setttings to first shop
-                        }];
-                        user.activeShopId = storeId;
-                    }
-
-                    // Migration: Move global botSettings to shop-specific if they exist and shops exist but no shop settings
-                    if (user.botSettings && user.shopifyStores && user.shopifyStores.length > 0) {
-                        user.shopifyStores.forEach(store => {
-                            if (!store.botSettings) {
-                                store.botSettings = { ...user.botSettings };
-                            }
-                        });
-                    }
-
-                    // Initialize empty array if no stores
-                    if (!user.shopifyStores) {
-                        user.shopifyStores = [];
-                    }
-
-                    return [user.id, user];
-                }));
-                console.log(`Loaded ${this.users.size} users from ${this.filePath}`);
-                this.saveUsers(); // Save migrated data
-            } catch (error) {
-                console.error('Error loading users from file:', error);
-            }
-        }
-    }
-
-    private saveUsers() {
-        try {
-            const usersArray = Array.from(this.users.values());
-            fs.writeFileSync(this.filePath, JSON.stringify(usersArray, null, 2), 'utf8');
-        } catch (error) {
-            console.error('Error saving users to file:', error);
-        }
-    }
-
-    async findByEmail(email: string): Promise<User | undefined> {
-        return Array.from(this.users.values()).find(user => user.email === email);
+    async findByEmail(email: string): Promise<User | null> {
+        return this.prisma.user.findUnique({
+            where: { email },
+            include: { shopifyStores: true }
+        });
     }
 
     async createOrFind(profile: any): Promise<User> {
@@ -137,25 +39,21 @@ export class UsersService implements OnModuleInit {
         let user = await this.findByEmail(email);
 
         if (!user) {
-            user = {
-                id: profile.id || Math.random().toString(36).substr(2, 9),
-                email,
-                name: profile.displayName,
-                picture: profile.photos?.[0]?.value,
-                isOnboardingComplete: false,
-                aiTokens: 500,
-                reportTokens: 250,
-                storeLimit: 2, // Default limit
-                hasFreeReports: false,
-                language: 'en',
-                createdAt: new Date().toISOString(),
-                ipAddress: profile.ipAddress,
-            };
+            user = await this.prisma.user.create({
+                data: {
+                    email,
+                    name: profile.displayName,
+                    picture: profile.photos?.[0]?.value,
+                    createdAt: new Date().toISOString(),
+                    ipAddress: profile.ipAddress,
+                    lastTokenReset: Date.now()
+                },
+                include: { shopifyStores: true }
+            });
+
             if (profile.ipAddress) {
                 await this.fetchAndSetLocation(user.id, profile.ipAddress);
             }
-            this.users.set(user.id, user);
-            this.saveUsers();
         }
         return user;
     }
@@ -164,188 +62,172 @@ export class UsersService implements OnModuleInit {
         const existing = await this.findByEmail(email);
         if (existing) throw new Error('User already exists');
 
-        const user: User = {
-            id: Math.random().toString(36).substr(2, 9),
-            email,
-            name,
-            password: passwordHash,
-            isOnboardingComplete: false,
-            aiTokens: 500,
-            reportTokens: 250,
-            storeLimit: 2, // Default limit
-            hasFreeReports: false,
-            language: 'en',
-            createdAt: new Date().toISOString(),
-            ipAddress: email.includes('@') ? undefined : undefined // placeholder, passed from auth service later
-        };
-        this.users.set(user.id, user);
-        this.saveUsers();
+        const user = await this.prisma.user.create({
+            data: {
+                email,
+                name,
+                password: passwordHash,
+                createdAt: new Date().toISOString(),
+                lastTokenReset: Date.now()
+            },
+            include: { shopifyStores: true }
+        });
         return user;
     }
 
-    async fetchAndSetLocation(userId: string, ip: string): Promise<User | undefined> {
-        const user = this.users.get(userId);
-        if (!user) return undefined;
+    async fetchAndSetLocation(userId: string, ip: string): Promise<User | null> {
+        let location = null;
+        let currency = null;
 
-        user.ipAddress = ip;
         try {
-            // Using precise ip address checking for all users via ipapi.co
             const response = await axios.get(`https://ipapi.co/${ip}/json/`);
             if (response.data && !response.data.error) {
-                user.location = response.data.country_name || response.data.city;
-                user.currency = response.data.currency;
+                location = response.data.country_name || response.data.city;
+                currency = response.data.currency;
             }
         } catch (error) {
             console.error(`[UsersService] Failed to fetch IP location for ${ip}:`, error.message);
         }
 
-        this.users.set(userId, user);
-        this.saveUsers();
-        return user;
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                ipAddress: ip,
+                ...(location && { location }),
+                ...(currency && { currency })
+            },
+            include: { shopifyStores: true }
+        });
     }
 
-    async findById(id: string): Promise<User | undefined> {
-        return this.users.get(id);
+    async findById(id: string): Promise<User | null> {
+        return this.prisma.user.findUnique({
+            where: { id },
+            include: { shopifyStores: true }
+        });
     }
 
     async updateShopifyCredentials(userId: string, shop: string, token: string): Promise<User> {
-        // Redirect to addShopifyStore for backward compatibility
         return this.addShopifyStore(userId, shop, token);
     }
 
-    /**
-     * Add a new Shopify store to the user's account.
-     * Recalculates tokens based on shop count.
-     */
     async addShopifyStore(userId: string, shop: string, token: string, name?: string): Promise<User> {
-        const user = this.users.get(userId);
+        const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
         if (!user) throw new Error('User not found');
 
-        // Check if shop already exists
-        if (!user.shopifyStores) user.shopifyStores = [];
         const existingStore = user.shopifyStores.find(s => s.shop === shop);
+        const encryptedToken = this.encryptionService.encrypt(token);
+
+        let updatedUser;
+
         if (existingStore) {
-            // Update existing store's token
-            existingStore.token = this.encryptionService.encrypt(token);
-            this.users.set(userId, user);
-            this.saveUsers();
-            return user;
+            await this.prisma.shopifyStore.update({
+                where: { id: existingStore.id },
+                data: { token: encryptedToken }
+            });
+            updatedUser = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+        } else {
+            if (user.shopifyStores.length >= user.storeLimit) {
+                throw new Error('Store limit reached. Please upgrade to add more stores.');
+            }
+
+            const store = await this.prisma.shopifyStore.create({
+                data: {
+                    shop,
+                    token: encryptedToken,
+                    name: name || shop.replace('.myshopify.com', ''),
+                    addedAt: new Date().toISOString(),
+                    userId: user.id
+                }
+            });
+
+            updatedUser = await this.prisma.user.update({
+                where: { id: userId },
+                data: {
+                    activeShopId: user.activeShopId || store.id,
+                    shopifyShop: shop,
+                    shopifyToken: encryptedToken
+                },
+                include: { shopifyStores: true }
+            });
         }
 
-        // Add new store
-        const storeId = crypto.randomBytes(4).toString('hex');
-        // Check Store Limit
-        // If shop is NEW (not updating existing), check limit.
-        if (user.shopifyStores.length >= (user.storeLimit || 2)) {
-            throw new Error('Store limit reached. Please upgrade to add more stores.');
-        }
-
-        user.shopifyStores.push({
-            id: storeId,
-            shop,
-            token: this.encryptionService.encrypt(token),
-            name: name || shop.replace('.myshopify.com', ''),
-            addedAt: new Date().toISOString(),
-        });
-
-        // Set as active if it's the first store
-        if (!user.activeShopId) {
-            user.activeShopId = storeId;
-        }
-
-        // Update legacy fields for backward compatibility
-        user.shopifyShop = shop;
-        user.shopifyToken = this.encryptionService.encrypt(token);
-
-        // Token scaling: 2+ shops = double tokens
-        this.recalculateTokens(user);
-
-        this.users.set(userId, user);
-        this.saveUsers();
-        console.log(`[MultiShop] Added store ${shop} for user ${userId}.Total stores: ${user.shopifyStores.length} `);
-        return user;
+        return this.recalculateTokens(updatedUser!);
     }
 
-    /**
-     * Remove a Shopify store from the user's account.
-     */
     async removeShopifyStore(userId: string, storeId: string): Promise<User> {
-        const user = this.users.get(userId);
+        const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
         if (!user) throw new Error('User not found');
 
-        if (!user.shopifyStores) user.shopifyStores = [];
-        user.shopifyStores = user.shopifyStores.filter(s => s.id !== storeId);
+        await this.prisma.shopifyStore.delete({ where: { id: storeId } });
 
-        // If removed store was active, switch to first remaining or clear
-        if (user.activeShopId === storeId) {
-            user.activeShopId = user.shopifyStores[0]?.id;
+        let userToRet: User | null = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+        if (!userToRet) throw new Error('User not found');
+
+        if (userToRet.activeShopId === storeId) {
+            const firstStore = (userToRet as any).shopifyStores?.[0];
+            userToRet = await this.prisma.user.update({
+                where: { id: userId },
+                data: {
+                    activeShopId: firstStore?.id || null,
+                    shopifyShop: firstStore?.shop || null,
+                    shopifyToken: firstStore?.token || null
+                },
+                include: { shopifyStores: true }
+            });
         }
 
-        // Update legacy fields
-        const activeStore = this.getActiveStoreSync(user);
-        user.shopifyShop = activeStore?.shop;
-        user.shopifyToken = activeStore?.token;
-
-        // Recalculate tokens
-        this.recalculateTokens(user);
-
-        this.users.set(userId, user);
-        this.saveUsers();
-        console.log(`[MultiShop] Removed store ${storeId} for user ${userId}.Total stores: ${user.shopifyStores.length} `);
-        return user;
+        return this.recalculateTokens(userToRet);
     }
 
     async removeShopifyCredentials(userId: string): Promise<User> {
-        const user = this.users.get(userId);
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (user) {
-            // Remove active store or all stores
             if (user.activeShopId) {
                 return this.removeShopifyStore(userId, user.activeShopId);
             }
-            user.shopifyShop = undefined;
-            user.shopifyToken = undefined;
-            user.shopifyStores = [];
-            user.activeShopId = undefined;
-            this.recalculateTokens(user);
-            this.users.set(userId, user);
-            this.saveUsers();
-            return user;
+            const userToRet = await this.prisma.user.update({
+                where: { id: userId },
+                data: {
+                    shopifyShop: null,
+                    shopifyToken: null,
+                    activeShopId: null
+                },
+                include: { shopifyStores: true }
+            });
+            
+            await this.prisma.shopifyStore.deleteMany({ where: { userId } });
+            const finalUser = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+            return this.recalculateTokens(finalUser!);
         }
         throw new Error('User not found');
     }
 
-    /**
-     * Set the active shop for a user.
-     */
     async setActiveShop(userId: string, storeId: string): Promise<User> {
-        const user = this.users.get(userId);
+        const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
         if (!user) throw new Error('User not found');
 
-        const store = user.shopifyStores?.find(s => s.id === storeId);
+        const store = user.shopifyStores.find(s => s.id === storeId);
         if (!store) throw new Error('Store not found');
 
-        user.activeShopId = storeId;
-
-        // Update legacy fields for backward compatibility
-        user.shopifyShop = store.shop;
-        user.shopifyToken = store.token;
-
-        this.users.set(userId, user);
-        this.saveUsers();
-        console.log(`[MultiShop] Set active shop to ${store.shop} for user ${userId}`);
-        return user;
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                activeShopId: storeId,
+                shopifyShop: store.shop,
+                shopifyToken: store.token
+            },
+            include: { shopifyStores: true }
+        });
     }
 
-    /**
-     * Get the active store for a user.
-     */
-    async getActiveShop(userId: string): Promise<ShopifyStore | undefined> {
-        const user = this.users.get(userId);
-        if (!user) return undefined;
-        return this.getActiveStoreSync(user);
+    async getActiveShop(userId: string): Promise<ShopifyStore | null> {
+        const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+        if (!user) return null;
+        return this.getActiveStoreSync(user) || null;
     }
 
-    private getActiveStoreSync(user: User): ShopifyStore | undefined {
+    private getActiveStoreSync(user: User & { shopifyStores?: ShopifyStore[] }): ShopifyStore | undefined {
         if (!user.shopifyStores || user.shopifyStores.length === 0) return undefined;
         if (user.activeShopId) {
             return user.shopifyStores.find(s => s.id === user.activeShopId);
@@ -353,50 +235,52 @@ export class UsersService implements OnModuleInit {
         return user.shopifyStores[0];
     }
 
-    /**
-     * Recalculate tokens based on shop count.
-     * 1 shop = base tokens, 2+ shops = double tokens
-     */
-    private recalculateTokens(user: User) {
+    private async recalculateTokens(user: User & { shopifyStores?: ShopifyStore[] }): Promise<User> {
         const shopCount = user.shopifyStores?.length || 0;
+        let aiTokens = 500;
+        let reportTokens = 250;
         if (shopCount >= 2) {
-            user.aiTokens = 1000;
-            user.reportTokens = 500;
-        } else {
-            user.aiTokens = 500;
-            user.reportTokens = 250;
+            aiTokens = 1000;
+            reportTokens = 500;
         }
-        console.log(`[Tokens] User ${user.id} now has ${shopCount} shops, tokens: AI = ${user.aiTokens}, Report = ${user.reportTokens} `);
+
+        return this.prisma.user.update({
+            where: { id: user.id },
+            data: { aiTokens, reportTokens },
+            include: { shopifyStores: true }
+        });
     }
 
-    async getDecryptedShopifyToken(userId: string): Promise<string | undefined> {
-        const user = this.users.get(userId);
+    async getDecryptedShopifyToken(userId: string): Promise<string | null> {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (user && user.shopifyToken) {
             return this.encryptionService.decrypt(user.shopifyToken);
         }
-        return undefined;
+        return null;
     }
 
     async updateProfile(userId: string, data: Partial<User>): Promise<User> {
-        const user = this.users.get(userId);
-        if (user) {
-            if (data.name) user.name = data.name;
-            if (data.email) user.email = data.email; // Caution: verify uniqueness if real DB
-            if (data.password) user.password = data.password;
-            if (data.isOnboardingComplete !== undefined) user.isOnboardingComplete = data.isOnboardingComplete;
-            if (data.refreshToken !== undefined) user.refreshToken = data.refreshToken;
-            if (data.aiTokens !== undefined) user.aiTokens = data.aiTokens;
-            if (data.reportTokens !== undefined) user.reportTokens = data.reportTokens;
-            if (data.botSettings !== undefined) user.botSettings = data.botSettings;
-            if (data.language !== undefined) user.language = data.language as 'en' | 'fr';
-            if (data.currency !== undefined) user.currency = data.currency;
-            if (data.location !== undefined) user.location = data.location;
+        const payload: any = {};
+        if (data.name !== undefined) payload.name = data.name;
+        if (data.email !== undefined) payload.email = data.email;
+        if (data.password !== undefined) payload.password = data.password;
+        if (data.isOnboardingComplete !== undefined) payload.isOnboardingComplete = data.isOnboardingComplete;
+        if (data.refreshToken !== undefined) payload.refreshToken = data.refreshToken;
+        if (data.aiTokens !== undefined) payload.aiTokens = data.aiTokens;
+        if (data.reportTokens !== undefined) payload.reportTokens = data.reportTokens;
+        if (data.botSettings !== undefined) payload.botSettings = data.botSettings as any;
+        if (data.language !== undefined) payload.language = data.language;
+        if (data.currency !== undefined) payload.currency = data.currency;
+        if (data.location !== undefined) payload.location = data.location;
+        if (data.signInCount !== undefined) payload.signInCount = data.signInCount;
+        if (data.lastLoginDate !== undefined) payload.lastLoginDate = data.lastLoginDate;
+        if (data.loginDates !== undefined) payload.loginDates = data.loginDates;
 
-            this.users.set(userId, user);
-            this.saveUsers();
-            return user;
-        }
-        throw new Error('User not found');
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: payload,
+            include: { shopifyStores: true }
+        });
     }
 
     async setRefreshToken(userId: string, refreshToken: string) {
@@ -407,24 +291,14 @@ export class UsersService implements OnModuleInit {
         return this.updateProfile(userId, { isOnboardingComplete: true });
     }
 
-
-    // New method to expose all users for Cron jobs
-    async getAllUsers(): Promise<User[]> {
-        return Array.from(this.users.values());
+    async getAllUsers() {
+        return this.prisma.user.findMany({ include: { shopifyStores: true } });
     }
 
-    // Keeping the original mock data method for dashboard compatibility if needed, 
-    // but ideally we should move away from this.
-    // For now, I'll keep it to avoid breaking other parts.
     findAll() {
         return {
             users: [
                 { id: 1, name: 'Alex Johnson', email: 'alex@example.com', status: 'active', plan: 'Premium', lastActive: '2 hours ago', location: 'New York', signupDate: '2024-01-15', avatar: 'AJ' },
-                { id: 2, name: 'Sarah Wilson', email: 'sarah@example.com', status: 'active', plan: 'Pro', lastActive: '5 minutes ago', location: 'London', signupDate: '2024-01-10', avatar: 'SW' },
-                { id: 3, name: 'Mike Brown', email: 'mike@example.com', status: 'inactive', plan: 'Free', lastActive: '2 days ago', location: 'Toronto', signupDate: '2023-12-20', avatar: 'MB' },
-                { id: 4, name: 'Emma Davis', email: 'emma@example.com', status: 'active', plan: 'Premium', lastActive: '1 hour ago', location: 'Sydney', signupDate: '2024-01-05', avatar: 'ED' },
-                { id: 5, name: 'James Wilson', email: 'james@example.com', status: 'active', plan: 'Enterprise', lastActive: 'Just now', location: 'San Francisco', signupDate: '2024-01-12', avatar: 'JW' },
-                { id: 6, name: 'Lisa Chen', email: 'lisa@example.com', status: 'inactive', plan: 'Free', lastActive: '1 week ago', location: 'Singapore', signupDate: '2023-11-30', avatar: 'LC' }
             ],
             stats: {
                 total: 15284,
@@ -437,152 +311,115 @@ export class UsersService implements OnModuleInit {
     }
 
     async checkAndReplenishTokens() {
-        console.log('[Tokens] Checking for monthly replenishment...');
+        const users = await this.prisma.user.findMany({ include: { shopifyStores: true } });
         const now = Date.now();
         const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
         let updatedCount = 0;
 
-        for (const user of this.users.values()) {
-            const lastReset = user.lastTokenReset || 0; // Default to 0 (epoch) if missing so it resets immediately
-
-            // If it's been more than 30 days since last reset
+        for (const user of users) {
+            const lastReset = user.lastTokenReset || 0;
             if (now - lastReset >= THIRTY_DAYS_MS) {
-                // Determine base tokens based on shop count
                 const shopCount = user.shopifyStores?.length || 0;
-                const baseAiTokens = shopCount >= 2 ? 1000 : 500;
+                const aiTokens = shopCount >= 2 ? 1000 : 500;
+                const reportTokens = shopCount >= 2 ? 500 : 250;
 
-                // Only reset if they have fewer than base tokens
-                user.aiTokens = baseAiTokens;
-                user.reportTokens = shopCount >= 2 ? 500 : 250;
-                user.lastTokenReset = now;
-
-                this.users.set(user.id, user);
+                await this.prisma.user.update({
+                    where: { id: user.id },
+                    data: { aiTokens, reportTokens, lastTokenReset: now }
+                });
                 updatedCount++;
-                console.log(`[Tokens] Replenished tokens for user ${user.id}`);
             }
         }
-
         if (updatedCount > 0) {
-            this.saveUsers();
             console.log(`[Tokens] Replenished tokens for ${updatedCount} users.`);
         }
     }
 
     async topUpTokens(userId: string, amount: number) {
-        const user = this.users.get(userId);
-        if (!user) throw new Error('User not found');
-
-        user.aiTokens = (user.aiTokens || 0) + amount;
-        this.users.set(userId, user);
-        this.saveUsers();
+        const user = await this.prisma.user.update({
+            where: { id: userId },
+            data: { aiTokens: { increment: amount } }
+        });
         return { success: true, newBalance: user.aiTokens };
     }
 
     async updateShopSettings(userId: string, storeId: string, settings: Partial<BotSettings>): Promise<ShopifyStore> {
-        const user = this.users.get(userId);
-        if (!user) throw new Error('User not found');
+        const store = await this.prisma.shopifyStore.findUnique({ where: { id: storeId } });
+        if (!store || store.userId !== userId) throw new Error('Store not found');
 
-        const store = user.shopifyStores?.find(s => s.id === storeId);
-        if (!store) throw new Error('Store not found');
-
-        store.botSettings = {
-            ...(store.botSettings || {
-                name: 'Analytics Assistant',
-                personality: 'Professional',
-                responseSpeed: 'Medium',
-                theme: 'Blue',
-                language: 'English',
-                notifications: true,
-                voiceEnabled: false,
-                dataAccess: 'Limited',
-                autoRespond: true
-            }),
-            ...settings
+        const currentSettings = (store.botSettings as any) || {
+            name: 'Analytics Assistant',
+            personality: 'Professional',
+            responseSpeed: 'Medium',
+            theme: 'Blue',
+            language: 'English',
+            notifications: true,
+            voiceEnabled: false,
+            dataAccess: 'Limited',
+            autoRespond: true
         };
 
-        this.saveUsers();
-        return store;
+        const newSettings = { ...currentSettings, ...settings };
+
+        return this.prisma.shopifyStore.update({
+            where: { id: storeId },
+            data: { botSettings: newSettings }
+        });
     }
 
     async setStoreTarget(userId: string, storeId: string, type: 'weekly' | 'monthly', value: number): Promise<ShopifyStore> {
-        const user = this.users.get(userId);
-        if (!user) throw new Error('User not found');
-
-        const store = user.shopifyStores?.find(s => s.id === storeId);
-        if (!store) throw new Error('Store not found');
-
-        store.targetType = type;
-        store.targetValue = value;
-
-        this.users.set(userId, user);
-        this.saveUsers();
-        return store;
+        return this.prisma.shopifyStore.update({
+            where: { id: storeId, userId },
+            data: { targetType: type, targetValue: value }
+        });
     }
 
     async getAiTokens(userId: string): Promise<number> {
-        const user = this.users.get(userId);
+        const user = await this.findById(userId);
         return user?.aiTokens || 0;
     }
 
     async increaseStoreLimit(userId: string): Promise<User> {
-        const user = this.users.get(userId);
-        if (!user) throw new Error('User not found');
-
-        user.storeLimit = (user.storeLimit || 2) + 1;
-        this.users.set(userId, user);
-        this.saveUsers();
-        console.log(`[Limits] User ${userId} increased store limit to ${user.storeLimit} `);
-        return user;
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { storeLimit: { increment: 1 } },
+            include: { shopifyStores: true }
+        });
     }
-    async extendRetention(userId: string, months: number): Promise<User> {
-        const user = this.users.get(userId);
-        if (!user) throw new Error('User not found');
 
-        user.retentionMonths = (user.retentionMonths || 3) + months;
-        this.users.set(userId, user);
-        this.saveUsers();
-        console.log(`[Retention] User ${userId} extended retention by ${months} months.New limit: ${user.retentionMonths} `);
-        return user;
+    async extendRetention(userId: string, months: number): Promise<User> {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { retentionMonths: { increment: months } },
+            include: { shopifyStores: true }
+        });
     }
 
     async setFreeReports(userId: string, enable: boolean): Promise<User> {
-        const user = this.users.get(userId);
-        if (!user) throw new Error('User not found');
-        user.hasFreeReports = enable;
-        this.users.set(userId, user);
-        this.saveUsers();
-        console.log(`[Admin] Set free reports for user ${userId} to ${enable} `);
-        return user;
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { hasFreeReports: enable },
+            include: { shopifyStores: true }
+        });
     }
 
     async setAllFreeReports(enable: boolean): Promise<number> {
-        let count = 0;
-        for (const user of this.users.values()) {
-            user.hasFreeReports = enable;
-            this.users.set(user.id, user);
-            count++;
-        }
-        this.saveUsers();
-        console.log(`[Admin] Set free reports for ALL ${count} users to ${enable} `);
-        return count;
+        const res = await this.prisma.user.updateMany({
+            data: { hasFreeReports: enable }
+        });
+        return res.count;
     }
 
     async deductReportToken(userId: string, amount: number = 1): Promise<User> {
-        const user = this.users.get(userId);
+        const user = await this.findById(userId);
         if (!user) throw new Error('User not found');
+        if (user.hasFreeReports) return user;
+        if (user.reportTokens < amount) throw new Error('Insufficient report tokens');
 
-        if (user.hasFreeReports) {
-            console.log(`[Tokens] User ${userId} has free reports, skipping deduction.`);
-            return user;
-        }
-
-        if ((user.reportTokens || 0) < amount) {
-            throw new Error('Insufficient report tokens');
-        }
-
-        user.reportTokens = (user.reportTokens || 0) - amount;
-        this.users.set(userId, user);
-        this.saveUsers();
-        return user;
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { reportTokens: { decrement: amount } },
+            include: { shopifyStores: true }
+        });
     }
 }

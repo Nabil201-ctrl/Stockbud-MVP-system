@@ -10,7 +10,7 @@ import { ShopifyGateway } from './shopify.gateway';
 
 @Injectable()
 export class ShopifyService {
-  // In-memory pairing code storage: code -> { userId, expiresAt }
+  
   private pairingCodes = new Map<string, { userId: string; expiresAt: Date }>();
 
   constructor(
@@ -20,13 +20,9 @@ export class ShopifyService {
     private readonly shopifyGateway: ShopifyGateway,
   ) { }
 
-  /**
-   * Generates a short-lived pairing code for a user.
-   * Code expires in 10 minutes.
-   */
-  generatePairingCode(userId: string): string {
-    // Generate a random code like "ABC-123-XYZ"
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid ambiguous chars
+    generatePairingCode(userId: string): string {
+    
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
     const part1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const part2 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const part3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -72,7 +68,7 @@ export class ShopifyService {
       return { success: false, error: 'Invalid or expired pairing code' };
     }
 
-    // Use the existing connectShop logic with the resolved userId
+    
     const dto = { shop, accessToken };
     return this.connectShop(dto as any, userId);
   }
@@ -82,7 +78,7 @@ export class ShopifyService {
   }
 
   async connectShop(dto: ConnectShopDto, userId?: string) {
-    // Security: Log formatted token prefix to debug connection issues without exposing secrets
+    
     const tokenPrefix = dto.accessToken ? dto.accessToken.substring(0, 10) + '...' : 'MISSING';
     console.log(`[Connect] Connecting shop: ${dto.shop}, Token Prefix: ${tokenPrefix}`);
 
@@ -92,7 +88,7 @@ export class ShopifyService {
       user = await this.usersService.findById(userId);
     }
 
-    // Fallback: Find user by shop or email (Legacy behavior or if userId lookup failed)
+    
     if (!user) {
       const users = await this.usersService.getAllUsers();
       user = users.find(u => u.shopifyShop === dto.shop);
@@ -102,29 +98,29 @@ export class ShopifyService {
       }
     }
 
-    // --- Realtime Simulation Start ---
-    // Step 1: Handshake (Already happening conceptually)
+    
+    
     this.shopifyGateway.emitStatusUpdate(dto.shop, 1, 'Initiating Handshake');
     await this.delay(1500);
 
-    // Step 2: Verification
+    
     this.shopifyGateway.emitStatusUpdate(dto.shop, 2, 'Verifying Credentials');
     await this.delay(2000);
 
-    // Step 3: Syncing
+    
     this.shopifyGateway.emitStatusUpdate(dto.shop, 3, 'Syncing Product Catalog');
     await this.delay(2500);
 
-    // Step 4: Analyzing
+    
     this.shopifyGateway.emitStatusUpdate(dto.shop, 4, 'Analyzing Historical Data');
     await this.delay(2000);
-    // --- Realtime Simulation End ---
+    
 
     if (user) {
-      // Update existing
+      
       await this.usersService.updateShopifyCredentials(user.id, dto.shop, dto.accessToken);
 
-      // Update name if provided (from Shopify App Login)
+      
       if (dto.name) {
         await this.usersService.updateProfile(user.id, { name: dto.name });
       }
@@ -132,8 +128,8 @@ export class ShopifyService {
       this.shopifyGateway.emitStatusUpdate(dto.shop, 5, 'Connection Secure & Active');
       return { success: true, action: 'updated', userId: user.id };
     } else {
-      // Only create new if we absolutely have to, but with JWT auth this branch should technically be unreachable if we require login
-      // However, keeping fallback for robustness if logic changes
+      
+      
       const email = dto.email || `shop+${dto.shop}@stockbud.com`;
       const name = dto.shop.replace('.myshopify.com', '');
       const passwordHash = '$2b$10$NotARealPasswordHashForShopConnect' + Math.random();
@@ -207,7 +203,7 @@ export class ShopifyService {
             'X-Shopify-Access-Token': token,
             'Content-Type': 'application/json',
           },
-          timeout: 60000, // 60 seconds timeout
+          timeout: 60000, 
         }),
       );
 
@@ -218,7 +214,7 @@ export class ShopifyService {
 
       console.log("DEBUG: Shopify GraphQL Response:", JSON.stringify(response.data, null, 2));
 
-      // return response.data.data.orders.edges.map(edge => { ... });
+      
       const orders = response.data.data.orders.edges.map(edge => {
         const node = edge.node;
         return {
@@ -346,7 +342,7 @@ export class ShopifyService {
         return { products: [], pageInfo: {}, totalCount: 0 };
       }
 
-      // Transform GraphQL structure
+      
       const products = response.data.data.products.edges.map(edge => {
         const node = edge.node;
         return {

@@ -15,7 +15,7 @@ const FeedbackModal = ({ isOpen, onClose, onSubmit, isDarkMode }) => {
         setIsSubmitting(true);
 
         try {
-            await fetch('http:
+            await fetch('http://localhost:3000/feed', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ const FeedbackModal = ({ isOpen, onClose, onSubmit, isDarkMode }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className={`w-full max-w-md rounded-2xl shadow-xl overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200 ${bgClass} border ${borderColor}`}>
 
-                {}
+                { }
                 <div className={`p-4 border-b ${borderColor} flex items-center justify-between`}>
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -69,7 +69,7 @@ const FeedbackModal = ({ isOpen, onClose, onSubmit, isDarkMode }) => {
                     </button>
                 </div>
 
-                {}
+                { }
                 {!submitted ? (
                     <form onSubmit={handleSubmit} className="p-5 space-y-4">
                         <div>

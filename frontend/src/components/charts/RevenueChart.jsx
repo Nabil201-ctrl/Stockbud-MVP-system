@@ -1,4 +1,4 @@
-// components/charts/RevenueChart.jsx
+
 import React from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, 

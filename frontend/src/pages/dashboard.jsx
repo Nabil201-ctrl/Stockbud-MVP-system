@@ -1,4 +1,4 @@
-// Dashboard.jsx
+
 import React, { useState, lazy, Suspense } from 'react';
 import Sidebar from '../components/Dashboard/Sidebar';
 import Header from '../components/Dashboard/Header';
@@ -9,14 +9,14 @@ import ChartLoading from '../components/layout/ChatLoading';
 import ChatBotButton from '../components/ChatBot/ChatBotButton';
 import { useTheme } from '../context/ThemeContext';
 
-// Lazy loaded chart components
+
 const RevenueChart = lazy(() => import('../components/charts/RevenueChart'));
 const SourcePieChart = lazy(() => import('../components/charts/SourcePieChart'));
 const CountryBarChart = lazy(() => import('../components/charts/CountryBarChart'));
 const VisitorAreaChart = lazy(() => import('../components/charts/VisitorAreaChart'));
 
 const Dashboard = () => {
-  //const [selectedDate, setSelectedDate] = useState(17);
+  
   const [isCalendarOpen, setIsCalendarOpen] = useState(true);
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -31,7 +31,7 @@ const Dashboard = () => {
           <DashboardStats isDarkMode={isDarkMode} />
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Revenue Chart */}
+            {}
             <div className="lg:col-span-2 rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -59,7 +59,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Source of Purchases - Pie Chart */}
+            {}
             <div className="rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
               <div className="flex items-center justify-between mb-4">
                 <span className="font-semibold">Source of Purchases</span>
@@ -78,7 +78,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* 72 Countries - Bar Chart */}
+            {}
             <div className="rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
               <div className="flex items-center justify-between mb-4">
                 <span className="font-semibold">72 Countries <span className="text-gray-400 text-sm">(7/604 Sales)</span></span>
@@ -91,7 +91,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Visitors - Area Chart */}
+            {}
             <div className="rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
               <div className="flex items-center justify-between mb-4">
                 <span className="font-semibold">Visitors (Today)</span>
@@ -120,7 +120,7 @@ const Dashboard = () => {
             <SalesHistory isDarkMode={isDarkMode} />
           </div>
 
-          {/* Ensure there's enough space at the bottom to prevent white space */}
+          {}
           <div className="h-6"></div>
         </div>
       </div>

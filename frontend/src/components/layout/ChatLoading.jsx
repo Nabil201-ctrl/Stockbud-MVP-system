@@ -1,4 +1,4 @@
-// components/layout/ChartLoading.jsx
+
 import React from 'react';
 
 const ChartLoading = ({ type = 'default' }) => {

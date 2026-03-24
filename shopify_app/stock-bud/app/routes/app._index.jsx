@@ -24,7 +24,7 @@ export const action = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   if (!session) return { status: "error", message: "No session" };
 
-  // Fetch Offline Session for Background Jobs
+  
   const offlineId = getOfflineId(session.shop);
   const offlineSession = await shopify.sessionStorage.loadSession(offlineId);
   const offlineToken = offlineSession?.accessToken;
@@ -38,9 +38,9 @@ export const action = async ({ request }) => {
   try {
     const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
 
-    // Determine which endpoint to call based on what we have
+    
     if (pairingCode) {
-      // New flow: Use pairing code
+      
       const response = await fetch(`${backendUrl}/shopify/connect-with-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -59,7 +59,7 @@ export const action = async ({ request }) => {
         return { status: "error", message: errorText || "Invalid pairing code" };
       }
     } else if (stockbudToken) {
-      // Legacy flow: Use Bearer token (for backward compatibility if needed)
+      
       const headers = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${stockbudToken}`,
@@ -106,9 +106,9 @@ const PolarisTimeline = ({ currentStep }) => {
         const isCompleted = currentStep > stepNum;
         const isPending = currentStep < stepNum;
 
-        let color = '#E4E5E7'; // Gray
-        if (isActive) color = '#2563EB'; // Blue
-        if (isCompleted) color = '#12B76A'; // Green
+        let color = '#E4E5E7'; 
+        if (isActive) color = '#2563EB'; 
+        if (isCompleted) color = '#12B76A'; 
 
         return (
           <div key={index} style={{ display: 'flex', marginBottom: '24px', opacity: isPending ? 0.5 : 1, transition: 'opacity 0.5s' }}>
@@ -140,7 +140,7 @@ export default function Index() {
   const fetcher = useFetcher();
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Login State
+  
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -148,7 +148,7 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
-  const openApp = () => window.open("http://localhost:5173", "_blank");
+  const openApp = () => window.open("http:
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -163,11 +163,11 @@ export default function Index() {
       // For now, we'll use a form submission approach
       // The code is in 'email' state (reused variable)
       const formData = new FormData();
-      formData.append("pairingCode", email); // email state holds the pairing code
+      formData.append("pairingCode", email); 
       fetcher.submit(formData, { method: "POST" });
 
-      // Token will be set after fetcher completes successfully
-      // We'll check for a special response to signal success
+      
+      
     } catch (err) {
       setLoginError("Connection error: " + err.message);
       setIsLoading(false);
@@ -176,7 +176,7 @@ export default function Index() {
 
   const handleGoogleLogin = () => {
     const backendUrl = "http://localhost:3000";
-    // Center popup
+    
     const width = 600;
     const height = 700;
     const left = window.screen.width / 2 - width / 2;
@@ -197,17 +197,17 @@ export default function Index() {
     window.addEventListener("message", listener);
   };
 
-  // Trigger Sync Animation once code is validated or token is received
+  
   useEffect(() => {
-    // Check if fetcher returned success for pairing code flow
+    
     if (fetcher.data?.status === 'success' && fetcher.data?.usedCode && !token && currentStep === 0) {
-      // Pairing code was valid, start the animation
-      setToken('paired'); // Set token to trigger UI change
+      
+      setToken('paired'); 
       setIsLoading(false);
       setCurrentStep(1);
       setTimeout(() => setCurrentStep(2), 1500);
     } else if (token && fetcher.state === 'idle' && !fetcher.data && currentStep === 0) {
-      // Legacy Bearer token flow
+      
       setCurrentStep(1);
       setTimeout(() => setCurrentStep(2), 1500);
 
@@ -217,7 +217,7 @@ export default function Index() {
       fetcher.submit(formData, { method: "POST" });
     }
 
-    // Handle error from pairing code
+    
     if (fetcher.data?.status === 'error' && fetcher.data?.message) {
       setLoginError(fetcher.data.message);
       setIsLoading(false);
@@ -227,12 +227,12 @@ export default function Index() {
   useEffect(() => {
     if (currentStep >= 2) {
       if (fetcher.data?.status === 'success') {
-        // Continue animation if success
-        if (currentStep === 2) setTimeout(() => setCurrentStep(3), 1000); // Syncing
-        if (currentStep === 3) setTimeout(() => setCurrentStep(4), 2500); // Analyzing
-        if (currentStep === 4) setTimeout(() => setCurrentStep(5), 2000); // Done
+        
+        if (currentStep === 2) setTimeout(() => setCurrentStep(3), 1000); 
+        if (currentStep === 3) setTimeout(() => setCurrentStep(4), 2500); 
+        if (currentStep === 4) setTimeout(() => setCurrentStep(5), 2000); 
       } else if (fetcher.data?.status === 'error') {
-        // Handle error visualization if needed, currently just stops
+        
         console.error("Sync Error:", fetcher.data.message);
       }
     }
@@ -297,7 +297,7 @@ export default function Index() {
               {currentStep === 5 && (
                 <Box padding="400" background="bg-surface-secondary">
                   <BlockStack gap="400" align="center">
-                    <div style={{ fontSize: '48px', textAlign: 'center' }}>🎉</div>
+                    <div style={{ fontSize: '48px', textAlign: 'center' }}></div>
                     <Text variant="headingMd" as="h3" alignment="center">Setup Complete!</Text>
                     <Button variant="primary" size="large" onClick={openApp}>
                       Launch Stockbud Dashboard

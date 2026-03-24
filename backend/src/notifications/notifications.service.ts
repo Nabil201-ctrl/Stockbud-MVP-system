@@ -28,7 +28,7 @@ export class NotificationsService implements OnModuleInit {
         private readonly configService: ConfigService,
         private readonly notificationsGateway: NotificationsGateway
     ) {
-        // Initialize Nodemailer - Using Ethereal for testing or real SMTP if configured
+        
         const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.ethereal.email';
         const smtpPort = this.configService.get<number>('SMTP_PORT') || 587;
         const smtpUser = this.configService.get<string>('SMTP_USER') || 'ethereal_user';
@@ -37,14 +37,14 @@ export class NotificationsService implements OnModuleInit {
         this.mailer = nodemailer.createTransport({
             host: smtpHost,
             port: smtpPort,
-            secure: false, // true for 465, false for other ports
+            secure: false, 
             auth: {
                 user: smtpUser,
                 pass: smtpPass,
             },
         });
 
-        // Initialize Web Push
+        
         const vapidPublicKey = this.configService.get<string>('VAPID_PUBLIC_KEY') || 'BFZhuGm7mzZ46vV6jPV8KiPOmbjnay0d5lQL9Qm1-rV6x69IBPgyd_nZGMu77y9t3lbLrHkAUprNu-TCtXPcqyY';
         const vapidPrivateKey = this.configService.get<string>('VAPID_PRIVATE_KEY') || 'YQ8ZfVCq3Xi8Dgbb1MZ2Al-fLJZbESHfPn3cATVnUXs';
         const vapidEmail = this.configService.get<string>('VAPID_EMAIL') || 'mailto:admin@stockbud.com';
@@ -71,7 +71,7 @@ export class NotificationsService implements OnModuleInit {
                 console.error('Error loading notifications from file:', error);
             }
         } else {
-            // Create initial seed data if file doesn't exist
+            
             this.seedData();
         }
     }
@@ -85,15 +85,7 @@ export class NotificationsService implements OnModuleInit {
         }
     }
 
-    // Seed some initial data for testing
     private seedData() {
-        // We don't have user IDs here easily without circular dep or looking them up, 
-        // but we can create some generic ones or wait for first create.
-        // For the MVP "connect to backend" request, let's just leave it empty 
-        // and rely on the controller to creating them or manual seeding.
-        // Actually, let's create a few dummy ones that might likely match any user 
-        // if we filter leniently, or just keep it empty. 
-        // Better: Provide a method to create welcome notification for a new user.
     }
 
     async create(userId: string, title: string, message: string, type: 'info' | 'success' | 'warning' | 'error', channels: string[] = ['in-app']): Promise<Notification> {
@@ -109,7 +101,7 @@ export class NotificationsService implements OnModuleInit {
         this.notifications.set(notification.id, notification);
         this.saveNotifications();
 
-        // Push notification in real-time
+        
         try {
             this.notificationsGateway.sendNotificationToUser(userId, notification);
         } catch (error) {
@@ -128,7 +120,7 @@ export class NotificationsService implements OnModuleInit {
                 html,
             });
             console.log("Message sent: %s", info.messageId);
-            // Preview only available when sending through an Ethereal account
+            
             console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
             return info;
         } catch (error) {

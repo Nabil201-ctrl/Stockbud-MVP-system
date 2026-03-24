@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { storage } from '../utils/db'; 
+import { storage } from '../utils/db';
 import Sidebar from '../components/Dashboard/Sidebar';
 import Header from '../components/Dashboard/Header';
 import DashboardStats from '../components/Dashboard/DashboardStats';
@@ -22,17 +22,17 @@ const Dashboard = () => {
   const { isDarkMode, toggleTheme } = useTheme();
   const { t } = useLanguage();
 
-  
+
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [targetType, setTargetType] = useState('monthly');
   const [targetValue, setTargetValue] = useState(0);
 
-  
+
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { authenticatedFetch, user } = useAuth(); 
+  const { authenticatedFetch, user } = useAuth();
 
-  
+
   const userCurrency = user?.currency || 'USD';
   const getCurrencySymbol = (currency) => {
     try {
@@ -64,7 +64,7 @@ const Dashboard = () => {
 
         // 2. Fetch fresh data using authenticated cookie
         // The backend knows the active shop from the user session/state
-        const response = await authenticatedFetch('http:
+        const response = await authenticatedFetch('http://localhost:3000/dashboard/stats');
 
         if (!response.ok) {
           if (response.status === 401) throw new Error('Unauthorized');
@@ -78,13 +78,13 @@ const Dashboard = () => {
           setTargetValue(data.targetDetails.value);
         }
 
-        
+
         setStats(data);
         await storage.set(cacheKey, data);
 
       } catch (error) {
         console.error('Failed to fetch dashboard stats', error);
-        
+
       } finally {
         setLoading(false);
       }
@@ -107,8 +107,8 @@ const Dashboard = () => {
 
       if (response.ok) {
         setIsTargetModalOpen(false);
-        
-        
+
+
         if (user?.activeShopId) {
           setLoading(true);
           const fresh = await authenticatedFetch('http://localhost:3000/dashboard/stats');
@@ -145,7 +145,7 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {}
+              { }
               <div id="revenue-chart" className="lg:col-span-2 rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                   <div>
@@ -184,7 +184,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {}
+              { }
               <div id="source-chart" className="rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-semibold">{t('dashboard.sourceOfPurchases')}</span>
@@ -203,9 +203,9 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {}
+              { }
 
-              {}
+              { }
 
               <div className="lg:col-span-2">
                 <SalesHeatmap isDarkMode={isDarkMode} />
@@ -216,12 +216,12 @@ const Dashboard = () => {
             </div>
           )}
 
-          {}
+          { }
           <div className="h-6"></div>
         </div>
       </div>
 
-      {}
+      { }
       {isTargetModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className={`w-full max-w-sm rounded-xl p-6 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} shadow-2xl transition-all`}>

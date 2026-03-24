@@ -1,4 +1,4 @@
-// components/pages/BotCustomization.jsx
+
 import React, { useState } from 'react';
 import { Bot, MessageSquare, Settings, Palette, Zap, Shield, Globe, Brain } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -26,10 +26,10 @@ const BotCustomization = () => {
   };
 
   const personalityOptions = [
-    { id: 'professional', label: 'Professional', icon: '👔', description: 'Formal and business-like responses' },
-    { id: 'friendly', label: 'Friendly', icon: '😊', description: 'Warm and approachable tone' },
-    { id: 'technical', label: 'Technical', icon: '💻', description: 'Detailed and data-focused' },
-    { id: 'concise', label: 'Concise', icon: '⚡', description: 'Short and to-the-point responses' }
+    { id: 'professional', label: 'Professional', icon: '', description: 'Formal and business-like responses' },
+    { id: 'friendly', label: 'Friendly', icon: '', description: 'Warm and approachable tone' },
+    { id: 'technical', label: 'Technical', icon: '', description: 'Detailed and data-focused' },
+    { id: 'concise', label: 'Concise', icon: '', description: 'Short and to-the-point responses' }
   ];
 
   const themeOptions = [
@@ -42,7 +42,7 @@ const BotCustomization = () => {
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Bot Customization</h1>
           <p className="text-gray-500 dark:text-gray-400">
@@ -51,7 +51,7 @@ const BotCustomization = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Bot Preview */}
+          {}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
@@ -79,7 +79,7 @@ const BotCustomization = () => {
               </div>
             </div>
 
-            {/* Preview Chat */}
+            {}
             <div className={`rounded-lg p-4 mb-6 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <div className="text-sm font-medium mb-2">Preview Chat</div>
               <div className="space-y-3">
@@ -98,7 +98,7 @@ const BotCustomization = () => {
                   <div className={`rounded-lg p-3 max-w-[70%] ${isDarkMode ? 'bg-gray-600' : 'bg-white'}`}>
                     <p className="text-sm">
                       {botSettings.personality === 'Friendly' 
-                        ? "Hey there! 😊 Your revenue today is $40,256.92 with a 2.94% increase from yesterday. Great job!" 
+                        ? "Hey there!  Your revenue today is $40,256.92 with a 2.94% increase from yesterday. Great job!" 
                         : botSettings.personality === 'Technical'
                         ? "Revenue analysis: $40,256.92 as of current time. This represents a 2.94% increase from previous period. Data sourced from multiple revenue streams."
                         : botSettings.personality === 'Concise'
@@ -111,7 +111,7 @@ const BotCustomization = () => {
               </div>
             </div>
 
-            {/* Bot Capabilities */}
+            {}
             <div>
               <h3 className="text-lg font-semibold mb-4">Capabilities</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -141,12 +141,12 @@ const BotCustomization = () => {
             </div>
           </div>
 
-          {/* Right Column - Settings */}
+          {}
           <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <h2 className="text-xl font-bold mb-6">Configuration Settings</h2>
             
             <div className="space-y-6">
-              {/* Bot Name */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">Bot Name</label>
                 <input
@@ -157,7 +157,7 @@ const BotCustomization = () => {
                 />
               </div>
 
-              {/* Personality */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">Personality Type</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -180,7 +180,7 @@ const BotCustomization = () => {
                 </div>
               </div>
 
-              {/* Response Speed */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">Response Speed</label>
                 <div className="flex gap-2">
@@ -199,7 +199,7 @@ const BotCustomization = () => {
                 </div>
               </div>
 
-              {/* Theme Color */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">Theme Color</label>
                 <div className="flex gap-3">
@@ -218,7 +218,7 @@ const BotCustomization = () => {
                 </div>
               </div>
 
-              {/* Language */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">Language</label>
                 <select
@@ -234,7 +234,7 @@ const BotCustomization = () => {
                 </select>
               </div>
 
-              {/* Toggles */}
+              {}
               <div className="space-y-4">
                 {[
                   { label: 'Enable Notifications', setting: 'notifications', icon: <MessageSquare size={16} /> },
@@ -268,7 +268,7 @@ const BotCustomization = () => {
                 ))}
               </div>
 
-              {/* Data Access */}
+              {}
               <div>
                 <label className="block text-sm font-medium mb-2">Data Access Level</label>
                 <select
@@ -283,7 +283,7 @@ const BotCustomization = () => {
                 </select>
               </div>
 
-              {/* Save Button */}
+              {}
               <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors">
                 Save Changes
               </button>

@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-    private resetTokens = new Map<string, string>(); // Token -> Email
+    private resetTokens = new Map<string, string>(); 
 
     constructor(
         private usersService: UsersService,
@@ -13,7 +13,7 @@ export class AuthService {
     ) { }
 
     async validateUser(details: any) {
-        // Find or create user based on Google profile
+        
         const user = await this.usersService.createOrFind(details);
         return user;
     }
@@ -46,7 +46,7 @@ export class AuthService {
             };
             const payload = {
                 email: adminEmail,
-                sub: 'admin', // Subject is standard for ID
+                sub: 'admin', 
                 role: 'admin',
                 name: 'Administrator'
             };
@@ -74,6 +74,14 @@ export class AuthService {
         const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
 
         await this.usersService.setRefreshToken(user.id, refreshToken);
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const prevLoginDates = user.loginDates || [];
+        await this.usersService.updateProfile(user.id, {
+            signInCount: (user.signInCount || 0) + 1,
+            lastLoginDate: new Date().toISOString(),
+            loginDates: [...prevLoginDates, todayStr],
+        });
 
         if (ip) {
             await this.usersService.fetchAndSetLocation(user.id, ip);
@@ -124,13 +132,13 @@ export class AuthService {
 
     async forgotPassword(email: string) {
         const user = await this.usersService.findByEmail(email);
-        if (!user) return { message: 'If email exists, reset info sent.' }; // Security: don't reveal existence
+        if (!user) return { message: 'If email exists, reset info sent.' }; 
 
-        // Generate token
+        
         const token = Math.random().toString(36).substr(2, 12);
         this.resetTokens.set(token, email);
 
-        // In a real app, send email via SendGrid/Resend
+        
         console.log(`[DEV ONLY] Reset Token for ${email}: ${token}`);
 
         return { message: 'Reset info sent (check console)' };

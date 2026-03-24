@@ -1,4 +1,4 @@
-// components/pages/Products.jsx
+
 import React, { useState } from 'react';
 import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -18,12 +18,12 @@ const ProductsPage = () => {
   };
 
   const products = [
-    { id: 1, name: 'Premium Headphones', category: 'Electronics', price: 299.99, stock: 45, revenue: 24500, rating: 4.5, status: 'active', image: '🎧' },
-    { id: 2, name: 'Wireless Mouse', category: 'Electronics', price: 49.99, stock: 120, revenue: 18400, rating: 4.3, status: 'active', image: '🖱️' },
-    { id: 3, name: 'Office Chair', category: 'Furniture', price: 349.99, stock: 8, revenue: 31200, rating: 4.7, status: 'low', image: '💺' },
-    { id: 4, name: 'Desk Lamp', category: 'Home', price: 39.99, stock: 0, revenue: 8900, rating: 4.0, status: 'out', image: '💡' },
-    { id: 5, name: 'Notebook Set', category: 'Stationery', price: 24.99, stock: 200, revenue: 12400, rating: 4.2, status: 'active', image: '📓' },
-    { id: 6, name: 'Coffee Mug', category: 'Home', price: 19.99, stock: 150, revenue: 9800, rating: 4.1, status: 'active', image: '☕' }
+    { id: 1, name: 'Premium Headphones', category: 'Electronics', price: 299.99, stock: 45, revenue: 24500, rating: 4.5, status: 'active', image: '' },
+    { id: 2, name: 'Wireless Mouse', category: 'Electronics', price: 49.99, stock: 120, revenue: 18400, rating: 4.3, status: 'active', image: '️' },
+    { id: 3, name: 'Office Chair', category: 'Furniture', price: 349.99, stock: 8, revenue: 31200, rating: 4.7, status: 'low', image: '' },
+    { id: 4, name: 'Desk Lamp', category: 'Home', price: 39.99, stock: 0, revenue: 8900, rating: 4.0, status: 'out', image: '' },
+    { id: 5, name: 'Notebook Set', category: 'Stationery', price: 24.99, stock: 200, revenue: 12400, rating: 4.2, status: 'active', image: '' },
+    { id: 6, name: 'Coffee Mug', category: 'Home', price: 19.99, stock: 150, revenue: 9800, rating: 4.1, status: 'active', image: '' }
   ];
 
   const categories = [
@@ -38,7 +38,7 @@ const ProductsPage = () => {
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">Product Management</h1>
@@ -52,7 +52,7 @@ const ProductsPage = () => {
           </button>
         </div>
 
-        {/* Stats Grid */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
             { icon: <Package size={24} />, label: 'Total Products', value: productStats.total, change: '+12%', color: 'bg-blue-500' },
@@ -76,7 +76,7 @@ const ProductsPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Product List */}
+          {}
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold">Product Catalog</h2>
@@ -177,9 +177,9 @@ const ProductsPage = () => {
             </div>
           </div>
 
-          {/* Right Column - Analytics */}
+          {}
           <div className="space-y-6">
-            {/* Categories */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">Categories</h3>
               <div className="space-y-3">
@@ -204,7 +204,7 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            {/* Stock Status */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">Stock Status</h3>
               <div className="space-y-4">
@@ -232,7 +232,7 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            {/* Top Performing */}
+            {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">Top Performing</h3>
               <div className="space-y-4">

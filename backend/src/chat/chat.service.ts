@@ -33,13 +33,11 @@ export class ChatService implements OnModuleInit {
         private readonly configService: ConfigService,
         private readonly reportsService: ReportsService,
         private readonly geminiService: GeminiService
-    ) {}
+    ) { }
 
     async onModuleInit() {
         this.loadChats();
     }
-
-    // ... (keep private methods same)
 
     private loadChats() {
         if (fs.existsSync(this.filePath)) {
@@ -62,22 +60,6 @@ export class ChatService implements OnModuleInit {
             console.error('Error saving chats to file:', error);
         }
     }
-
-    // ... (keep getUserChats, getChat, createChat, deleteChat, addMessage, quickChat, generateBotResponse same) 
-    // Wait, I can't skip lines in replace_file_content like this unless I target them.
-    // I need to only replace the constructor and the generateWeeklyReportForUser method.
-
-    // Let's do partial replacements.
-
-    // NO, I will use multi_replace for accuracy.
-    // Actually, I can just use replace_file_content for the method if I can identify it clearly.
-    // But I also need to update constructor.
-    // I'll do 2 chunks.
-
-    // Wait, I cannot use multiple chunks in replace_file_content.
-    // I'll use multi_replace.
-
-    // ... (keep private methods same)
 
     async getUserChats(userId: string) {
         return Array.from(this.chats.values())
@@ -137,7 +119,7 @@ export class ChatService implements OnModuleInit {
 
         chat.messages.push(userMessage);
 
-        // Update Title if it's the first message and still "New Chat"
+        
         if (chat.messages.length === 1 && chat.title === 'New Chat') {
             chat.title = content.length > 30 ? content.substring(0, 30) + '...' : content;
         }
@@ -145,7 +127,7 @@ export class ChatService implements OnModuleInit {
         chat.updatedAt = Date.now();
         this.saveChats();
 
-        // Generate Bot Response
+        
         const botResponse = await this.generateBotResponse(userId, content, chat.messages, language);
         chat.messages.push(botResponse);
         this.saveChats();
@@ -176,12 +158,13 @@ export class ChatService implements OnModuleInit {
 
         const user = await this.usersService.findById(userId);
         const settings = user?.botSettings;
-        const personality = settings?.personality || 'Professional';
+        const s = settings as any;
+        const personality = s?.personality || 'Professional';
 
-        // Calculate Token Cost
+        
         const tokenCost = 10;
 
-        // Check AI Tokens
+
         if ((user.aiTokens ?? 0) < tokenCost) {
             return {
                 role: 'assistant',
@@ -189,14 +172,14 @@ export class ChatService implements OnModuleInit {
                 timestamp: Date.now()
             };
         }
-        // Deduct AI Tokens
+
         await this.usersService.updateProfile(userId, { aiTokens: (user.aiTokens ?? 0) - tokenCost });
 
-        const name = settings?.name || 'StockBud';
-        const language = languageOverride || settings?.language || 'English';
-        const dataAccess = settings?.dataAccess || 'Limited';
+        const name = s?.name || 'StockBud';
+        const language = languageOverride || s?.language || 'English';
+        const dataAccess = s?.dataAccess || 'Limited';
 
-        // Fetch Real Stats
+        
         let storeStats = "No store connected.";
         if (user.shopifyShop && user.shopifyToken) {
             if (dataAccess === 'Limited') {
@@ -206,7 +189,7 @@ export class ChatService implements OnModuleInit {
                     const decryptedToken = await this.usersService.getDecryptedShopifyToken(userId);
                     const stats = await this.dashboardService.getStats(user.shopifyShop, decryptedToken);
 
-                    // Format detailed stats for the AI
+                    
                     const recentSales = stats.salesHistory.map(s => `${s.name} ($${s.amount})`).join(', ');
                     const revenueTrend = stats.revenue.chartData.map(d => `${d.date}: $${d.revenue}`).join(', ');
                     const trafficSources = stats.source.map(s => `${s.name}: ${s.value}%`).join(', ');
@@ -232,7 +215,7 @@ export class ChatService implements OnModuleInit {
             }
         }
 
-        // Construct System Prompt based on settings
+        
         let systemInstruction = `You are ${name}, a ${personality} AI assistant for an e-commerce dashboard called StockBud.`;
         if (personality === 'Friendly') systemInstruction += " Be warm, helpful, and use emojis occasionally.";
         if (personality === 'Professional') systemInstruction += " Be formal, precise, and business-focused.";
@@ -242,7 +225,7 @@ export class ChatService implements OnModuleInit {
         systemInstruction += ` Respond in ${language}.`;
         systemInstruction += ` ${name} acts as a Dashboard Explainer, Navigation Guide, and Business Tutor.`;
 
-        // 1. Navigation & Features
+        
         systemInstruction += `\n\n**Navigation Guide**:\n`;
         systemInstruction += `- **Dashboard**: Main overview, revenue charts, traffic sources, heatmap.\n`;
         systemInstruction += `- **Products**: Manage inventory, add new products, view stock levels.\n`;
@@ -251,20 +234,20 @@ export class ChatService implements OnModuleInit {
         systemInstruction += `- **Settings**: Connect Shopify store, manage preferences, toggle theme.\n`;
         systemInstruction += `If asked "How do I..." or "Where is...", guide them to the correct page.\n`;
 
-        // 2. Limitations
+        
         systemInstruction += `\n\n**Limitations (CRITICAL)**:\n`;
         systemInstruction += `- You CANNOT generate downloadable reports (PDF/CSV). Guide them to the Reports page.\n`;
         systemInstruction += `- You CANNOT duplicate, refund, or edit orders/products. You are Read-Only.\n`;
         systemInstruction += `- You ONLY see the snapshot provided below. You DO NOT have access to historical data (last year, last month) unless it's in the snapshot.\n`;
 
-        // 3. Data Context
+        
         systemInstruction += `\n\n**Current Data Snapshot**:\n${storeStats}\n`;
         systemInstruction += `Use this data to answer questions accurately. If asked about metric definitions (e.g. "What is AOV?"), explain them simply.`;
         systemInstruction += ` Keep responses concise and helpful.`;
 
         if (this.geminiService.hasKeys()) {
             try {
-                // Get history excluding the latest message which we just added
+                
                 const apiHistory = history.slice(0, -1).map(msg => ({
                     role: msg.role === 'user' ? 'user' : 'model',
                     parts: [{ text: msg.content }]
@@ -273,14 +256,14 @@ export class ChatService implements OnModuleInit {
                 const result = await this.geminiService.executeWithRetry("gemini-flash-latest", async (model) => {
                     const chat = model.startChat({
                         history: [
-                            { role: 'user', parts: [{ text: systemInstruction }] }, // System instruction as first user message
-                            { role: 'model', parts: [{ text: `Understood. I am ${name}, ready to assist.` }] }, // Ack
+                            { role: 'user', parts: [{ text: systemInstruction }] }, 
+                            { role: 'model', parts: [{ text: `Understood. I am ${name}, ready to assist.` }] }, 
                             ...apiHistory
                         ],
                     });
                     return await chat.sendMessage(userMessage);
                 });
-                
+
                 responseContent = result.response.text();
 
             } catch (error) {
@@ -288,7 +271,7 @@ export class ChatService implements OnModuleInit {
                 responseContent = "I apologize, but I'm encountering an error processing your request.";
             }
         } else {
-            // Fallback if no API key
+            
             responseContent = `[Mock ${name} (${personality})]: ${userMessage} (Gemini API Key missing)`;
         }
 
@@ -299,13 +282,13 @@ export class ChatService implements OnModuleInit {
         };
     }
 
-    // Daily Token Replenishment Check - Runs every midnight
+    
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async handleTokenReplenishment() {
         await this.usersService.checkAndReplenishTokens();
     }
 
-    // Weekly Report Cron Job - Runs every Monday at 9:00 AM
+    
     @Cron(CronExpression.EVERY_WEEK)
     async handleWeeklyReport() {
         console.log('Running Weekly Report Job...');
@@ -319,27 +302,27 @@ export class ChatService implements OnModuleInit {
         }
     }
 
-    // Helper to generate a report for a specific user (can be triggered manually or by cron)
+    
     async generateWeeklyReportForUser(userId: string) {
         const user = await this.usersService.findById(userId);
 
         if (!user || !user.shopifyShop || !user.shopifyToken) return;
 
-        // Check Report Tokens
+        
         if ((user.reportTokens ?? 0) < 50) {
             console.log(`Skipping weekly report for ${userId}: Not enough tokens.`);
             return;
         }
 
-        // Deduct 50 Report Tokens
+        
         await this.usersService.updateProfile(userId, { reportTokens: (user.reportTokens ?? 0) - 50 });
 
         try {
-            // Generate persistently stored report
+            
             const report = await this.reportsService.generateReport(userId, 'weekly' as any);
             const content = report.data.content;
 
-            // Find or create 'StockBud' chat
+            
             const chats = await this.getUserChats(userId);
             let chat = chats.find(c => c.title === 'StockBud Official' || c.title.includes('StockBud'));
 
@@ -347,7 +330,7 @@ export class ChatService implements OnModuleInit {
                 chat = await this.createChat(userId, 'StockBud Updates');
             }
 
-            // Add bot message with report summary
+            
             const botMsg: Message = {
                 role: 'assistant',
                 content: `**Weekly Report Ready:**\n\n${content}\n\n[View Full Report in Reports Tab]`,
@@ -361,7 +344,7 @@ export class ChatService implements OnModuleInit {
             console.error(`Failed to generate report for user ${userId}`, error);
         }
     }
-    // Cleanup Old Chats Cron
+    
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async cleanupOldChats() {
         console.log('Running daily chat cleanup...');

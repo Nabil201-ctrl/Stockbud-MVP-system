@@ -22,7 +22,7 @@ export interface Report {
     data?: any;
     description: string;
     emailSent?: boolean;
-    docxBase64?: string; // Store the DOCX for download
+    docxBase64?: string; 
 }
 
 @Injectable()
@@ -74,10 +74,10 @@ export class ReportsService {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
-    // ────────────── Core Report Generation ──────────────
+
 
     async generateReport(userId: string, type: 'sales' | 'inventory' | 'revenue' | 'weekly' | 'monthly' | 'welcome' | 'instant'): Promise<Report> {
-        // Deduct tokens for paid types only (weekly/monthly/welcome are free, instant costs tokens)
+        
         if (type === 'sales' || type === 'inventory' || type === 'revenue' || type === 'instant') {
             await this.usersService.deductReportToken(userId, 1);
         }
@@ -121,7 +121,7 @@ export class ReportsService {
         reports.push(report);
         this.saveReports(reports);
 
-        // Generate asynchronously
+        
         this.generateReportData(reportId, shop, token, type, userId);
 
         return report;
@@ -345,7 +345,7 @@ export class ReportsService {
         }
     }
 
-    // ────────────── Email Dispatch ──────────────
+
 
     private async sendReportEmail(type: string, user: any, report: Report, docxBase64: string): Promise<boolean> {
         if (!user?.email || !docxBase64) return false;
@@ -357,22 +357,22 @@ export class ReportsService {
             let priority = 3;
 
             if (type === 'weekly' || type === 'sales') {
-                subject = `📊 Your Weekly Store Report — ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+                subject = ` Your Weekly Store Report — ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
                 htmlContent = this.emailService.buildWeeklyEmailHtml(user.name || 'User', report.title, new Date().toLocaleDateString('en-US'));
                 attachmentName = `StockBud_Weekly_Report_${new Date().toISOString().slice(0, 10)}.docx`;
                 priority = 3;
             } else if (type === 'monthly') {
-                subject = `📈 Your Monthly Business Review — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+                subject = ` Your Monthly Business Review — ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
                 htmlContent = this.emailService.buildMonthlyEmailHtml(user.name || 'User', report.title, new Date().toLocaleDateString('en-US'));
                 attachmentName = `StockBud_Monthly_Review_${new Date().toISOString().slice(0, 7)}.docx`;
                 priority = 2;
             } else if (type === 'welcome') {
-                subject = `🎉 Welcome to StockBud! Your First Store Analysis is Ready`;
+                subject = ` Welcome to StockBud! Your First Store Analysis is Ready`;
                 htmlContent = this.emailService.buildWelcomeEmailHtml(user.name || 'User', user.shopifyShop || 'Your Store');
                 attachmentName = `StockBud_Welcome_Analysis_${(user.shopifyShop || 'Your Store').replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
                 priority = 1;
             } else if (type === 'instant') {
-                subject = `⚡ Your Instant System Review — ${report.title}`;
+                subject = ` Your Instant System Review — ${report.title}`;
                 htmlContent = this.emailService.buildInstantReviewEmailHtml(user.name || 'User', report.title);
                 attachmentName = `StockBud_Instant_Review_${new Date().toISOString().slice(0, 10)}.docx`;
                 priority = 1;
@@ -401,7 +401,7 @@ export class ReportsService {
         }
     }
 
-    // ────────────── Scheduled Jobs ──────────────
+
 
     /**
      * Weekly Report Cron - Every Monday at 8:00 AM
@@ -463,7 +463,7 @@ export class ReportsService {
         return this.generateReport(userId, 'instant');
     }
 
-    // ────────────── Report Data Endpoints ──────────────
+
 
     async getReportById(userId: string, reportId: string): Promise<Report | null> {
         const reports = this.loadReports();
@@ -502,7 +502,7 @@ export class ReportsService {
         };
     }
 
-    // ────────────── Cleanup ──────────────
+
 
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async cleanupOldReports() {
@@ -540,7 +540,7 @@ export class ReportsService {
         }
     }
 
-    // ────────────── AI Prompt Builders ──────────────
+
 
     private async generateAIContent(prompt: string): Promise<string> {
         if (!this.geminiService.hasKeys()) {
@@ -700,7 +700,7 @@ This is a PREMIUM report. Make it worth paying for. Be exhaustive, analytical, a
 Use **bold** for key findings. Use headers for clear organization. Start directly with the content.`;
     }
 
-    // ────────────── Helpers ──────────────
+
 
     private async calculateProfitMargin(shop: string, token: string, totalRevenue: number): Promise<number> {
         if (totalRevenue === 0) return 0;
