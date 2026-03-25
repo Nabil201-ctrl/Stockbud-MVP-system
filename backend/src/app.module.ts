@@ -13,7 +13,8 @@ import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import { EmailModule } from './email/email.module';
-import { PrismaModule } from './prisma/prisma.module';
+import { DatabaseModule } from './database/database.module';
+import { SocialStoresModule } from './social-stores/social-stores.module';
 
 @Module({
     imports: [
@@ -21,7 +22,7 @@ import { PrismaModule } from './prisma/prisma.module';
             isGlobal: true,
         }),
         ScheduleModule.forRoot(),
-        PrismaModule,
+        DatabaseModule,
         EmailModule,
         DashboardModule,
         ProductsModule,
@@ -34,6 +35,7 @@ import { PrismaModule } from './prisma/prisma.module';
         ReportsModule,
         NotificationsModule,
         PaymentsModule,
+        SocialStoresModule,
     ],
 })
 export class AppModule { }

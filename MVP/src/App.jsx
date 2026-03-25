@@ -3,7 +3,7 @@ import React from 'react';
 import ReloadPrompt from './ReloadPrompt';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
-import { storage } from './utils/db'; 
+import { storage } from './utils/db';
 import Dashboard from './pages/dashboard';
 import BotCustomization from './pages/BotCustomization';
 import Realtime from './pages/Realtime';
@@ -30,10 +30,11 @@ import { AuthProvider } from './context/AuthContext';
 import AuthSuccess from './pages/AuthSuccess';
 
 import LandingPage from './pages/LandingPage';
+import StorefrontPage from './pages/StorefrontPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
-  
+
   React.useEffect(() => {
     const seedDB = async () => {
       try {
@@ -61,23 +62,26 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
-            {}
+            { }
             <Route path="/" element={<LandingPage />} />
 
-            {}
+            { }
+            <Route path="/p/:slug" element={<StorefrontPage />} />
+
+            { }
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/signup" element={<Signup />} />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
             <Route path="/auth/reset-password" element={<ResetPassword />} />
             <Route path="/auth/success" element={<AuthSuccess />} />
 
-            {}
+            { }
             <Route path="/get-started" element={<ProtectedRoute><GetStarted /></ProtectedRoute>} />
             <Route path="/onboarding/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/onboarding/shop-access" element={<ProtectedRoute><ShopAccess /></ProtectedRoute>} />
             <Route path="/onboarding/link-shop" element={<ProtectedRoute><LinkShop /></ProtectedRoute>} />
 
-            {}
+            { }
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/bot-customization" element={<BotCustomization />} />
@@ -89,7 +93,7 @@ function App() {
               <Route path="/reports" element={<ReportsPage />} />
             </Route>
 
-            {}
+            { }
           </Routes>
         </Router>
         <ReloadPrompt />

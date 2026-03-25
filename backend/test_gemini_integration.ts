@@ -6,7 +6,7 @@ import fetch, { Headers, Request, Response } from 'node-fetch';
 async function run() {
     console.log('Starting Gemini Verification (Final Check)...');
 
-    
+
     const result = dotenv.config({ path: path.join(__dirname, '.env') });
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -15,15 +15,12 @@ async function run() {
         process.exit(1);
     }
 
-    
-    
-    global.fetch = fetch;
-    
-    global.Headers = Headers;
-    
-    global.Request = Request;
-    
-    global.Response = Response;
+
+
+    (global as any).fetch = fetch;
+    (global as any).Headers = Headers;
+    (global as any).Request = Request;
+    (global as any).Response = Response;
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });

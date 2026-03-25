@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical, Store, AlertCircle, Bell, X } from 'lucide-react';
+import SocialStoresPanel from '../components/Dashboard/SocialStoresPanel';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +18,7 @@ const ProductsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
 
-  
+
   const [products, setProducts] = useState([]);
   const [pageInfo, setPageInfo] = useState({
     hasNextPage: false,
@@ -40,7 +41,7 @@ const ProductsPage = () => {
   const [shopifyNotConnected, setShopifyNotConnected] = useState(false);
   const [error, setError] = useState(null);
 
-  
+
   const [thresholds, setThresholds] = useState({});
   const [showThresholdModal, setShowThresholdModal] = useState(null);
   const [thresholdInput, setThresholdInput] = useState('');
@@ -286,7 +287,7 @@ const ProductsPage = () => {
     );
   }
 
-  
+
   if (error) {
     return (
       <div className={`p-6 min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -312,7 +313,7 @@ const ProductsPage = () => {
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {}
+        { }
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">{t('products.title')}</h1>
@@ -322,7 +323,9 @@ const ProductsPage = () => {
           </div>
         </div>
 
-        {}
+        <SocialStoresPanel />
+
+        { }
         <div id="products-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
             { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total, change: '+12%', color: 'bg-blue-500' },
@@ -346,7 +349,7 @@ const ProductsPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {}
+          { }
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold">{t('products.catalog')}</h2>
@@ -369,7 +372,7 @@ const ProductsPage = () => {
             </div>
 
             <div id="products-table" className="overflow-x-auto relative">
-              {}
+              { }
               {paginationLoading && (
                 <div className="absolute inset-0 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
                   <div className="flex items-center gap-3">
@@ -500,9 +503,9 @@ const ProductsPage = () => {
             </div>
           </div>
 
-          {}
+          { }
           <div className="space-y-6">
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.categories')}</h3>
               <div className="space-y-3">
@@ -525,7 +528,7 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.stockStatus')}</h3>
               <div className="space-y-4">
@@ -553,7 +556,7 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.topPerforming')}</h3>
               <div className="space-y-4">
@@ -586,7 +589,7 @@ const ProductsPage = () => {
         </div>
       </div>
 
-      {}
+      { }
       {showThresholdModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className={`w-full max-w-sm rounded-xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -638,7 +641,7 @@ const ProductsPage = () => {
         </div>
       )}
 
-      {}
+      { }
       {showNotifications && notifications.length > 0 && (
         <div className="fixed bottom-6 right-6 z-40 max-w-sm w-full space-y-3">
           <div className={`p-4 rounded-xl shadow-xl flex items-start gap-4 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'

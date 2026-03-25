@@ -1,0 +1,34 @@
+[
+  {
+    "id": "58be82aab9f9c583",
+    "email": "abubakar.nabil.210@gmail.com",
+    "name": "Nabil Abubakar",
+    "password": null,
+    "picture": "https://lh3.googleusercontent.com/a/ACg8ocI8z1fhTKN-GgQEVlxfiScri4hFRc2ayAIyUBczAuiE-lTRkIET=s96-c",
+    "shopifyShop": null,
+    "shopifyToken": null,
+    "activeShopId": null,
+    "storeLimit": 2,
+    "retentionMonths": 3,
+    "createdAt": "2026-03-25T23:18:01.736Z",
+    "isOnboardingComplete": true,
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIxMEBnbWFpbC5jb20iLCJzdWIiOiI1OGJlODJhYWI5ZjljNTgzIiwiaWF0IjoxNzc0NDgwODA2LCJleHAiOjE3NzcwNzI4MDZ9.H7qiAtAhotOPcTSkNueoSdo1EuyvL6Mn6H0kMcWP7-s",
+    "aiTokens": 500,
+    "reportTokens": 250,
+    "botSettings": null,
+    "lastTokenReset": 1774480681736,
+    "hasFreeReports": false,
+    "language": "en",
+    "pushSubscription": null,
+    "ipAddress": "::1",
+    "location": null,
+    "currency": null,
+    "signInCount": 2,
+    "lastLoginDate": "2026-03-25T23:20:06.011Z",
+    "loginDates": [
+      "2026-03-25",
+      "2026-03-25"
+    ],
+    "shopifyStores": []
+  }
+]

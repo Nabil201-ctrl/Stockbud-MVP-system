@@ -2,8 +2,8 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { EncryptionService } from '../common/encryption.service';
 import axios from 'axios';
-import { PrismaService } from '../prisma/prisma.service';
-import { User, ShopifyStore } from '@prisma/client';
+import { JsonDatabaseService } from '../database/json-database.service';
+import { User, ShopifyStore } from '../database/interfaces';
 
 export interface BotSettings {
     name: string;
@@ -21,17 +21,14 @@ export interface BotSettings {
 export class UsersService implements OnModuleInit {
     constructor(
         private readonly encryptionService: EncryptionService,
-        private prisma: PrismaService
+        private db: JsonDatabaseService
     ) { }
 
     async onModuleInit() {
     }
 
     async findByEmail(email: string): Promise<User | null> {
-        return this.prisma.user.findUnique({
-            where: { email },
-            include: { shopifyStores: true }
-        });
+        return this.db.findUserByEmail(email);
     }
 
     async createOrFind(profile: any): Promise<User> {
@@ -39,16 +36,13 @@ export class UsersService implements OnModuleInit {
         let user = await this.findByEmail(email);
 
         if (!user) {
-            user = await this.prisma.user.create({
-                data: {
-                    email,
-                    name: profile.displayName,
-                    picture: profile.photos?.[0]?.value,
-                    createdAt: new Date().toISOString(),
-                    ipAddress: profile.ipAddress,
-                    lastTokenReset: Date.now()
-                },
-                include: { shopifyStores: true }
+            user = this.db.createUser({
+                email,
+                name: profile.displayName,
+                picture: profile.photos?.[0]?.value,
+                createdAt: new Date().toISOString(),
+                ipAddress: profile.ipAddress,
+                lastTokenReset: Date.now()
             });
 
             if (profile.ipAddress) {
@@ -62,15 +56,12 @@ export class UsersService implements OnModuleInit {
         const existing = await this.findByEmail(email);
         if (existing) throw new Error('User already exists');
 
-        const user = await this.prisma.user.create({
-            data: {
-                email,
-                name,
-                password: passwordHash,
-                createdAt: new Date().toISOString(),
-                lastTokenReset: Date.now()
-            },
-            include: { shopifyStores: true }
+        const user = this.db.createUser({
+            email,
+            name,
+            password: passwordHash,
+            createdAt: new Date().toISOString(),
+            lastTokenReset: Date.now()
         });
         return user;
     }
@@ -89,22 +80,15 @@ export class UsersService implements OnModuleInit {
             console.error(`[UsersService] Failed to fetch IP location for ${ip}:`, error.message);
         }
 
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: {
-                ipAddress: ip,
-                ...(location && { location }),
-                ...(currency && { currency })
-            },
-            include: { shopifyStores: true }
+        return this.db.updateUser(userId, {
+            ipAddress: ip,
+            ...(location && { location }),
+            ...(currency && { currency })
         });
     }
 
     async findById(id: string): Promise<User | null> {
-        return this.prisma.user.findUnique({
-            where: { id },
-            include: { shopifyStores: true }
-        });
+        return this.db.findUserById(id);
     }
 
     async updateShopifyCredentials(userId: string, shop: string, token: string): Promise<User> {
@@ -112,68 +96,52 @@ export class UsersService implements OnModuleInit {
     }
 
     async addShopifyStore(userId: string, shop: string, token: string, name?: string): Promise<User> {
-        const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+        const user = this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
 
         const existingStore = user.shopifyStores.find(s => s.shop === shop);
         const encryptedToken = this.encryptionService.encrypt(token);
 
-        let updatedUser;
-
         if (existingStore) {
-            await this.prisma.shopifyStore.update({
-                where: { id: existingStore.id },
-                data: { token: encryptedToken }
-            });
-            updatedUser = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+            this.db.updateStore(existingStore.id, { token: encryptedToken });
         } else {
             if (user.shopifyStores.length >= user.storeLimit) {
                 throw new Error('Store limit reached. Please upgrade to add more stores.');
             }
 
-            const store = await this.prisma.shopifyStore.create({
-                data: {
-                    shop,
-                    token: encryptedToken,
-                    name: name || shop.replace('.myshopify.com', ''),
-                    addedAt: new Date().toISOString(),
-                    userId: user.id
-                }
+            const store = this.db.createStore(userId, {
+                shop,
+                token: encryptedToken,
+                name: name || shop.replace('.myshopify.com', ''),
+                addedAt: new Date().toISOString(),
             });
 
-            updatedUser = await this.prisma.user.update({
-                where: { id: userId },
-                data: {
-                    activeShopId: user.activeShopId || store.id,
-                    shopifyShop: shop,
-                    shopifyToken: encryptedToken
-                },
-                include: { shopifyStores: true }
+            this.db.updateUser(userId, {
+                activeShopId: user.activeShopId || store.id,
+                shopifyShop: shop,
+                shopifyToken: encryptedToken
             });
         }
 
-        return this.recalculateTokens(updatedUser!);
+        const updatedUser = this.db.findUserById(userId)!;
+        return this.recalculateTokens(updatedUser);
     }
 
     async removeShopifyStore(userId: string, storeId: string): Promise<User> {
-        const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+        const user = this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
 
-        await this.prisma.shopifyStore.delete({ where: { id: storeId } });
+        this.db.deleteStore(storeId);
 
-        let userToRet: User | null = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+        let userToRet = this.db.findUserById(userId);
         if (!userToRet) throw new Error('User not found');
 
         if (userToRet.activeShopId === storeId) {
-            const firstStore = (userToRet as any).shopifyStores?.[0];
-            userToRet = await this.prisma.user.update({
-                where: { id: userId },
-                data: {
-                    activeShopId: firstStore?.id || null,
-                    shopifyShop: firstStore?.shop || null,
-                    shopifyToken: firstStore?.token || null
-                },
-                include: { shopifyStores: true }
+            const firstStore = userToRet.shopifyStores?.[0];
+            userToRet = this.db.updateUser(userId, {
+                activeShopId: firstStore?.id || null,
+                shopifyShop: firstStore?.shop || null,
+                shopifyToken: firstStore?.token || null
             });
         }
 
@@ -181,53 +149,45 @@ export class UsersService implements OnModuleInit {
     }
 
     async removeShopifyCredentials(userId: string): Promise<User> {
-        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        const user = this.db.findUserById(userId);
         if (user) {
             if (user.activeShopId) {
                 return this.removeShopifyStore(userId, user.activeShopId);
             }
-            const userToRet = await this.prisma.user.update({
-                where: { id: userId },
-                data: {
-                    shopifyShop: null,
-                    shopifyToken: null,
-                    activeShopId: null
-                },
-                include: { shopifyStores: true }
+            this.db.updateUser(userId, {
+                shopifyShop: null,
+                shopifyToken: null,
+                activeShopId: null
             });
-            
-            await this.prisma.shopifyStore.deleteMany({ where: { userId } });
-            const finalUser = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
-            return this.recalculateTokens(finalUser!);
+
+            this.db.deleteStoresByUserId(userId);
+            const finalUser = this.db.findUserById(userId)!;
+            return this.recalculateTokens(finalUser);
         }
         throw new Error('User not found');
     }
 
     async setActiveShop(userId: string, storeId: string): Promise<User> {
-        const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+        const user = this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
 
         const store = user.shopifyStores.find(s => s.id === storeId);
         if (!store) throw new Error('Store not found');
 
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: {
-                activeShopId: storeId,
-                shopifyShop: store.shop,
-                shopifyToken: store.token
-            },
-            include: { shopifyStores: true }
+        return this.db.updateUser(userId, {
+            activeShopId: storeId,
+            shopifyShop: store.shop,
+            shopifyToken: store.token
         });
     }
 
     async getActiveShop(userId: string): Promise<ShopifyStore | null> {
-        const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { shopifyStores: true } });
+        const user = this.db.findUserById(userId);
         if (!user) return null;
         return this.getActiveStoreSync(user) || null;
     }
 
-    private getActiveStoreSync(user: User & { shopifyStores?: ShopifyStore[] }): ShopifyStore | undefined {
+    private getActiveStoreSync(user: User): ShopifyStore | undefined {
         if (!user.shopifyStores || user.shopifyStores.length === 0) return undefined;
         if (user.activeShopId) {
             return user.shopifyStores.find(s => s.id === user.activeShopId);
@@ -235,7 +195,7 @@ export class UsersService implements OnModuleInit {
         return user.shopifyStores[0];
     }
 
-    private async recalculateTokens(user: User & { shopifyStores?: ShopifyStore[] }): Promise<User> {
+    private recalculateTokens(user: User): User {
         const shopCount = user.shopifyStores?.length || 0;
         let aiTokens = 500;
         let reportTokens = 250;
@@ -244,15 +204,11 @@ export class UsersService implements OnModuleInit {
             reportTokens = 500;
         }
 
-        return this.prisma.user.update({
-            where: { id: user.id },
-            data: { aiTokens, reportTokens },
-            include: { shopifyStores: true }
-        });
+        return this.db.updateUser(user.id, { aiTokens, reportTokens });
     }
 
     async getDecryptedShopifyToken(userId: string): Promise<string | null> {
-        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        const user = this.db.findUserById(userId);
         if (user && user.shopifyToken) {
             return this.encryptionService.decrypt(user.shopifyToken);
         }
@@ -268,7 +224,7 @@ export class UsersService implements OnModuleInit {
         if (data.refreshToken !== undefined) payload.refreshToken = data.refreshToken;
         if (data.aiTokens !== undefined) payload.aiTokens = data.aiTokens;
         if (data.reportTokens !== undefined) payload.reportTokens = data.reportTokens;
-        if (data.botSettings !== undefined) payload.botSettings = data.botSettings as any;
+        if (data.botSettings !== undefined) payload.botSettings = data.botSettings;
         if (data.language !== undefined) payload.language = data.language;
         if (data.currency !== undefined) payload.currency = data.currency;
         if (data.location !== undefined) payload.location = data.location;
@@ -276,11 +232,7 @@ export class UsersService implements OnModuleInit {
         if (data.lastLoginDate !== undefined) payload.lastLoginDate = data.lastLoginDate;
         if (data.loginDates !== undefined) payload.loginDates = data.loginDates;
 
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: payload,
-            include: { shopifyStores: true }
-        });
+        return this.db.updateUser(userId, payload);
     }
 
     async setRefreshToken(userId: string, refreshToken: string) {
@@ -292,7 +244,7 @@ export class UsersService implements OnModuleInit {
     }
 
     async getAllUsers() {
-        return this.prisma.user.findMany({ include: { shopifyStores: true } });
+        return this.db.getAllUsers();
     }
 
     findAll() {
@@ -311,7 +263,7 @@ export class UsersService implements OnModuleInit {
     }
 
     async checkAndReplenishTokens() {
-        const users = await this.prisma.user.findMany({ include: { shopifyStores: true } });
+        const users = this.db.getAllUsers();
         const now = Date.now();
         const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
         let updatedCount = 0;
@@ -323,10 +275,7 @@ export class UsersService implements OnModuleInit {
                 const aiTokens = shopCount >= 2 ? 1000 : 500;
                 const reportTokens = shopCount >= 2 ? 500 : 250;
 
-                await this.prisma.user.update({
-                    where: { id: user.id },
-                    data: { aiTokens, reportTokens, lastTokenReset: now }
-                });
+                this.db.updateUser(user.id, { aiTokens, reportTokens, lastTokenReset: now });
                 updatedCount++;
             }
         }
@@ -336,15 +285,17 @@ export class UsersService implements OnModuleInit {
     }
 
     async topUpTokens(userId: string, amount: number) {
-        const user = await this.prisma.user.update({
-            where: { id: userId },
-            data: { aiTokens: { increment: amount } }
+        const user = this.db.findUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        const updated = this.db.updateUser(userId, {
+            aiTokens: user.aiTokens + amount
         });
-        return { success: true, newBalance: user.aiTokens };
+        return { success: true, newBalance: updated.aiTokens };
     }
 
     async updateShopSettings(userId: string, storeId: string, settings: Partial<BotSettings>): Promise<ShopifyStore> {
-        const store = await this.prisma.shopifyStore.findUnique({ where: { id: storeId } });
+        const store = this.db.findStoreById(storeId);
         if (!store || store.userId !== userId) throw new Error('Store not found');
 
         const currentSettings = (store.botSettings as any) || {
@@ -361,17 +312,13 @@ export class UsersService implements OnModuleInit {
 
         const newSettings = { ...currentSettings, ...settings };
 
-        return this.prisma.shopifyStore.update({
-            where: { id: storeId },
-            data: { botSettings: newSettings }
-        });
+        return this.db.updateStore(storeId, { botSettings: newSettings });
     }
 
     async setStoreTarget(userId: string, storeId: string, type: 'weekly' | 'monthly', value: number): Promise<ShopifyStore> {
-        return this.prisma.shopifyStore.update({
-            where: { id: storeId, userId },
-            data: { targetType: type, targetValue: value }
-        });
+        const store = this.db.findStoreById(storeId);
+        if (!store || store.userId !== userId) throw new Error('Store not found');
+        return this.db.updateStore(storeId, { targetType: type, targetValue: value });
     }
 
     async getAiTokens(userId: string): Promise<number> {
@@ -380,34 +327,27 @@ export class UsersService implements OnModuleInit {
     }
 
     async increaseStoreLimit(userId: string): Promise<User> {
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: { storeLimit: { increment: 1 } },
-            include: { shopifyStores: true }
+        const user = this.db.findUserById(userId);
+        if (!user) throw new Error('User not found');
+        return this.db.updateUser(userId, {
+            storeLimit: user.storeLimit + 1
         });
     }
 
     async extendRetention(userId: string, months: number): Promise<User> {
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: { retentionMonths: { increment: months } },
-            include: { shopifyStores: true }
+        const user = this.db.findUserById(userId);
+        if (!user) throw new Error('User not found');
+        return this.db.updateUser(userId, {
+            retentionMonths: user.retentionMonths + months
         });
     }
 
     async setFreeReports(userId: string, enable: boolean): Promise<User> {
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: { hasFreeReports: enable },
-            include: { shopifyStores: true }
-        });
+        return this.db.updateUser(userId, { hasFreeReports: enable });
     }
 
     async setAllFreeReports(enable: boolean): Promise<number> {
-        const res = await this.prisma.user.updateMany({
-            data: { hasFreeReports: enable }
-        });
-        return res.count;
+        return this.db.updateManyUsers({ hasFreeReports: enable });
     }
 
     async deductReportToken(userId: string, amount: number = 1): Promise<User> {
@@ -416,10 +356,8 @@ export class UsersService implements OnModuleInit {
         if (user.hasFreeReports) return user;
         if (user.reportTokens < amount) throw new Error('Insufficient report tokens');
 
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: { reportTokens: { decrement: amount } },
-            include: { shopifyStores: true }
+        return this.db.updateUser(userId, {
+            reportTokens: user.reportTokens - amount
         });
     }
 }
