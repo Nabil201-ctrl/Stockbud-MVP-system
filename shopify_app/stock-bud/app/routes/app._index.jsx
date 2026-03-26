@@ -24,7 +24,7 @@ export const action = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   if (!session) return { status: "error", message: "No session" };
 
-  
+
   const offlineId = getOfflineId(session.shop);
   const offlineSession = await shopify.sessionStorage.loadSession(offlineId);
   const offlineToken = offlineSession?.accessToken;
@@ -38,9 +38,9 @@ export const action = async ({ request }) => {
   try {
     const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
 
-    
+
     if (pairingCode) {
-      
+
       const response = await fetch(`${backendUrl}/shopify/connect-with-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -59,7 +59,7 @@ export const action = async ({ request }) => {
         return { status: "error", message: errorText || "Invalid pairing code" };
       }
     } else if (stockbudToken) {
-      
+
       const headers = {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${stockbudToken}`,
@@ -106,9 +106,9 @@ const PolarisTimeline = ({ currentStep }) => {
         const isCompleted = currentStep > stepNum;
         const isPending = currentStep < stepNum;
 
-        let color = '#E4E5E7'; 
-        if (isActive) color = '#2563EB'; 
-        if (isCompleted) color = '#12B76A'; 
+        let color = '#E4E5E7';
+        if (isActive) color = '#2563EB';
+        if (isCompleted) color = '#12B76A';
 
         return (
           <div key={index} style={{ display: 'flex', marginBottom: '24px', opacity: isPending ? 0.5 : 1, transition: 'opacity 0.5s' }}>
@@ -140,7 +140,7 @@ export default function Index() {
   const fetcher = useFetcher();
   const [currentStep, setCurrentStep] = useState(0);
 
-  
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -148,26 +148,18 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
-  const openApp = () => window.open("http:
+  const openApp = () => window.open("https://stockbud.app", "_blank");
 
   const handleLogin = async () => {
     setIsLoading(true);
     setLoginError("");
     try {
-
-
-      // Get the offline token from the session (from loader)
-      // Note: We can't access offlineSession here in the component.
-      // We'll send the code and let the action handle token retrieval.
-
-      // For now, we'll use a form submission approach
-      // The code is in 'email' state (reused variable)
       const formData = new FormData();
-      formData.append("pairingCode", email); 
+      formData.append("pairingCode", email);
       fetcher.submit(formData, { method: "POST" });
 
-      
-      
+
+
     } catch (err) {
       setLoginError("Connection error: " + err.message);
       setIsLoading(false);
@@ -176,7 +168,7 @@ export default function Index() {
 
   const handleGoogleLogin = () => {
     const backendUrl = "http://localhost:3000";
-    
+
     const width = 600;
     const height = 700;
     const left = window.screen.width / 2 - width / 2;
@@ -197,17 +189,17 @@ export default function Index() {
     window.addEventListener("message", listener);
   };
 
-  
+
   useEffect(() => {
-    
+
     if (fetcher.data?.status === 'success' && fetcher.data?.usedCode && !token && currentStep === 0) {
-      
-      setToken('paired'); 
+
+      setToken('paired');
       setIsLoading(false);
       setCurrentStep(1);
       setTimeout(() => setCurrentStep(2), 1500);
     } else if (token && fetcher.state === 'idle' && !fetcher.data && currentStep === 0) {
-      
+
       setCurrentStep(1);
       setTimeout(() => setCurrentStep(2), 1500);
 
@@ -217,7 +209,7 @@ export default function Index() {
       fetcher.submit(formData, { method: "POST" });
     }
 
-    
+
     if (fetcher.data?.status === 'error' && fetcher.data?.message) {
       setLoginError(fetcher.data.message);
       setIsLoading(false);
@@ -227,12 +219,12 @@ export default function Index() {
   useEffect(() => {
     if (currentStep >= 2) {
       if (fetcher.data?.status === 'success') {
-        
-        if (currentStep === 2) setTimeout(() => setCurrentStep(3), 1000); 
-        if (currentStep === 3) setTimeout(() => setCurrentStep(4), 2500); 
-        if (currentStep === 4) setTimeout(() => setCurrentStep(5), 2000); 
+
+        if (currentStep === 2) setTimeout(() => setCurrentStep(3), 1000);
+        if (currentStep === 3) setTimeout(() => setCurrentStep(4), 2500);
+        if (currentStep === 4) setTimeout(() => setCurrentStep(5), 2000);
       } else if (fetcher.data?.status === 'error') {
-        
+
         console.error("Sync Error:", fetcher.data.message);
       }
     }

@@ -1,15 +1,15 @@
-import { json } from "@remix-run/node";
+
 
 export const loader = async () => {
-    return json(
-        {
+    return new Response(
+        JSON.stringify({
             status: "ok",
             app: "stockbud_shopify_app",
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             memory: process.memoryUsage(),
-            environment: process.env.NODE_ENV
-        },
+            environment: process.env.NODE_ENV,
+        }),
         {
             status: 200,
             headers: {
