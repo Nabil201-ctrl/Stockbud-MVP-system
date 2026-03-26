@@ -132,6 +132,22 @@ const ProductsPage = () => {
   }, [socialStores, user?.activeShopId]);
 
   const fetchProducts = async (cursor = null, direction = 'next') => {
+    // 1. Ensure we have social stores list before proceeding
+    let currentSocialStores = socialStores;
+    if (socialStores.length === 0) {
+      try {
+        const response = await authenticatedFetch(`${API_URL}/social-stores`);
+        if (response.ok) {
+          currentSocialStores = await response.json();
+          setSocialStores(currentSocialStores);
+        }
+      } catch (err) {
+        console.error('Failed to pre-fetch social stores in products:', err);
+      }
+    }
+
+    const isCurrentlySocial = currentSocialStores.some(s => s.id === user?.activeShopId);
+
     if (!user?.activeShopId) {
       setLoading(false);
       setShopifyNotConnected(true);
@@ -159,7 +175,7 @@ const ProductsPage = () => {
       }
 
       // Handle Social Store Products
-      if (isActiveStoreSocial) {
+      if (isCurrentlySocial) {
         url = `${API_URL}/social-stores/${user.activeShopId}/products`;
         const response = await authenticatedFetch(url);
         if (!response.ok) throw new Error('Failed to fetch social products');
@@ -667,7 +683,7 @@ const ProductsPage = () => {
                       <div className="min-w-0 flex-1">
                         <div className="font-medium truncate">{product.name}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                          ${(product.revenue || 0).toLocaleString()} revenue
+                          {activeCurrency} {(product.revenue || 0).toLocaleString()} revenue
                         </div>
                       </div>
                     </div>
@@ -680,89 +696,89 @@ const ProductsPage = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          {showThresholdModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-              <div className={`w-full max-w-sm rounded-xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <div className={`p-4 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <Bell size={20} className="text-blue-500" />
-                    Set Stock Threshold
-                  </h3>
-                  <button
-                    onClick={() => setShowThresholdModal(null)}
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="p-6">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Alert me when stock for <strong>{showThresholdModal.name}</strong> falls to or below:
-                  </p>
-                  <input
-                    type="number"
-                    min="0"
-                    value={thresholdInput}
-                    onChange={(e) => setThresholdInput(e.target.value)}
-                    placeholder="e.g. 10"
-                    className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-shadow ${isDarkMode
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                      }`}
-                  />
-                  <p className="text-xs text-gray-500 mt-2">Leave blank to clear threshold.</p>
-                </div>
-                <div className={`p-4 border-t flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-                  <button
-                    onClick={() => setShowThresholdModal(null)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
-                      }`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveThreshold}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                  >
-                    Save Threshold
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showNotifications && notifications.length > 0 && (
-            <div className="fixed bottom-6 right-6 z-40 max-w-sm w-full space-y-3">
-              <div className={`p-4 rounded-xl shadow-xl flex items-start gap-4 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}>
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                  <AlertCircle size={20} className="text-red-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-red-500 mb-1">Low Stock Alerts</h4>
-                  <div className="max-h-32 overflow-y-auto pr-2 space-y-2">
-                    {notifications.map((n, i) => (
-                      <p key={i} className={`text-sm ${n.stock === 0 ? 'text-red-500 font-bold' : 'text-gray-600 dark:text-gray-300'}`}>
-                        <span className="font-medium text-gray-900 dark:text-white truncate block">{n.name} - {n.stock === 0 ? 'Out of Stock' : 'Low Stock'}</span>
-                        <span className="text-xs">Stock: {n.stock} (Threshold: {n.threshold})</span>
-                      </p>
-                    ))}
-                  </div>
-                </div>
+        {showThresholdModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className={`w-full max-w-sm rounded-xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className={`p-4 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Bell size={20} className="text-blue-500" />
+                  Set Stock Threshold
+                </h3>
                 <button
-                  onClick={() => setShowNotifications(false)}
-                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  onClick={() => setShowThresholdModal(null)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
-                  <X size={18} />
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Alert me when stock for <strong>{showThresholdModal.name}</strong> falls to or below:
+                </p>
+                <input
+                  type="number"
+                  min="0"
+                  value={thresholdInput}
+                  onChange={(e) => setThresholdInput(e.target.value)}
+                  placeholder="e.g. 10"
+                  className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-shadow ${isDarkMode
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                    }`}
+                />
+                <p className="text-xs text-gray-500 mt-2">Leave blank to clear threshold.</p>
+              </div>
+              <div className={`p-4 border-t flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                <button
+                  onClick={() => setShowThresholdModal(null)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
+                    }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveThreshold}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Save Threshold
                 </button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {showNotifications && notifications.length > 0 && (
+          <div className="fixed bottom-6 right-6 z-40 max-w-sm w-full space-y-3">
+            <div className={`p-4 rounded-xl shadow-xl flex items-start gap-4 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertCircle size={20} className="text-red-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-red-500 mb-1">Low Stock Alerts</h4>
+                <div className="max-h-32 overflow-y-auto pr-2 space-y-2">
+                  {notifications.map((n, i) => (
+                    <p key={i} className={`text-sm ${n.stock === 0 ? 'text-red-500 font-bold' : 'text-gray-600 dark:text-gray-300'}`}>
+                      <span className="font-medium text-gray-900 dark:text-white truncate block">{n.name} - {n.stock === 0 ? 'Out of Stock' : 'Low Stock'}</span>
+                      <span className="text-xs">Stock: {n.stock} (Threshold: {n.threshold})</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      );
-};
+    </div>
+  );
 };
 
-      export default ProductsPage;
+export default ProductsPage;

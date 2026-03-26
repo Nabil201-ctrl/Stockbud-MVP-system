@@ -41,7 +41,7 @@ export class UsersController {
         return this.usersService.completeOnboarding(req.user.id);
     }
 
-        @Get('shopify-stores')
+    @Get('shopify-stores')
     @UseGuards(AuthGuard('jwt'))
     async getShopifyStores(@Req() req) {
         const user = await this.usersService.findById(req.user.id);
@@ -51,18 +51,20 @@ export class UsersController {
         };
     }
 
-        @Delete('shopify-stores/:storeId')
+    @Delete('shopify-stores/:storeId')
     @UseGuards(AuthGuard('jwt'))
     async removeShopifyStore(@Req() req) {
         const storeId = req.params.storeId;
         return this.usersService.removeShopifyStore(req.user.id, storeId);
     }
 
-        async setActiveShop(@Req() req, @Body() body: { storeId: string }) {
+    @Post('shopify-stores/active')
+    @UseGuards(AuthGuard('jwt'))
+    async setActiveShop(@Req() req, @Body() body: { storeId: string }) {
         return this.usersService.setActiveShop(req.user.id, body.storeId);
     }
 
-        @Put('shopify-stores/:storeId/settings')
+    @Put('shopify-stores/:storeId/settings')
     @UseGuards(AuthGuard('jwt'))
     async updateShopSettings(@Req() req, @Body() body: any) {
         const storeId = req.params.storeId;

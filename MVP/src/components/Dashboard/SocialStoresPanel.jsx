@@ -9,7 +9,7 @@ const APP_URL = window.location.origin;
 
 const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, onAddProductModalClose }) => {
     const { isDarkMode } = useTheme();
-    const { authenticatedFetch } = useAuth();
+    const { authenticatedFetch, refreshUser } = useAuth();
 
     const [stores, setStores] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -76,6 +76,7 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
             });
             if (res.ok) {
                 await fetchStores();
+                await refreshUser();
                 setShowAddStore(false);
                 setStoreForm({ type: 'whatsapp', storeName: '', contact: '', description: '' });
             }

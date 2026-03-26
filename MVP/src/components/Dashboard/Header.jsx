@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Search, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon, Zap, Globe, Check, Info, AlertTriangle, CheckCircle, ShoppingBag, HelpCircle } from 'lucide-react';
+import { Menu, Search, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon, Zap, Globe, Check, Info, AlertTriangle, CheckCircle, ShoppingBag, HelpCircle, Store } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';

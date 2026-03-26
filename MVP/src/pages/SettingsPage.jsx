@@ -38,7 +38,26 @@ const SettingsPage = () => {
     const [pairingCode, setPairingCode] = useState(null);
     const [pairingLoading, setPairingLoading] = useState(false);
     const [codeCopied, setCodeCopied] = useState(false);
+    const [socialStores, setSocialStores] = useState([]);
     const prevStoreCountRef = useRef(user?.shopifyStores?.length || 0);
+
+    const fetchSocialStores = async () => {
+        try {
+            const response = await authenticatedFetch(`${API_URL}/social-stores`);
+            if (response.ok) {
+                const data = await response.json();
+                setSocialStores(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch social stores", error);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'integrations') {
+            fetchSocialStores();
+        }
+    }, [activeTab]);
 
     // Polling for new store connection when pairing code is active
     useEffect(() => {
@@ -245,17 +264,24 @@ const SettingsPage = () => {
         }
     };
 
-    const handleRemoveStore = async (storeId, shopName) => {
+    const handleRemoveStore = async (storeId, shopName, type) => {
         if (!window.confirm(`Are you sure you want to remove ${shopName}?`)) {
             return;
         }
 
         try {
-            const response = await authenticatedFetch(`${API_URL}/users/shopify-stores/${storeId}`, {
+            const url = type === 'social'
+                ? `${API_URL}/social-stores/${storeId}`
+                : `${API_URL}/users/shopify-stores/${storeId}`;
+
+            const response = await authenticatedFetch(url, {
                 method: 'DELETE'
             });
 
             if (response.ok) {
+                if (type === 'social') {
+                    fetchSocialStores();
+                }
                 await refreshUser();
             } else {
                 alert('Failed to remove store');
@@ -763,7 +789,7 @@ const SettingsPage = () => {
                         <div className="flex items-center gap-2">
                             <h2 className="text-lg sm:text-xl font-bold dark:text-white">{t('settings.connectedStores')}</h2>
                             <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500">
-                                {user?.shopifyStores?.length || 0} / {user?.storeLimit || 2}
+                                {(user?.shopifyStores?.length || 0) + (socialStores.length || 0)} / {user?.storeLimit || 2}
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -807,57 +833,77 @@ const SettingsPage = () => {
                     )}
 
                     { }
-                    {user?.shopifyStores && user.shopifyStores.length > 0 ? (
-                        <div className="space-y-3">
-                            {user.shopifyStores.map((store) => (
-                                <div
-                                    key={store.id}
-                                    className={`p-3 sm:p-4 rounded-lg border transition-all ${user.activeShopId === store.id
-                                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-700'
-                                        : isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
-                                        }`}
-                                >
-                                    <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-                                        <div className={`p-2.5 sm:p-3 rounded-full flex-shrink-0 ${user.activeShopId === store.id ? 'bg-green-100 dark:bg-green-900/50' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                                            <ShoppingBag className={user.activeShopId === store.id ? 'text-green-600' : 'text-gray-500'} size={18} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-semibold dark:text-white flex items-center gap-2 text-sm sm:text-base flex-wrap">
-                                                <span className="truncate">{store.name || store.shop.replace('.myshopify.com', '')}</span>
-                                                {user.activeShopId === store.id && (
-                                                    <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-green-600 text-white rounded-full">Active</span>
-                                                )}
-                                            </h3>
-                                            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{store.shop}</p>
-                                        </div>
-                                    </div>
+                    {/* Connected Stores List (Combined Shopify + Social) */}
+                    {(() => {
+                        const allStores = [
+                            ...(user?.shopifyStores?.map(s => ({ ...s, type: 'shopify' })) || []),
+                            ...(socialStores.map(s => ({ ...s, name: s.storeName, shop: s.contact, type: 'social', platform: s.type })))
+                        ];
 
-                                    <div className="flex items-center gap-2 mt-2.5 sm:mt-3 ml-11 sm:ml-14">
-                                        {user.activeShopId !== store.id && (
-                                            <button
-                                                onClick={() => handleSetActiveShop(store.id)}
-                                                className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 text-xs sm:text-sm font-medium transition-colors dark:bg-blue-900/30 dark:hover:bg-blue-900/50 dark:text-blue-400"
-                                            >
-                                                {t('settings.setActive')}
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => handleRemoveStore(store.id, store.shop)}
-                                            className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 text-xs sm:text-sm font-medium transition-colors dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400"
+                        if (allStores.length > 0) {
+                            return (
+                                <div className="space-y-3">
+                                    {allStores.map((store) => (
+                                        <div
+                                            key={store.id}
+                                            className={`p-3 sm:p-4 rounded-lg border transition-all ${user.activeShopId === store.id
+                                                ? 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-700'
+                                                : isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
+                                                }`}
                                         >
-                                            {t('settings.remove')}
-                                        </button>
-                                    </div>
+                                            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                                                <div className={`p-2.5 sm:p-3 rounded-full flex-shrink-0 ${user.activeShopId === store.id ? 'bg-green-100 dark:bg-green-900/50' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                                                    {store.type === 'social' ? (
+                                                        <Globe className={user.activeShopId === store.id ? 'text-green-600' : 'text-gray-500'} size={18} />
+                                                    ) : (
+                                                        <ShoppingBag className={user.activeShopId === store.id ? 'text-green-600' : 'text-gray-500'} size={18} />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-semibold dark:text-white flex items-center gap-2 text-sm sm:text-base flex-wrap">
+                                                        <span className="truncate">{store.name || store.shop?.replace('.myshopify.com', '')}</span>
+                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${store.type === 'social' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300'
+                                                            }`}>
+                                                            {store.type === 'social' ? (store.platform || 'Social') : 'Shopify'}
+                                                        </span>
+                                                        {user.activeShopId === store.id && (
+                                                            <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-green-600 text-white rounded-full">Active</span>
+                                                        )}
+                                                    </h3>
+                                                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{store.shop}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 mt-2.5 sm:mt-3 ml-11 sm:ml-14">
+                                                {user.activeShopId !== store.id && (
+                                                    <button
+                                                        onClick={() => handleSetActiveShop(store.id)}
+                                                        className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium transition-colors"
+                                                    >
+                                                        {t('settings.setActive')}
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleRemoveStore(store.id, store.name || store.shop, store.type)}
+                                                    className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 text-xs sm:text-sm font-medium transition-colors dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400"
+                                                >
+                                                    {t('settings.remove')}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className={`text-center py-8 sm:py-12 rounded-lg border ${isDarkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
-                            <ShoppingBag className="mx-auto mb-3 sm:mb-4 text-gray-400" size={40} />
-                            <h3 className="font-semibold text-base sm:text-lg dark:text-white mb-1.5 sm:mb-2">{t('settings.noStores')}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 px-4">{t('settings.connectToStart')}</p>
-                        </div>
-                    )}
+                            );
+                        } else {
+                            return (
+                                <div className={`text-center py-8 sm:py-12 rounded-lg border ${isDarkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                                    <ShoppingBag className="mx-auto mb-3 sm:mb-4 text-gray-400" size={40} />
+                                    <h3 className="font-semibold text-base sm:text-lg dark:text-white mb-1.5 sm:mb-2">{t('settings.noStores')}</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 px-4">{t('settings.connectToStart')}</p>
+                                </div>
+                            );
+                        }
+                    })()}
 
                     { }
                     {user?.shopifyStores && user.shopifyStores.length >= 2 && (

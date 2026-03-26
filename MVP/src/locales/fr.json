@@ -230,7 +230,9 @@
         "noNotifications": "Aucune notification",
         "viewAll": "Voir toutes les notifications",
         "profile": "Profil",
-        "logout": "Déconnexion"
+        "logout": "Déconnexion",
+        "selectStore": "Choisir une boutique",
+        "startTour": "Démarrer la visite"
     },
     "onboarding": {
         "linkShop": "Associer votre boutique",

@@ -230,7 +230,9 @@
         "noNotifications": "No notifications yet",
         "viewAll": "View all notifications",
         "profile": "Profile",
-        "logout": "Logout"
+        "logout": "Logout",
+        "selectStore": "Select Store",
+        "startTour": "Start Tour"
     },
     "onboarding": {
         "linkShop": "Link Your Shop",

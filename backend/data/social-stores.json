@@ -9,6 +9,16 @@
       "description": "things",
       "logo": null,
       "createdAt": "2026-03-26T10:21:31.479Z"
+    },
+    {
+      "id": "6bc64183-78f7-4352-9960-26e0b990340b",
+      "userId": "f87b6da6ff9d976d",
+      "type": "whatsapp",
+      "storeName": "But",
+      "contact": "234080567854",
+      "description": "Bomb",
+      "logo": null,
+      "createdAt": "2026-03-26T11:23:23.004Z"
     }
   ],
   "products": [
@@ -24,6 +34,19 @@
       "status": "active",
       "stock": 20,
       "createdAt": "2026-03-26T10:36:18.952Z"
+    },
+    {
+      "id": "d0f1ee04-a619-4020-a0b6-cf2a3e06743a",
+      "storeId": "6bc64183-78f7-4352-9960-26e0b990340b",
+      "name": "Nike Max",
+      "description": "Shoes",
+      "price": 150000,
+      "currency": "NGN",
+      "image": null,
+      "slug": "a80d34534db4",
+      "status": "active",
+      "stock": 10,
+      "createdAt": "2026-03-26T11:24:14.009Z"
     }
   ]
 }

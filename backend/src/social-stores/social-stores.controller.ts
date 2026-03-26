@@ -1,15 +1,23 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Req, UseGuards, Inject, forwardRef } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { SocialStoresService, SocialStore, SocialProduct } from './social-stores.service';
+import { UsersService } from '../users/users.service';
 
 @Controller('social-stores')
 export class SocialStoresController {
-    constructor(private readonly socialStoresService: SocialStoresService) { }
+    constructor(
+        private readonly socialStoresService: SocialStoresService,
+        @Inject(forwardRef(() => UsersService))
+        private readonly usersService: UsersService,
+    ) { }
 
     @UseGuards(AuthGuard('jwt'))
     @Post()
     async createStore(@Req() req, @Body() body: { type: string; storeName: string; contact: string; description?: string; logo?: string }) {
-        return this.socialStoresService.createStore(req.user.id, body);
+        const store = await this.socialStoresService.createStore(req.user.id, body);
+        // Automatically set it as active
+        await this.usersService.setActiveShop(req.user.id, store.id);
+        return store;
     }
 
     @UseGuards(AuthGuard('jwt'))
