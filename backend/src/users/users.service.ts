@@ -172,13 +172,21 @@ export class UsersService implements OnModuleInit {
         if (!user) throw new Error('User not found');
 
         const store = user.shopifyStores.find(s => s.id === storeId);
-        if (!store) throw new Error('Store not found');
 
-        return this.db.updateUser(userId, {
-            activeShopId: storeId,
-            shopifyShop: store.shop,
-            shopifyToken: store.token
-        });
+        if (store) {
+            return this.db.updateUser(userId, {
+                activeShopId: storeId,
+                shopifyShop: store.shop,
+                shopifyToken: store.token
+            });
+        } else {
+            // Assume it's a social store ID or other
+            return this.db.updateUser(userId, {
+                activeShopId: storeId,
+                shopifyShop: null,
+                shopifyToken: null
+            });
+        }
     }
 
     async getActiveShop(userId: string): Promise<ShopifyStore | null> {

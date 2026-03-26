@@ -1,4 +1,29 @@
 {
-  "stores": [],
-  "products": []
+  "stores": [
+    {
+      "id": "1b9ae58e-8c6b-4760-888d-4fffbc1bcef4",
+      "userId": "58be82aab9f9c583",
+      "type": "whatsapp",
+      "storeName": "STore",
+      "contact": "23408058784589",
+      "description": "things",
+      "logo": null,
+      "createdAt": "2026-03-26T10:21:31.479Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "ab9eed6f-f43f-4703-a0d7-af617f6eef1c",
+      "storeId": "1b9ae58e-8c6b-4760-888d-4fffbc1bcef4",
+      "name": "NIke Max",
+      "description": "the Good nike",
+      "price": 10000,
+      "currency": "NGN",
+      "image": null,
+      "slug": "f4e962be4964",
+      "status": "active",
+      "stock": 20,
+      "createdAt": "2026-03-26T10:36:18.952Z"
+    }
+  ]
 }

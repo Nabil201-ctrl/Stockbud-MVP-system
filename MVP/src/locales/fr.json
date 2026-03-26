@@ -88,6 +88,24 @@
         "selectAmount": "Sélectionner le montant",
         "totalPrice": "Prix total"
     },
+    "social": {
+        "title": "Boutiques Sociales",
+        "subtitle": "Créez des vitrines WhatsApp ou Instagram pour vendre directement à vos clients.",
+        "addStore": "Ajouter une boutique",
+        "createStore": "Créer la boutique",
+        "noStores": "Aucune boutique sociale connectée pour le moment.",
+        "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette boutique et tous ses produits ?",
+        "storefrontLink": "Lien de la vitrine",
+        "copyLink": "Copier le lien",
+        "linkCopied": "Lien copié !",
+        "manageProducts": "Gérer les produits",
+        "whatsapp": "WhatsApp",
+        "instagram": "Instagram",
+        "storeName": "Nom de la boutique",
+        "contact": "Contact (Téléphone ou Identifiant)",
+        "description": "Description",
+        "creating": "Création..."
+    },
     "products": {
         "title": "Gestion des produits",
         "subtitle": "Gérez votre catalogue de produits et votre inventaire",

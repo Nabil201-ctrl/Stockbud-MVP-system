@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import Timeline from '../components/Shopify/Timeline';
+import SocialStoresPanel from '../components/Dashboard/SocialStoresPanel';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -79,7 +80,7 @@ const SettingsPage = () => {
             window.history.replaceState({}, document.title, location.pathname);
         }
 
-        
+
         const pendingRef = localStorage.getItem('pending_payment_ref');
         if (pendingRef && !reference) {
             console.log('[Payment] Recovering pending payment:', pendingRef);
@@ -94,13 +95,13 @@ const SettingsPage = () => {
             const handler = PaystackPop.setup({
                 key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
                 email: user.email,
-                amount: (purchaseAmount / 100) * 500 * 100, 
+                amount: (purchaseAmount / 100) * 500 * 100,
                 metadata: {
                     userId: user.id,
                     tokenCount: purchaseAmount
                 },
                 callback: (transaction) => {
-                    setPurchaseLoading(true); 
+                    setPurchaseLoading(true);
                     verifyPayment(transaction.reference);
                 },
                 onClose: () => {
@@ -116,7 +117,7 @@ const SettingsPage = () => {
         }
     };
 
-    
+
     const verifyWithRetry = async (reference, maxRetries = 3) => {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -125,15 +126,15 @@ const SettingsPage = () => {
                 if (response.ok && data.success) {
                     return data;
                 }
-                
+
                 return { success: false, message: data.message || 'Verification failed' };
             } catch (error) {
                 console.warn(`[Payment] Verify attempt ${attempt}/${maxRetries} failed:`, error.message);
                 if (attempt < maxRetries) {
-                    
+
                     await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt - 1)));
                 } else {
-                    
+
                     localStorage.setItem('pending_payment_ref', reference);
                     return { success: false, message: 'Network error. Your payment is safe — please refresh the page to retry.' };
                 }
@@ -269,7 +270,7 @@ const SettingsPage = () => {
         const limit = user?.storeLimit || 2;
 
         if (currentStoreCount >= limit) {
-            
+
             if (confirm(t('settings.storeLimitReached', { limit }))) {
                 initiateStoreLimitPayment();
             }
@@ -306,7 +307,7 @@ const SettingsPage = () => {
             const handler = PaystackPop.setup({
                 key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
                 email: user.email,
-                amount: 5000 * 100, 
+                amount: 5000 * 100,
                 metadata: {
                     userId: user.id,
                     type: 'store_slot'
@@ -340,7 +341,7 @@ const SettingsPage = () => {
             const handler = PaystackPop.setup({
                 key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
                 email: user.email,
-                amount: amount * 100, 
+                amount: amount * 100,
                 metadata: {
                     userId: user.id,
                     type: 'retention_extend',
@@ -396,7 +397,7 @@ const SettingsPage = () => {
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
             <h1 className="text-xl sm:text-2xl font-bold dark:text-white" id="settings-header">{t('settings.title')}</h1>
 
-            {}
+            { }
             <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                 <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2 dark:text-white">
                     <Globe size={18} />
@@ -415,7 +416,7 @@ const SettingsPage = () => {
                 </div>
             </div>
 
-            {}
+            { }
             <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0" id="settings-tabs">
                 <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-max">
                     {[
@@ -439,7 +440,7 @@ const SettingsPage = () => {
                 </nav>
             </div>
 
-            {}
+            { }
             {activeTab === 'profile' && (
                 <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 dark:text-white">{t('settings.profile')}</h2>
@@ -463,7 +464,7 @@ const SettingsPage = () => {
                             />
                         </div>
 
-                        {}
+                        { }
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2">
                                 <Languages className="w-4 h-4" />
@@ -482,7 +483,7 @@ const SettingsPage = () => {
                             </select>
                         </div>
 
-                        {}
+                        { }
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2">
                                 <span className="w-4 h-4 flex items-center justify-center font-bold text-xs">$</span>
@@ -505,7 +506,7 @@ const SettingsPage = () => {
                             </select>
                         </div>
 
-                        {}
+                        { }
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center justify-between">
                                 <span>Text Size</span>
@@ -546,7 +547,7 @@ const SettingsPage = () => {
                 </div>
             )}
 
-            {}
+            { }
             {activeTab === 'security' && (
                 <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 dark:text-white">{t('settings.changePassword')}</h2>
@@ -598,12 +599,12 @@ const SettingsPage = () => {
                 </div>
             )}
 
-            {}
+            { }
             {activeTab === 'usage' && (
                 <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 dark:text-white">Usage & Limits</h2>
 
-                    {}
+                    { }
                     <div className={`mb-6 sm:mb-8 p-4 sm:p-6 rounded-xl border ${isDarkMode ? 'bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-blue-800' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100'}`}>
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4 sm:mb-6">
                             <div>
@@ -681,7 +682,7 @@ const SettingsPage = () => {
                             </p>
                         </div>
 
-                        {}
+                        { }
                         <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2 font-medium dark:text-gray-200">
@@ -755,7 +756,7 @@ const SettingsPage = () => {
                 </div>
             )}
 
-            {}
+            { }
             {activeTab === 'integrations' && (
                 <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between mb-4 sm:mb-6">
@@ -786,7 +787,7 @@ const SettingsPage = () => {
                         </div>
                     </div>
 
-                    {}
+                    { }
                     {pairingCode && (
                         <div className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg border ${isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-200'}`}>
                             <div className="flex items-center justify-between gap-3">
@@ -805,7 +806,7 @@ const SettingsPage = () => {
                         </div>
                     )}
 
-                    {}
+                    { }
                     {user?.shopifyStores && user.shopifyStores.length > 0 ? (
                         <div className="space-y-3">
                             {user.shopifyStores.map((store) => (
@@ -858,7 +859,7 @@ const SettingsPage = () => {
                         </div>
                     )}
 
-                    {}
+                    { }
                     {user?.shopifyStores && user.shopifyStores.length >= 2 && (
                         <div className="mt-3 sm:mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-start sm:items-center gap-2">
                             <Zap className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5 sm:mt-0" size={16} />
@@ -868,13 +869,18 @@ const SettingsPage = () => {
                         </div>
                     )}
 
-                    {}
+                    { }
                     {user?.shopifyStores && user.shopifyStores.length > 0 && (
                         <div className={`mt-4 sm:mt-6 p-4 sm:p-6 rounded-lg border ${isDarkMode ? 'bg-gray-700/30 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
                             <h3 className="font-semibold text-base sm:text-lg dark:text-white mb-3 sm:mb-4">Connection Status</h3>
                             <Timeline currentStepOverride={5} />
                         </div>
                     )}
+
+                    {/* Social Stores System */}
+                    <div className="mt-8">
+                        <SocialStoresPanel />
+                    </div>
                 </div>
             )}
         </div>

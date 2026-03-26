@@ -67,6 +67,7 @@ function App() {
 
             { }
             <Route path="/p/:slug" element={<StorefrontPage />} />
+            <Route path="/s/:storeId" element={<StorefrontPage />} />
 
             { }
             <Route path="/auth/login" element={<Login />} />

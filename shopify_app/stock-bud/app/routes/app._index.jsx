@@ -142,7 +142,7 @@ export default function Index() {
 
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [pairingCode, setPairingCode] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -155,11 +155,8 @@ export default function Index() {
     setLoginError("");
     try {
       const formData = new FormData();
-      formData.append("pairingCode", email);
+      formData.append("pairingCode", pairingCode);
       fetcher.submit(formData, { method: "POST" });
-
-
-
     } catch (err) {
       setLoginError("Connection error: " + err.message);
       setIsLoading(false);
@@ -260,8 +257,8 @@ export default function Index() {
                       <FormLayout>
                         <TextField
                           label="Pairing Code"
-                          value={email}
-                          onChange={setEmail}
+                          value={pairingCode}
+                          onChange={setPairingCode}
                           placeholder="ABC-123-XYZ"
                           autoComplete="off"
                         />
@@ -289,7 +286,7 @@ export default function Index() {
               {currentStep === 5 && (
                 <Box padding="400" background="bg-surface-secondary">
                   <BlockStack gap="400" align="center">
-                    <div style={{ fontSize: '48px', textAlign: 'center' }}></div>
+                    <div style={{ fontSize: '48px', textAlign: 'center' }}>✅</div>
                     <Text variant="headingMd" as="h3" alignment="center">Setup Complete!</Text>
                     <Button variant="primary" size="large" onClick={openApp}>
                       Launch Stockbud Dashboard

@@ -7,5 +7,6 @@ import { CommonModule } from '../common/common.module';
     imports: [CommonModule],
     controllers: [SocialStoresController],
     providers: [SocialStoresService],
+    exports: [SocialStoresService],
 })
 export class SocialStoresModule { }

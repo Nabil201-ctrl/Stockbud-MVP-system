@@ -198,7 +198,7 @@ const Dashboard = () => {
                 </div>
                 <div className="h-64 min-h-[256px] w-full">
                   <Suspense fallback={<ChartLoading type="pie" />}>
-                    <SourcePieChart />
+                    <SourcePieChart data={stats?.source || []} />
                   </Suspense>
                 </div>
               </div>
@@ -208,10 +208,10 @@ const Dashboard = () => {
               { }
 
               <div className="lg:col-span-2">
-                <SalesHeatmap isDarkMode={isDarkMode} />
+                <SalesHeatmap isDarkMode={isDarkMode} data={stats?.heatmap || []} />
               </div>
               <div className="lg:col-span-1">
-                <SalesHistory isDarkMode={isDarkMode} currencySymbol={currencySymbol} />
+                <SalesHistory isDarkMode={isDarkMode} currencySymbol={currencySymbol} data={stats?.salesHistory || []} />
               </div>
             </div>
           )}

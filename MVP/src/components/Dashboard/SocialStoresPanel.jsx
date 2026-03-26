@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const APP_URL = window.location.origin;
 
-const SocialStoresPanel = () => {
+const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, onAddProductModalClose }) => {
     const { isDarkMode } = useTheme();
     const { authenticatedFetch } = useAuth();
 
@@ -17,6 +17,7 @@ const SocialStoresPanel = () => {
     const [showAddProduct, setShowAddProduct] = useState(null);
     const [expandedStore, setExpandedStore] = useState(null);
     const [copiedSlug, setCopiedSlug] = useState(null);
+    const [copiedStoreId, setCopiedStoreId] = useState(null);
 
     const [storeForm, setStoreForm] = useState({
         type: 'whatsapp',
@@ -52,7 +53,17 @@ const SocialStoresPanel = () => {
 
     useEffect(() => {
         fetchStores();
-    }, [authenticatedFetch]);
+    }, [authenticatedFetch, activeStoreId]);
+
+    useEffect(() => {
+        if (activeStoreId && stores.length > 0) {
+            setExpandedStore(activeStoreId);
+            if (triggerAddProduct) {
+                setShowAddProduct(activeStoreId);
+                if (onAddProductModalClose) onAddProductModalClose();
+            }
+        }
+    }, [activeStoreId, stores, triggerAddProduct]);
 
     const handleCreateStore = async (e) => {
         e.preventDefault();
@@ -101,6 +112,7 @@ const SocialStoresPanel = () => {
             });
             if (res.ok) {
                 await fetchStores();
+                if (onProductAdded) onProductAdded();
                 setShowAddProduct(null);
                 setProductForm({ name: '', description: '', price: '', currency: 'NGN', image: '', stock: '' });
             }
@@ -126,6 +138,13 @@ const SocialStoresPanel = () => {
         navigator.clipboard.writeText(link);
         setCopiedSlug(slug);
         setTimeout(() => setCopiedSlug(null), 2000);
+    };
+
+    const copyStoreLink = (storeId) => {
+        const link = `${APP_URL}/s/${storeId}`;
+        navigator.clipboard.writeText(link);
+        setCopiedStoreId(storeId);
+        setTimeout(() => setCopiedStoreId(null), 2000);
     };
 
     const shareLink = (product, store) => {
@@ -195,114 +214,133 @@ const SocialStoresPanel = () => {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {stores.map(store => (
-                            <div key={store.id} className={`rounded-xl border overflow-hidden transition-all ${isDarkMode ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
-                                <div
-                                    className={`flex items-center justify-between p-4 cursor-pointer ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors`}
-                                    onClick={() => setExpandedStore(expandedStore === store.id ? null : store.id)}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${store.type === 'whatsapp' ? 'bg-green-500/10 text-green-500' : 'bg-pink-500/10 text-pink-500'}`}>
-                                            {store.type === 'whatsapp' ? <MessageCircle size={20} /> : <Instagram size={20} />}
+                        {stores
+                            .filter(s => !activeStoreId || s.id === activeStoreId)
+                            .map(store => (
+                                <div key={store.id} className={`rounded-xl border overflow-hidden transition-all ${isDarkMode ? 'border-gray-700 bg-gray-750' : 'border-gray-200 bg-gray-50'}`}>
+                                    <div
+                                        className={`flex items-center justify-between p-4 cursor-pointer ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} transition-colors ${activeStoreId === store.id ? (isDarkMode ? 'bg-indigo-900/20' : 'bg-indigo-50/50') : ''}`}
+                                        onClick={() => setExpandedStore(expandedStore === store.id ? null : store.id)}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${store.type === 'whatsapp' ? 'bg-green-500/10 text-green-500' : 'bg-pink-500/10 text-pink-500'}`}>
+                                                {store.type === 'whatsapp' ? <MessageCircle size={20} /> : <Instagram size={20} />}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold">{store.storeName}</h4>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {store.type === 'whatsapp' ? `+${store.contact}` : `@${store.contact}`} · {store.products?.length || 0} products
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="font-semibold">{store.storeName}</h4>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                {store.type === 'whatsapp' ? `+${store.contact}` : `@${store.contact}`} · {store.products?.length || 0} products
-                                            </p>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); copyStoreLink(store.id); }}
+                                                className={`p-2 rounded-lg transition-all ${copiedStoreId === store.id ? 'text-green-500 bg-green-500/10' : 'text-gray-400 hover:text-blue-500 hover:bg-blue-500/10'}`}
+                                                title="Copy store link"
+                                            >
+                                                {copiedStoreId === store.id ? <Check size={18} /> : <Copy size={18} />}
+                                            </button>
+                                            <a
+                                                href={`/s/${store.id}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="p-2 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-500/10 transition-all"
+                                                title="View Storefront"
+                                            >
+                                                <ExternalLink size={18} />
+                                            </a>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setShowAddProduct(store.id); }}
+                                                className="p-2 rounded-lg text-blue-500 hover:bg-blue-500/10 transition-colors"
+                                                title="Add Product"
+                                            >
+                                                <Plus size={18} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteStore(store.id); }}
+                                                className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
+                                                title="Delete Store"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                            {expandedStore === store.id ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setShowAddProduct(store.id); }}
-                                            className="p-2 rounded-lg text-blue-500 hover:bg-blue-500/10 transition-colors"
-                                            title="Add Product"
-                                        >
-                                            <Plus size={18} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteStore(store.id); }}
-                                            className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
-                                            title="Delete Store"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                        {expandedStore === store.id ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
-                                    </div>
-                                </div>
 
-                                {expandedStore === store.id && (
-                                    <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                                        {(!store.products || store.products.length === 0) ? (
-                                            <div className="p-6 text-center">
-                                                <Package size={32} className="mx-auto mb-2 text-gray-400" />
-                                                <p className="text-gray-500 text-sm">No products yet</p>
-                                                <button
-                                                    onClick={() => setShowAddProduct(store.id)}
-                                                    className="mt-3 text-sm text-purple-500 hover:text-purple-400 font-medium"
-                                                >
-                                                    + Add your first product
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="p-4 space-y-3">
-                                                {store.products.map(product => (
-                                                    <div key={product.id} className={`flex items-center gap-3 p-3 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} shadow-sm`}>
-                                                        <div className="w-14 h-14 rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden flex-shrink-0">
-                                                            {product.image ? (
-                                                                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center">
-                                                                    <Package size={20} className="text-gray-400" />
-                                                                </div>
-                                                            )}
+                                    {expandedStore === store.id && (
+                                        <div className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                                            {(!store.products || store.products.length === 0) ? (
+                                                <div className="p-6 text-center">
+                                                    <Package size={32} className="mx-auto mb-2 text-gray-400" />
+                                                    <p className="text-gray-500 text-sm">No products yet</p>
+                                                    <button
+                                                        onClick={() => setShowAddProduct(store.id)}
+                                                        className="mt-3 text-sm text-purple-500 hover:text-purple-400 font-medium"
+                                                    >
+                                                        + Add your first product
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 space-y-3">
+                                                    {store.products.map(product => (
+                                                        <div key={product.id} className={`flex items-center gap-3 p-3 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} shadow-sm`}>
+                                                            <div className="w-14 h-14 rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden flex-shrink-0">
+                                                                {product.image ? (
+                                                                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center">
+                                                                        <Package size={20} className="text-gray-400" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h5 className="font-medium text-sm truncate">{product.name}</h5>
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                    {product.currency} {product.price.toLocaleString()} · Stock: {product.stock}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                                                <button
+                                                                    onClick={() => copyLink(product.slug)}
+                                                                    className={`p-2 rounded-lg transition-all ${copiedSlug === product.slug ? 'text-green-500 bg-green-500/10' : 'text-gray-400 hover:text-blue-500 hover:bg-blue-500/10'}`}
+                                                                    title="Copy shareable link"
+                                                                >
+                                                                    {copiedSlug === product.slug ? <Check size={16} /> : <Copy size={16} />}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => shareLink(product, store)}
+                                                                    className="p-2 rounded-lg text-gray-400 hover:text-purple-500 hover:bg-purple-500/10 transition-all"
+                                                                    title="Share product"
+                                                                >
+                                                                    <Share2 size={16} />
+                                                                </button>
+                                                                <a
+                                                                    href={`/p/${product.slug}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="p-2 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-500/10 transition-all"
+                                                                    title="View public page"
+                                                                >
+                                                                    <ExternalLink size={16} />
+                                                                </a>
+                                                                <button
+                                                                    onClick={() => handleDeleteProduct(product.id)}
+                                                                    className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                                                                    title="Delete product"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h5 className="font-medium text-sm truncate">{product.name}</h5>
-                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                                {product.currency} {product.price.toLocaleString()} · Stock: {product.stock}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                                            <button
-                                                                onClick={() => copyLink(product.slug)}
-                                                                className={`p-2 rounded-lg transition-all ${copiedSlug === product.slug ? 'text-green-500 bg-green-500/10' : 'text-gray-400 hover:text-blue-500 hover:bg-blue-500/10'}`}
-                                                                title="Copy shareable link"
-                                                            >
-                                                                {copiedSlug === product.slug ? <Check size={16} /> : <Copy size={16} />}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => shareLink(product, store)}
-                                                                className="p-2 rounded-lg text-gray-400 hover:text-purple-500 hover:bg-purple-500/10 transition-all"
-                                                                title="Share product"
-                                                            >
-                                                                <Share2 size={16} />
-                                                            </button>
-                                                            <a
-                                                                href={`/p/${product.slug}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="p-2 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-500/10 transition-all"
-                                                                title="View public page"
-                                                            >
-                                                                <ExternalLink size={16} />
-                                                            </a>
-                                                            <button
-                                                                onClick={() => handleDeleteProduct(product.id)}
-                                                                className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all"
-                                                                title="Delete product"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
                     </div>
                 )}
             </div>

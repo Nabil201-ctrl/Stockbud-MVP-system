@@ -28,10 +28,10 @@ export class DashboardService {
                 } else {
                     orders = ordersData.orders;
                 }
-                
-                
 
-                
+
+
+
                 let exchangeRate = 1;
                 if (orders.length > 0) {
                     const shopCurrency = orders[0].currency || 'USD';
@@ -50,7 +50,7 @@ export class DashboardService {
                     }
                 }
 
-                
+
                 orders.forEach(order => {
                     const amount = Number(order.total_price) * exchangeRate;
                     if (order.financial_status === 'voided' || order.cancelled_at) {
@@ -60,7 +60,7 @@ export class DashboardService {
                     }
                 });
 
-                
+
                 const now = new Date();
                 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                 const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -88,11 +88,11 @@ export class DashboardService {
                 }
 
 
-                
+
                 const last7Days = [...Array(7)].map((_, i) => {
                     const d = new Date();
                     d.setDate(d.getDate() - (6 - i));
-                    return d.toISOString().split('T')[0]; 
+                    return d.toISOString().split('T')[0];
                 });
 
                 revenueData = last7Days.map(date => {
@@ -112,7 +112,7 @@ export class DashboardService {
                     };
                 });
 
-                
+
                 const sources = {};
                 orders.forEach(o => {
                     const source = o.source_name || 'direct';
@@ -126,7 +126,7 @@ export class DashboardService {
                     color: this.getColorForSource(name)
                 }));
 
-                
+
                 const heatMapCounts = {};
                 orders.forEach(o => {
                     const date = o.created_at.split('T')[0];
@@ -139,7 +139,7 @@ export class DashboardService {
                     level: Math.min(4, Math.ceil(Number(count) / 2))
                 }));
 
-                
+
                 salesHistoryData = orders.slice(0, 5).map(o => {
                     const first = o.customer?.first_name || 'Guest';
                     const last = o.customer?.last_name || '';
@@ -187,6 +187,61 @@ export class DashboardService {
             source: sourceData,
             heatmap: heatmapData,
             salesHistory: salesHistoryData,
+            topProducts: topProducts
+        };
+    }
+
+    async getSocialStats(storeId: string, products: any[]) {
+        let totalStockValue = 0;
+        let heatmapData = [];
+        let sourceData: { name: string; value: number; color: string }[] = [];
+        let topProducts = [];
+
+        // 1. Inventory Health
+        products.forEach(p => {
+            totalStockValue += (Number(p.price) * (Number(p.stock) || 0));
+        });
+
+        // 2. Heatmap (Mocked from creation dates)
+        const heatMapCounts = {};
+        products.forEach(p => {
+            const date = p.createdAt?.split('T')[0];
+            if (date) heatMapCounts[date] = (heatMapCounts[date] || 0) + 1;
+        });
+
+        heatmapData = Object.entries(heatMapCounts).map(([date, count]) => ({
+            date,
+            count: Number(count),
+            level: Math.min(4, Math.ceil(Number(count) / 2))
+        }));
+
+        // 3. Source (Mainly WhatsApp for social stores)
+        sourceData = [
+            { name: 'WhatsApp', value: 85, color: '#10B981' },
+            { name: 'Instagram', value: 10, color: '#8B5CF6' },
+            { name: 'Direct', value: 5, color: '#6B7280' }
+        ];
+
+        // 4. Top Stocked Products
+        topProducts = [...products]
+            .sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))
+            .slice(0, 5)
+            .map(p => ({ name: p.name, count: p.stock }));
+
+        return {
+            revenue: {
+                total: totalStockValue, // Potential revenue from stock
+                change: 0,
+                chartData: [],
+                lost: 0
+            },
+            targetDetails: {
+                type: 'monthly',
+                value: 0
+            },
+            source: sourceData,
+            heatmap: heatmapData,
+            salesHistory: [],
             topProducts: topProducts
         };
     }

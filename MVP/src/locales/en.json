@@ -88,6 +88,24 @@
         "selectAmount": "Select Amount",
         "totalPrice": "Total Price"
     },
+    "social": {
+        "title": "Social Stores",
+        "subtitle": "Create WhatsApp or Instagram storefronts to sell directly to your customers.",
+        "addStore": "Add Store",
+        "createStore": "Create Store",
+        "noStores": "No social stores connected yet.",
+        "deleteConfirm": "Are you sure you want to delete this store and all its products?",
+        "storefrontLink": "Storefront Link",
+        "copyLink": "Copy Link",
+        "linkCopied": "Link Copied!",
+        "manageProducts": "Manage Products",
+        "whatsapp": "WhatsApp",
+        "instagram": "Instagram",
+        "storeName": "Store Name",
+        "contact": "Contact (Phone or Handle)",
+        "description": "Description",
+        "creating": "Creating..."
+    },
     "products": {
         "title": "Product Management",
         "subtitle": "Manage your product catalog and inventory",

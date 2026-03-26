@@ -14,6 +14,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   const [showShopMenu, setShowShopMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [socialStores, setSocialStores] = useState([]);
 
   const menuRef = useRef(null);
   const shopMenuRef = useRef(null);
@@ -31,9 +32,22 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
     }
   };
 
+  const fetchSocialStores = async () => {
+    try {
+      const response = await authenticatedFetch('http://localhost:3000/social-stores');
+      if (response.ok) {
+        const data = await response.json();
+        setSocialStores(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch social stores", error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchNotifications();
+      fetchSocialStores();
     }
   }, [user]);
 
@@ -108,9 +122,9 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
         body: JSON.stringify({ storeId })
       });
       if (response.ok) {
-        await refreshUser(); 
+        await refreshUser();
         setShowShopMenu(false);
-        
+
         window.location.reload();
       }
     } catch (error) {
@@ -118,7 +132,12 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
     }
   };
 
-  const activeShop = user?.shopifyStores?.find(s => s.id === user?.activeShopId);
+  const allStores = [
+    ...(user?.shopifyStores?.map(s => ({ ...s, isShopify: true })) || []),
+    ...(socialStores.map(s => ({ ...s, isSocial: true, name: s.storeName, shop: s.type })))
+  ];
+
+  const activeStore = allStores.find(s => s.id === user?.activeShopId);
 
   return (
     <div id="app-header" className={`px-6 py-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} border-b sticky top-0 z-10`}>
@@ -128,50 +147,52 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
             <Menu size={24} />
           </button>
           <div className="hidden md:flex items-center relative" ref={shopMenuRef}>
-            {activeShop ? (
+            {(allStores.length > 0) ? (
               <>
                 <button
                   id="shop-selector"
                   onClick={() => setShowShopMenu(!showShopMenu)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
                 >
-                  <div className={`p-1 rounded-md ${isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-600'}`}>
-                    <ShoppingBag size={16} />
+                  <div className={`p-1 rounded-md ${activeStore?.isSocial
+                    ? (isDarkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-600')
+                    : (isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-600')
+                    }`}>
+                    {activeStore?.isSocial ? <Store size={16} /> : <ShoppingBag size={16} />}
                   </div>
                   <span className={`text-sm font-medium max-w-[150px] truncate ${isDarkMode ? 'text-gray-200' : 'text-slate-700'}`}>
-                    {activeShop.name || activeShop.shop.replace('.myshopify.com', '')}
+                    {activeStore ? (activeStore.name || activeStore.shop?.replace('.myshopify.com', '')) : t('header.selectStore') || 'Select Store'}
                   </span>
                   <ChevronDown size={14} className={`text-gray-400 transition-transform ${showShopMenu ? 'rotate-180' : ''}`} />
                 </button>
-
                 {showShopMenu && (
                   <div className={`absolute top-full left-0 mt-2 w-64 rounded-xl shadow-xl border overflow-hidden z-50 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
                     <div className={`px-4 py-2 border-b text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'border-gray-700 text-gray-400' : 'border-slate-100 text-slate-500'}`}>
                       {t('header.selectShop')}
                     </div>
                     <div className="max-h-[300px] overflow-y-auto">
-                      {user?.shopifyStores?.map(store => (
+                      {allStores.map(store => (
                         <button
                           key={store.id}
                           onClick={() => handleShopSwitch(store.id)}
                           className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${user.activeShopId === store.id
-                            ? (isDarkMode ? 'bg-green-900/10 text-green-400' : 'bg-green-50 text-green-700')
+                            ? (isDarkMode ? 'bg-indigo-900/10 text-indigo-400' : 'bg-indigo-50 text-indigo-700')
                             : (isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-slate-50 text-slate-700')
                             }`}
                         >
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${user.activeShopId === store.id
-                              ? 'bg-green-500 text-white'
+                              ? 'bg-indigo-500 text-white'
                               : (isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-slate-200 text-slate-500')
                               }`}>
-                              {(store.name || store.shop).substring(0, 2).toUpperCase()}
+                              {store.isSocial ? <Store size={14} /> : (store.name || store.shop).substring(0, 2).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">{store.name || store.shop.replace('.myshopify.com', '')}</div>
-                              <div className="text-xs opacity-70 truncate">{store.shop}</div>
+                              <div className="font-medium truncate">{store.name || store.shop?.replace('.myshopify.com', '')}</div>
+                              <div className="text-xs opacity-70 truncate">{store.isSocial ? store.type : store.shop}</div>
                             </div>
                           </div>
-                          {user.activeShopId === store.id && <Check size={16} className="text-green-500" />}
+                          {user.activeShopId === store.id && <Check size={16} className="text-indigo-500" />}
                         </button>
                       ))}
                     </div>
@@ -333,7 +354,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
               <ChevronDown size={16} className={`transition-transform duration-200 ${isDarkMode ? 'text-gray-400' : 'text-slate-400'} ${showProfileMenu ? 'rotate-180' : ''}`} />
             </div>
 
-            {}
+            { }
             {showProfileMenu && (
               <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} z-50`}>
                 <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 md:hidden">

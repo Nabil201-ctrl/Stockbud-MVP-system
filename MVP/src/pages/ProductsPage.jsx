@@ -15,6 +15,7 @@ const ProductsPage = () => {
   const { isDarkMode } = useTheme();
   const { authenticatedFetch, user } = useAuth();
   const { t } = useLanguage();
+  const [socialStores, setSocialStores] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
 
@@ -47,6 +48,22 @@ const ProductsPage = () => {
   const [thresholdInput, setThresholdInput] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [triggerAddProduct, setTriggerAddProduct] = useState(false);
+
+  // Get active store for context
+  const activeStore = useMemo(() => {
+    return socialStores.find(s => s.id === user?.activeShopId);
+  }, [socialStores, user?.activeShopId]);
+
+  const activeCurrency = useMemo(() => {
+    if (activeStore && activeStore.products?.[0]?.currency) {
+      return activeStore.products[0].currency;
+    }
+    if (products.length > 0 && products[0].currency) {
+      return products[0].currency;
+    }
+    return user?.currency || 'USD';
+  }, [activeStore, products, user?.currency]);
 
   useEffect(() => {
     const loadThresholds = async () => {
@@ -58,9 +75,22 @@ const ProductsPage = () => {
     loadThresholds();
   }, [user?.activeShopId]);
 
+  const fetchSocialStores = async () => {
+    try {
+      const response = await authenticatedFetch(`${API_URL}/social-stores`);
+      if (response.ok) {
+        const data = await response.json();
+        setSocialStores(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch social stores:', err);
+    }
+  };
+
   useEffect(() => {
+    fetchSocialStores();
     fetchProducts();
-  }, [authenticatedFetch]);
+  }, [authenticatedFetch, user?.activeShopId]);
 
   // Update notifications when products or thresholds change
   useEffect(() => {
@@ -97,18 +127,30 @@ const ProductsPage = () => {
     setThresholdInput('');
   };
 
+  const isActiveStoreSocial = useMemo(() => {
+    return socialStores.some(s => s.id === user?.activeShopId);
+  }, [socialStores, user?.activeShopId]);
+
   const fetchProducts = async (cursor = null, direction = 'next') => {
+    if (!user?.activeShopId) {
+      setLoading(false);
+      setShopifyNotConnected(true);
+      setProducts([]);
+      return;
+    }
+
     try {
+      let url;
       if (!cursor) {
         // PWA Offline Storage: Immediately load from IndexedDB
-        const cacheKey = `products_${user?.activeShopId || 'default'}`;
+        const cacheKey = `products_${user.activeShopId}`;
         const cachedProducts = await storage.get(cacheKey);
         if (cachedProducts) {
           setProducts(cachedProducts.products);
           setProductStats(cachedProducts.stats);
           setPageInfo(cachedProducts.pageInfo);
           setTotalCount(cachedProducts.totalCount);
-          setLoading(false); // Instant load
+          setLoading(false);
         } else {
           setLoading(true);
         }
@@ -116,8 +158,43 @@ const ProductsPage = () => {
         setPaginationLoading(true);
       }
 
-      // Construct URL with pagination
-      let url = `${API_URL}/shopify/products?first=${ITEMS_PER_PAGE}`;
+      // Handle Social Store Products
+      if (isActiveStoreSocial) {
+        url = `${API_URL}/social-stores/${user.activeShopId}/products`;
+        const response = await authenticatedFetch(url);
+        if (!response.ok) throw new Error('Failed to fetch social products');
+        const data = await response.json();
+
+        const mappedProducts = data.map(p => ({
+          id: p.id,
+          name: p.name,
+          image: p.image || '',
+          price: p.price,
+          currency: p.currency,
+          stock: p.stock,
+          category: 'Social',
+          status: p.stock <= 0 ? 'out' : p.stock <= 5 ? 'low' : 'active'
+        }));
+
+        setProducts(mappedProducts);
+        setProductStats({
+          total: data.length,
+          active: data.filter(p => p.stock > 0).length,
+          outOfStock: data.filter(p => p.stock <= 0).length,
+          lowStock: data.filter(p => p.stock > 0 && p.stock <= 5).length,
+          totalRevenue: data.reduce((acc, p) => acc + (p.price * (p.stock || 0)), 0),
+          avgRating: 0
+        });
+        setPageInfo({ hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null });
+        setTotalCount(data.length);
+        setLoading(false);
+        setPaginationLoading(false);
+        setShopifyNotConnected(false);
+        return;
+      }
+
+      // Construct Shopify URL with pagination
+      url = `${API_URL}/shopify/products?first=${ITEMS_PER_PAGE}`;
       if (cursor) {
         if (direction === 'next') {
           url = `${API_URL}/shopify/products?first=${ITEMS_PER_PAGE}&after=${encodeURIComponent(cursor)}`;
@@ -271,16 +348,16 @@ const ProductsPage = () => {
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
             <Store size={32} className="text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold mb-3">Connect Your Store</h2>
+          <h2 className="text-2xl font-bold mb-3">No Active Store</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            To view and manage your products, please connect your Shopify store first.
+            To view and manage your products, please connect or select a store first.
           </p>
           <Link
             to="/settings"
             className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
           >
             <Store size={20} />
-            Go to Settings
+            Connect Your Store
           </Link>
         </div>
       </div>
@@ -321,15 +398,29 @@ const ProductsPage = () => {
               {t('products.subtitle')}
             </p>
           </div>
+          {isActiveStoreSocial && (
+            <button
+              onClick={() => setTriggerAddProduct(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+            >
+              <Package size={20} />
+              {t('products.addNew')}
+            </button>
+          )}
         </div>
 
-        <SocialStoresPanel />
+        <SocialStoresPanel
+          activeStoreId={isActiveStoreSocial ? user?.activeShopId : null}
+          onProductAdded={fetchProducts}
+          triggerAddProduct={triggerAddProduct}
+          onAddProductModalClose={() => setTriggerAddProduct(false)}
+        />
 
         { }
         <div id="products-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
             { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total, change: '+12%', color: 'bg-blue-500' },
-            { icon: <DollarSign size={24} />, label: t('products.revenue'), value: `$${productStats.totalRevenue.toLocaleString()}`, change: '+8.5%', color: 'bg-green-500' },
+            { icon: <DollarSign size={24} />, label: t('products.revenue'), value: `${activeCurrency} ${productStats.totalRevenue.toLocaleString()}`, change: '+8.5%', color: 'bg-green-500' },
             { icon: <ShoppingCart size={24} />, label: t('products.activeProducts'), value: productStats.active, change: '+3.2%', color: 'bg-purple-500' },
             { icon: <Star size={24} />, label: t('products.avgRating'), value: productStats.avgRating, change: '+0.2', color: 'bg-orange-500' }
           ].map((stat, idx) => (
@@ -389,7 +480,7 @@ const ProductsPage = () => {
                   <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
                     {searchTerm || category !== 'all'
                       ? 'Try adjusting your search or filter criteria'
-                      : 'Your Shopify store has no products yet'}
+                      : 'Your store has no products yet'}
                   </p>
                 </div>
               ) : (
@@ -433,7 +524,10 @@ const ProductsPage = () => {
                             {product.category}
                           </span>
                         </td>
-                        <td className="py-4 px-4 font-medium">${product.price}</td>
+                        <td className="py-4 px-4 font-medium">
+                          {product.currency ? `${product.currency} ` : '$'}
+                          {product.price.toLocaleString()}
+                        </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
                             <div className={`w-24 h-2 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
@@ -586,91 +680,89 @@ const ProductsPage = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      { }
-      {showThresholdModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-sm rounded-xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`p-4 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              <h3 className="font-semibold text-lg flex items-center gap-2">
-                <Bell size={20} className="text-blue-500" />
-                Set Stock Threshold
-              </h3>
-              <button
-                onClick={() => setShowThresholdModal(null)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Alert me when stock for <strong>{showThresholdModal.name}</strong> falls to or below:
-              </p>
-              <input
-                type="number"
-                min="0"
-                value={thresholdInput}
-                onChange={(e) => setThresholdInput(e.target.value)}
-                placeholder="e.g. 10"
-                className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-shadow ${isDarkMode
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  }`}
-              />
-              <p className="text-xs text-gray-500 mt-2">Leave blank to clear threshold.</p>
-            </div>
-            <div className={`p-4 border-t flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-              <button
-                onClick={() => setShowThresholdModal(null)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
-                  }`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveThreshold}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Save Threshold
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      { }
-      {showNotifications && notifications.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-40 max-w-sm w-full space-y-3">
-          <div className={`p-4 rounded-xl shadow-xl flex items-start gap-4 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-            }`}>
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <AlertCircle size={20} className="text-red-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-red-500 mb-1">Low Stock Alerts</h4>
-              <div className="max-h-32 overflow-y-auto pr-2 space-y-2">
-                {notifications.map((n, i) => (
-                  <p key={i} className={`text-sm ${n.stock === 0 ? 'text-red-500 font-bold' : 'text-gray-600 dark:text-gray-300'}`}>
-                    <span className="font-medium text-gray-900 dark:text-white truncate block">{n.name} - {n.stock === 0 ? 'Out of Stock' : 'Low Stock'}</span>
-                    <span className="text-xs">Stock: {n.stock} (Threshold: {n.threshold})</span>
+          {showThresholdModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <div className={`w-full max-w-sm rounded-xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                <div className={`p-4 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <Bell size={20} className="text-blue-500" />
+                    Set Stock Threshold
+                  </h3>
+                  <button
+                    onClick={() => setShowThresholdModal(null)}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="p-6">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Alert me when stock for <strong>{showThresholdModal.name}</strong> falls to or below:
                   </p>
-                ))}
+                  <input
+                    type="number"
+                    min="0"
+                    value={thresholdInput}
+                    onChange={(e) => setThresholdInput(e.target.value)}
+                    placeholder="e.g. 10"
+                    className={`w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-shadow ${isDarkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                      }`}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">Leave blank to clear threshold.</p>
+                </div>
+                <div className={`p-4 border-t flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                  <button
+                    onClick={() => setShowThresholdModal(null)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-700'
+                      }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveThreshold}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Save Threshold
+                  </button>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setShowNotifications(false)}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-            >
-              <X size={18} />
-            </button>
-          </div>
+          )}
+
+          {showNotifications && notifications.length > 0 && (
+            <div className="fixed bottom-6 right-6 z-40 max-w-sm w-full space-y-3">
+              <div className={`p-4 rounded-xl shadow-xl flex items-start gap-4 border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                }`}>
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <AlertCircle size={20} className="text-red-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-red-500 mb-1">Low Stock Alerts</h4>
+                  <div className="max-h-32 overflow-y-auto pr-2 space-y-2">
+                    {notifications.map((n, i) => (
+                      <p key={i} className={`text-sm ${n.stock === 0 ? 'text-red-500 font-bold' : 'text-gray-600 dark:text-gray-300'}`}>
+                        <span className="font-medium text-gray-900 dark:text-white truncate block">{n.name} - {n.stock === 0 ? 'Out of Stock' : 'Low Stock'}</span>
+                        <span className="text-xs">Stock: {n.stock} (Threshold: {n.threshold})</span>
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowNotifications(false)}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div >
-  );
+      </div>
+      );
+};
 };
 
-export default ProductsPage;
+      export default ProductsPage;
