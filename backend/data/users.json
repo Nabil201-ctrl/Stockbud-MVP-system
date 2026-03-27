@@ -46,7 +46,7 @@
     "retentionMonths": 3,
     "createdAt": "2026-03-26T11:10:11.501Z",
     "isOnboardingComplete": true,
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzQ1MjM0MTQsImV4cCI6MTc3NzExNTQxNH0.ze_nLj7msETgHkfVWG8u8FDsUOAJyg9QL5KU4BLMUzo",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzQ2NDA0NDcsImV4cCI6MTc3NzIzMjQ0N30.fqtPJWPtHmaxFlPhSjOdaeGHXONroTgrQI21j073q7k",
     "aiTokens": 500,
     "reportTokens": 250,
     "botSettings": null,
@@ -57,10 +57,13 @@
     "ipAddress": "::1",
     "location": null,
     "currency": null,
-    "signInCount": 1,
-    "lastLoginDate": "2026-03-26T11:10:14.092Z",
+    "signInCount": 4,
+    "lastLoginDate": "2026-03-27T19:40:47.281Z",
     "loginDates": [
-      "2026-03-26"
+      "2026-03-26",
+      "2026-03-27",
+      "2026-03-27",
+      "2026-03-27"
     ],
     "shopifyStores": []
   }

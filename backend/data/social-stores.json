@@ -36,17 +36,30 @@
       "createdAt": "2026-03-26T10:36:18.952Z"
     },
     {
-      "id": "d0f1ee04-a619-4020-a0b6-cf2a3e06743a",
+      "id": "698cc7d1-c599-4fb1-baf0-34e2cd427c2b",
       "storeId": "6bc64183-78f7-4352-9960-26e0b990340b",
-      "name": "Nike Max",
+      "name": "Timberland",
       "description": "Shoes",
-      "price": 150000,
+      "price": 10000,
       "currency": "NGN",
       "image": null,
-      "slug": "a80d34534db4",
+      "slug": "cfe267f9a0ec",
       "status": "active",
-      "stock": 10,
-      "createdAt": "2026-03-26T11:24:14.009Z"
+      "stock": 100,
+      "createdAt": "2026-03-27T19:37:32.549Z"
+    },
+    {
+      "id": "b3c085f4-2b83-4853-9b75-80c58f7daa2c",
+      "storeId": "6bc64183-78f7-4352-9960-26e0b990340b",
+      "name": "NIke Air",
+      "description": "Shoe",
+      "price": 1000,
+      "currency": "NGN",
+      "image": null,
+      "slug": "045d772f8287",
+      "status": "active",
+      "stock": 100,
+      "createdAt": "2026-03-27T19:43:33.690Z"
     }
   ]
 }
