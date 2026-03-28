@@ -41,12 +41,12 @@
     "picture": null,
     "shopifyShop": null,
     "shopifyToken": null,
-    "activeShopId": "6bc64183-78f7-4352-9960-26e0b990340b",
+    "activeShopId": "7d7ad302-0d07-4356-b64a-329ebb780ad6",
     "storeLimit": 2,
     "retentionMonths": 3,
     "createdAt": "2026-03-26T11:10:11.501Z",
     "isOnboardingComplete": true,
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzQ2NDA0NDcsImV4cCI6MTc3NzIzMjQ0N30.fqtPJWPtHmaxFlPhSjOdaeGHXONroTgrQI21j073q7k",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzQ3MzUxODMsImV4cCI6MTc3NzMyNzE4M30.iuX9rB6vyNEbIfZMRj4shiwV68QVCBrkK1s2qAUX6Go",
     "aiTokens": 500,
     "reportTokens": 250,
     "botSettings": null,
@@ -57,13 +57,19 @@
     "ipAddress": "::1",
     "location": null,
     "currency": null,
-    "signInCount": 4,
-    "lastLoginDate": "2026-03-27T19:40:47.281Z",
+    "signInCount": 10,
+    "lastLoginDate": "2026-03-28T21:43:37.687Z",
     "loginDates": [
       "2026-03-26",
       "2026-03-27",
       "2026-03-27",
-      "2026-03-27"
+      "2026-03-27",
+      "2026-03-27",
+      "2026-03-27",
+      "2026-03-28",
+      "2026-03-28",
+      "2026-03-28",
+      "2026-03-28"
     ],
     "shopifyStores": []
   }

@@ -193,14 +193,15 @@ export class ChatService implements OnModuleInit {
 
                 if (socialStore) {
                     const products = await this.socialStoresService.getProducts(activeShopId, userId);
-                    const stats = await this.dashboardService.getSocialStats(activeShopId, products);
+                    const stats = await this.dashboardService.getSocialStats(activeShopId, products, userId);
                     const topProducts = stats.topProducts ? stats.topProducts.map(p => `${p.name} (${p.count})`).join(', ') : 'No data';
 
                     storeStats = `
                         Storefront Type: Social (${socialStore.type})
                         Overview:
                         - Store Name: ${socialStore.storeName}
-                        - Potential Inventory Value: ${user.currency || 'NGN'} ${stats.revenue.total.toLocaleString()}
+                        - Sales Revenue (Actual): ${user.currency || 'NGN'} ${stats.revenue.total.toLocaleString()}
+                        - Potential Inventory Value: ${user.currency || 'NGN'} ${stats.revenue.potential?.toLocaleString() || '0'}
                         - In-Stock Items: ${products.filter(p => p.stock > 0).length}
                         - Out-of-Stock Items: ${products.filter(p => p.stock <= 0).length}
 

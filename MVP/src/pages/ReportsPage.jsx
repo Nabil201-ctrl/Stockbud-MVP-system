@@ -21,10 +21,16 @@ const ReportsPage = () => {
     const [previewReport, setPreviewReport] = useState(null);
     const [activeTab, setActiveTab] = useState('all');
 
+    const currencySymbol = React.useMemo(() => {
+        return user?.currency || '$';
+    }, [user?.currency]);
+
     useEffect(() => {
-        fetchReports();
-        fetchStats();
-    }, []);
+        if (user?.activeShopId) {
+            fetchReports();
+            fetchStats();
+        }
+    }, [user?.activeShopId]);
 
     const fetchReports = async () => {
         try {
@@ -69,7 +75,7 @@ const ReportsPage = () => {
         }
     };
 
-    
+
     const handleGenerateReport = () => {
         setGenerating(true);
 
@@ -77,7 +83,7 @@ const ReportsPage = () => {
             const handler = PaystackPop.setup({
                 key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
                 email: user.email,
-                amount: 1000 * 100, 
+                amount: 1000 * 100,
                 metadata: {
                     userId: user.id,
                     type: 'report_payment'
@@ -98,7 +104,7 @@ const ReportsPage = () => {
         }
     };
 
-    
+
     const verifyWithRetry = async (reference, maxRetries = 3) => {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -149,7 +155,7 @@ const ReportsPage = () => {
         }
     };
 
-    
+
     const handleInstantReview = () => {
         setInstantGenerating(true);
 
@@ -217,13 +223,13 @@ const ReportsPage = () => {
         }
     };
 
-    
+
     const handleDownloadDocx = async (report) => {
         try {
             const response = await authenticatedFetch(`${API_URL}/reports/${report.id}/download`);
 
             if (!response.ok) {
-                
+
                 downloadReportFallback(report);
                 return;
             }
@@ -241,7 +247,7 @@ const ReportsPage = () => {
         }
     };
 
-    
+
     const downloadReportFallback = (report) => {
         const title = report.title || 'Report';
         const date = formatDate(report.createdAt);
@@ -352,7 +358,7 @@ const ReportsPage = () => {
         });
     };
 
-    
+
     const filteredReports = activeTab === 'all'
         ? reports
         : reports.filter(r => {
@@ -439,7 +445,7 @@ const ReportsPage = () => {
 
     return (
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-            {}
+            { }
             <div className="space-y-3" id="reports-header">
                 <div>
                     <h1 className="text-xl sm:text-2xl font-bold dark:text-white">{t('reports.title')}</h1>
@@ -469,7 +475,7 @@ const ReportsPage = () => {
                 </div>
             </div>
 
-            {}
+            { }
             <div className={`rounded-xl border-2 border-dashed p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${isDarkMode ? 'border-purple-700 bg-purple-900/10' : 'border-purple-300 bg-purple-50'
                 }`}>
                 <div className="flex items-start sm:items-center gap-3 sm:gap-4">
@@ -497,7 +503,7 @@ const ReportsPage = () => {
                 </button>
             </div>
 
-            {}
+            { }
             {stats && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" id="reports-stats-grid">
                     <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
@@ -507,7 +513,7 @@ const ReportsPage = () => {
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">{t('reports.totalRevenue')}</p>
-                                <p className="text-xl font-bold dark:text-white">${stats.totalRevenue?.toLocaleString() || '0'}</p>
+                                <p className="text-xl font-bold dark:text-white">{currencySymbol} {stats.totalRevenue?.toLocaleString() || '0'}</p>
                             </div>
                         </div>
                     </div>
@@ -550,7 +556,7 @@ const ReportsPage = () => {
                 </div>
             )}
 
-            {}
+            { }
             <div className="flex items-center gap-1 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
                 {[
                     { id: 'all', label: 'All' },
@@ -573,7 +579,7 @@ const ReportsPage = () => {
                 ))}
             </div>
 
-            {}
+            { }
             <div className={`rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`} id="reports-list">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h2 className="text-lg font-semibold dark:text-white">{t('reports.generated')}</h2>
@@ -602,14 +608,14 @@ const ReportsPage = () => {
                                 key={report.id}
                                 className={`p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
                             >
-                                {}
+                                { }
                                 <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-                                    {}
+                                    { }
                                     <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                                         {getTypeIcon(report.type)}
                                     </div>
 
-                                    {}
+                                    { }
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                             <h3 className="font-medium dark:text-white text-sm sm:text-base truncate max-w-[180px] sm:max-w-none">{report.title}</h3>
@@ -634,7 +640,7 @@ const ReportsPage = () => {
                                         </div>
                                     </div>
 
-                                    {}
+                                    { }
                                     <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                                         {report.status === 'generating' ? (
                                             <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-sm">
@@ -672,7 +678,7 @@ const ReportsPage = () => {
                                     </div>
                                 </div>
 
-                                {}
+                                { }
                                 <div className="flex sm:hidden items-center gap-2 mt-2.5 ml-10">
                                     {report.status === 'generating' ? (
                                         <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-xs">
@@ -714,7 +720,7 @@ const ReportsPage = () => {
                 )}
             </div>
 
-            {}
+            { }
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-200'}`}>
                     <div className="flex items-start gap-3">
@@ -751,11 +757,11 @@ const ReportsPage = () => {
                 </div>
             </div>
 
-            {}
+            { }
             {previewReport && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-sm">
                     <div className={`w-full sm:max-w-5xl xl:max-w-7xl h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl shadow-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                        {}
+                        { }
                         <div className={`flex items-center justify-between p-3 sm:p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                 <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
@@ -777,12 +783,12 @@ const ReportsPage = () => {
                             </button>
                         </div>
 
-                        {}
+                        { }
                         <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
                             {renderPreviewContent(previewReport)}
                         </div>
 
-                        {}
+                        { }
                         <div className={`flex items-center justify-end gap-2 sm:gap-3 p-3 sm:p-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                             <button
                                 onClick={() => setPreviewReport(null)}

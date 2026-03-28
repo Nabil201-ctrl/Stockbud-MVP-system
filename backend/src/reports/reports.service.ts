@@ -9,6 +9,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
 import { EmailBatchService } from '../email/email-batch.service';
 import { DocxGeneratorService } from '../email/docx-generator.service';
+import { SocialStoresService } from '../social-stores/social-stores.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -22,7 +23,7 @@ export interface Report {
     data?: any;
     description: string;
     emailSent?: boolean;
-    docxBase64?: string; 
+    docxBase64?: string;
 }
 
 @Injectable()
@@ -40,6 +41,7 @@ export class ReportsService {
         private readonly emailBatchService: EmailBatchService,
         private readonly docxGeneratorService: DocxGeneratorService,
         private readonly geminiService: GeminiService,
+        private readonly socialStoresService: SocialStoresService,
     ) {
         this.ensureDataFile();
     }
@@ -77,7 +79,7 @@ export class ReportsService {
 
 
     async generateReport(userId: string, type: 'sales' | 'inventory' | 'revenue' | 'weekly' | 'monthly' | 'welcome' | 'instant'): Promise<Report> {
-        
+
         if (type === 'sales' || type === 'inventory' || type === 'revenue' || type === 'instant') {
             await this.usersService.deductReportToken(userId, 1);
         }
@@ -121,7 +123,7 @@ export class ReportsService {
         reports.push(report);
         this.saveReports(reports);
 
-        
+
         this.generateReportData(reportId, shop, token, type, userId);
 
         return report;
@@ -489,9 +491,30 @@ export class ReportsService {
     async getQuickStats(userId: string): Promise<any> {
         const user = await this.usersService.findById(userId);
         const shop = user?.shopifyShop;
-        const token = await this.usersService.getDecryptedShopifyToken(userId);
+        const activeShopId = user?.activeShopId;
 
-        const stats = await this.dashboardService.getStats(shop, token);
+        // 1. Check if the active store is a social store
+        const socialStores = await this.socialStoresService.getStores(userId);
+        const activeSocialStore = socialStores.find(s => s.id === activeShopId);
+
+        let stats: any;
+
+        if (activeSocialStore) {
+            const products = await this.socialStoresService.getProducts(activeShopId, userId);
+            stats = await this.dashboardService.getSocialStats(activeShopId, products, userId);
+        } else if (shop) {
+            const token = await this.usersService.getDecryptedShopifyToken(userId);
+            stats = await this.dashboardService.getStats(shop, token);
+        } else {
+            // Fallback for no store connected
+            return {
+                totalRevenue: 0,
+                revenueChange: 0,
+                productCount: 0,
+                orderCount: 0,
+                lostRevenue: 0,
+            };
+        }
 
         return {
             totalRevenue: stats.revenue?.total || 0,

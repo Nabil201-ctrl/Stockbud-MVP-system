@@ -21,22 +21,30 @@ export interface SocialProduct {
     description: string | null;
     price: number;
     currency: string;
-    image: string | null;
+    images: string[];
     slug: string;
     status: string;
     stock: number;
     createdAt: string;
 }
 
+export interface SocialView {
+    id: string;
+    storeId: string;
+    timestamp: string;
+    date: string; // YYYY-MM-DD
+}
+
 interface StoreData {
     stores: SocialStore[];
     products: SocialProduct[];
+    views: SocialView[];
 }
 
 @Injectable()
 export class SocialStoresService implements OnModuleInit {
     private readonly dataPath = path.join(process.cwd(), 'data', 'social-stores.json');
-    private data: StoreData = { stores: [], products: [] };
+    private data: StoreData = { stores: [], products: [], views: [] };
 
     async onModuleInit() {
         await this.loadData();
@@ -79,6 +87,11 @@ export class SocialStoresService implements OnModuleInit {
     }
 
     async createStore(userId: string, data: { type: string; storeName: string; contact: string; description?: string; logo?: string }) {
+        const userStores = this.data.stores.filter(s => s.userId === userId);
+        if (userStores.length >= 2) {
+            throw new ForbiddenException('Maximum of 2 social stores allowed');
+        }
+
         const store: SocialStore = {
             id: this.generateId(),
             userId,
@@ -92,6 +105,27 @@ export class SocialStoresService implements OnModuleInit {
         this.data.stores.push(store);
         await this.saveData();
         return store;
+    }
+
+    async updateStore(storeId: string, userId: string, data: Partial<SocialStore>) {
+        const storeIndex = this.data.stores.findIndex(s => s.id === storeId);
+        if (storeIndex === -1) throw new NotFoundException('Store not found');
+
+        const store = this.data.stores[storeIndex];
+        if (store.userId !== userId) throw new ForbiddenException('Access denied');
+
+        const updatedStore = {
+            ...store,
+            ...(data.type !== undefined && { type: data.type }),
+            ...(data.storeName !== undefined && { storeName: data.storeName }),
+            ...(data.contact !== undefined && { contact: data.contact }),
+            ...(data.description !== undefined && { description: data.description }),
+            ...(data.logo !== undefined && { logo: data.logo }),
+        };
+
+        this.data.stores[storeIndex] = updatedStore;
+        await this.saveData();
+        return updatedStore;
     }
 
     async getStores(userId: string) {
@@ -126,7 +160,7 @@ export class SocialStoresService implements OnModuleInit {
         return store;
     }
 
-    async createProduct(userId: string, storeId: string, data: { name: string; description?: string; price: number; currency?: string; image?: string; stock?: number }) {
+    async createProduct(userId: string, storeId: string, data: { name: string; description?: string; price: number; currency?: string; images?: string[]; stock?: number }) {
         const store = this.data.stores.find(s => s.id === storeId);
         if (!store) throw new NotFoundException('Store not found');
         if (store.userId !== userId) throw new ForbiddenException('Access denied');
@@ -138,7 +172,7 @@ export class SocialStoresService implements OnModuleInit {
             description: data.description || null,
             price: data.price,
             currency: data.currency || 'NGN',
-            image: data.image || null,
+            images: data.images || [],
             slug: this.generateSlug(),
             status: 'active',
             stock: data.stock || 0,
@@ -174,7 +208,7 @@ export class SocialStoresService implements OnModuleInit {
             ...(data.description !== undefined && { description: data.description }),
             ...(data.price !== undefined && { price: data.price }),
             ...(data.currency !== undefined && { currency: data.currency }),
-            ...(data.image !== undefined && { image: data.image }),
+            ...(data.images !== undefined && { images: data.images }),
             ...(data.stock !== undefined && { stock: data.stock }),
             ...(data.status !== undefined && { status: data.status }),
         };

@@ -35,7 +35,8 @@ const ProductsPage = () => {
     outOfStock: 0,
     lowStock: 0,
     totalRevenue: 0,
-    avgRating: 0
+    avgRating: 0,
+    topProducts: []
   });
   const [loading, setLoading] = useState(true);
   const [paginationLoading, setPaginationLoading] = useState(false);
@@ -88,9 +89,36 @@ const ProductsPage = () => {
   };
 
   useEffect(() => {
-    fetchSocialStores();
-    fetchProducts();
+    const init = async () => {
+      await fetchSocialStores();
+      await fetchProducts();
+      await fetchDashboardStats();
+    };
+    init();
   }, [authenticatedFetch, user?.activeShopId]);
+
+  const fetchDashboardStats = async () => {
+    if (!user?.activeShopId) return;
+    try {
+      const response = await authenticatedFetch(`${API_URL}/dashboard/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        setProductStats(prev => ({
+          ...prev,
+          totalRevenue: data.revenue?.total || 0,
+          topProducts: data.topProducts || [],
+          avgRating: 0 // Resetting mock avgRating
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err);
+    }
+  };
+
+  const handleProductAdded = async () => {
+    await fetchProducts();
+    await fetchDashboardStats();
+  };
 
   // Update notifications when products or thresholds change
   useEffect(() => {
@@ -184,7 +212,8 @@ const ProductsPage = () => {
         const mappedProducts = data.map(p => ({
           id: p.id,
           name: p.name,
-          image: p.image || '',
+          images: p.images || [],
+          image: p.images?.[0] || '',
           price: p.price,
           currency: p.currency,
           stock: p.stock,
@@ -193,14 +222,14 @@ const ProductsPage = () => {
         }));
 
         setProducts(mappedProducts);
-        setProductStats({
+        setProductStats(prev => ({
+          ...prev,
           total: data.length,
           active: data.filter(p => p.stock > 0).length,
           outOfStock: data.filter(p => p.stock <= 0).length,
           lowStock: data.filter(p => p.stock > 0 && p.stock <= 5).length,
-          totalRevenue: data.reduce((acc, p) => acc + (p.price * (p.stock || 0)), 0),
-          avgRating: 0
-        });
+          totalRevenue: 0 // Default to zero before we fetch real dashboard stats
+        }));
         setPageInfo({ hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null });
         setTotalCount(data.length);
         setLoading(false);
@@ -281,23 +310,26 @@ const ProductsPage = () => {
       const outOfStock = transformedProducts.filter(p => p.stock === 0).length;
       const lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
 
-      const statsData = {
+      setProductStats(prev => ({
+        ...prev,
         total: serverTotalCount || transformedProducts.length,
         active,
         outOfStock,
         lowStock,
-        totalRevenue: 0,
-        avgRating: 0
-      };
-
-      setProductStats(statsData);
+      }));
 
       // PWA Offline Storage: Cache new fresh data
       if (!cursor) {
         const cacheKey = `products_${user?.activeShopId || 'default'}`;
         await storage.set(cacheKey, {
           products: transformedProducts,
-          stats: statsData,
+          stats: {
+            total: serverTotalCount || transformedProducts.length,
+            active,
+            outOfStock,
+            lowStock,
+            totalRevenue: productStats.totalRevenue // Persist current revenue
+          },
           pageInfo: pageInfoData,
           totalCount: serverTotalCount
         });
@@ -427,7 +459,7 @@ const ProductsPage = () => {
 
         <SocialStoresPanel
           activeStoreId={isActiveStoreSocial ? user?.activeShopId : null}
-          onProductAdded={fetchProducts}
+          onProductAdded={handleProductAdded}
           triggerAddProduct={triggerAddProduct}
           onAddProductModalClose={() => setTriggerAddProduct(false)}
         />
@@ -670,29 +702,28 @@ const ProductsPage = () => {
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.topPerforming')}</h3>
               <div className="space-y-4">
-                {products.slice(0, 3).map((product) => (
-                  <div key={product.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+                {productStats.topProducts.slice(0, 5).map((product, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
                     <div className="flex items-center gap-3 min-w-0 pr-2">
                       <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {product.image.startsWith('http') ? (
-                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-xl">{product.image}</span>
-                        )}
+                        <Package size={20} className="text-gray-400" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">{product.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        <div className="font-medium truncate text-sm">{product.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {activeCurrency} {(product.revenue || 0).toLocaleString()} revenue
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Star size={14} className="text-yellow-500" />
-                      <span className="text-sm font-medium">{product.rating}</span>
+                      <TrendingUp size={14} className="text-green-500" />
+                      <span className="text-xs font-medium">{product.count}</span>
                     </div>
                   </div>
                 ))}
+                {productStats.topProducts.length === 0 && (
+                  <div className="text-center py-4 text-sm text-gray-500">No data found</div>
+                )}
               </div>
             </div>
           </div>

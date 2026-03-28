@@ -19,6 +19,16 @@
       "description": "Bomb",
       "logo": null,
       "createdAt": "2026-03-26T11:23:23.004Z"
+    },
+    {
+      "id": "7d7ad302-0d07-4356-b64a-329ebb780ad6",
+      "userId": "f87b6da6ff9d976d",
+      "type": "instagram",
+      "storeName": "Bomb",
+      "contact": "TImmer",
+      "description": "lowlow",
+      "logo": null,
+      "createdAt": "2026-03-28T21:21:53.763Z"
     }
   ],
   "products": [
@@ -36,30 +46,32 @@
       "createdAt": "2026-03-26T10:36:18.952Z"
     },
     {
-      "id": "698cc7d1-c599-4fb1-baf0-34e2cd427c2b",
+      "id": "60c6b0a6-4224-4204-b697-d023f2eb165c",
       "storeId": "6bc64183-78f7-4352-9960-26e0b990340b",
-      "name": "Timberland",
-      "description": "Shoes",
-      "price": 10000,
-      "currency": "NGN",
-      "image": null,
-      "slug": "cfe267f9a0ec",
-      "status": "active",
-      "stock": 100,
-      "createdAt": "2026-03-27T19:37:32.549Z"
-    },
-    {
-      "id": "b3c085f4-2b83-4853-9b75-80c58f7daa2c",
-      "storeId": "6bc64183-78f7-4352-9960-26e0b990340b",
-      "name": "NIke Air",
+      "name": "Nike Air",
       "description": "Shoe",
       "price": 1000,
       "currency": "NGN",
-      "image": null,
-      "slug": "045d772f8287",
+      "images": [
+        "https://res.cloudinary.com/djanz538u/image/upload/v1774731889/stockbud_products/y2opsown7alufi2p9xx7.jpg"
+      ],
+      "slug": "d319536c8d4b",
       "status": "active",
       "stock": 100,
-      "createdAt": "2026-03-27T19:43:33.690Z"
+      "createdAt": "2026-03-28T21:04:58.236Z"
+    },
+    {
+      "id": "b0453017-d110-4050-9221-4f3d2f534948",
+      "storeId": "7d7ad302-0d07-4356-b64a-329ebb780ad6",
+      "name": "Mika max",
+      "description": "djffj",
+      "price": 1000,
+      "currency": "NGN",
+      "images": [],
+      "slug": "3dd1e1d32011",
+      "status": "active",
+      "stock": 50,
+      "createdAt": "2026-03-28T21:23:07.420Z"
     }
   ]
 }

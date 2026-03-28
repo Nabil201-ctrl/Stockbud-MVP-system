@@ -29,7 +29,7 @@ export class DashboardController {
 
             if (isSocial) {
                 const products = await this.socialStoresService.getProducts(activeShopId, user.id);
-                return this.dashboardService.getSocialStats(activeShopId, products);
+                return this.dashboardService.getSocialStats(activeShopId, products, user.id);
             }
         }
 

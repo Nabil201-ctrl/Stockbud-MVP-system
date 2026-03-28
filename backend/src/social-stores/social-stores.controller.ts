@@ -27,6 +27,12 @@ export class SocialStoresController {
     }
 
     @UseGuards(AuthGuard('jwt'))
+    @Put(':storeId')
+    async updateStore(@Req() req, @Param('storeId') storeId: string, @Body() body: any) {
+        return this.socialStoresService.updateStore(storeId, req.user.id, body);
+    }
+
+    @UseGuards(AuthGuard('jwt'))
     @Get(':storeId')
     async getStoreById(@Req() req, @Param('storeId') storeId: string) {
         return this.socialStoresService.getStoreById(storeId, req.user.id);

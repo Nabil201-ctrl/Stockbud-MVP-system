@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Store, Trash2, MessageCircle, Instagram, Link as LinkIcon, Copy, Check, Package, Edit3, X, ChevronDown, ChevronUp, ExternalLink, Share2 } from 'lucide-react';
+import { Plus, Store, Trash2, MessageCircle, Instagram, Link as LinkIcon, Copy, Check, Package, Edit3, X, ChevronDown, ChevronUp, ExternalLink, Share2, Settings } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const IMAGES_API_URL = import.meta.env.VITE_IMAGES_API_URL || 'http://localhost:3002';
 const APP_URL = window.location.origin;
 
 const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, onAddProductModalClose }) => {
@@ -18,6 +19,8 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
     const [expandedStore, setExpandedStore] = useState(null);
     const [copiedSlug, setCopiedSlug] = useState(null);
     const [copiedStoreId, setCopiedStoreId] = useState(null);
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [editingStore, setEditingStore] = useState(null);
 
     const [storeForm, setStoreForm] = useState({
         type: 'whatsapp',
@@ -31,10 +34,11 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
         description: '',
         price: '',
         currency: 'NGN',
-        image: '',
+        images: [],
         stock: '',
     });
 
+    const [uploading, setUploading] = useState(false);
     const [saving, setSaving] = useState(false);
 
     const fetchStores = async () => {
@@ -69,8 +73,13 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
         e.preventDefault();
         setSaving(true);
         try {
-            const res = await authenticatedFetch(`${API_URL}/social-stores`, {
-                method: 'POST',
+            const isEditing = !!editingStore;
+            const endpoint = isEditing
+                ? `${API_URL}/social-stores/${editingStore.id}`
+                : `${API_URL}/social-stores`;
+
+            const res = await authenticatedFetch(endpoint, {
+                method: isEditing ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(storeForm),
             });
@@ -78,13 +87,25 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                 await fetchStores();
                 await refreshUser();
                 setShowAddStore(false);
+                setEditingStore(null);
                 setStoreForm({ type: 'whatsapp', storeName: '', contact: '', description: '' });
             }
         } catch (err) {
-            console.error('Failed to create store:', err);
+            console.error('Failed to save store:', err);
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleEditStore = (store) => {
+        setEditingStore(store);
+        setStoreForm({
+            type: store.type,
+            storeName: store.storeName,
+            contact: store.contact,
+            description: store.description || '',
+        });
+        setShowAddStore(true);
     };
 
     const handleDeleteStore = async (storeId) => {
@@ -99,11 +120,16 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
 
     const handleCreateProduct = async (e) => {
         e.preventDefault();
-        if (!showAddProduct) return;
+        if (!showAddProduct && !editingProduct) return;
         setSaving(true);
         try {
-            const res = await authenticatedFetch(`${API_URL}/social-stores/${showAddProduct}/products`, {
-                method: 'POST',
+            const isEditing = !!editingProduct;
+            const endpoint = isEditing
+                ? `${API_URL}/social-stores/products/${editingProduct.id}`
+                : `${API_URL}/social-stores/${showAddProduct}/products`;
+
+            const res = await authenticatedFetch(endpoint, {
+                method: isEditing ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...productForm,
@@ -115,13 +141,26 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                 await fetchStores();
                 if (onProductAdded) onProductAdded();
                 setShowAddProduct(null);
-                setProductForm({ name: '', description: '', price: '', currency: 'NGN', image: '', stock: '' });
+                setEditingProduct(null);
+                setProductForm({ name: '', description: '', price: '', currency: 'NGN', images: [], stock: '' });
             }
         } catch (err) {
-            console.error('Failed to create product:', err);
+            console.error('Failed to save product:', err);
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleEditProduct = (product) => {
+        setEditingProduct(product);
+        setProductForm({
+            name: product.name,
+            description: product.description || '',
+            price: product.price.toString(),
+            currency: product.currency || 'NGN',
+            images: product.images || [],
+            stock: product.stock.toString(),
+        });
     };
 
     const handleDeleteProduct = async (productId) => {
@@ -187,13 +226,19 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                             Sell via WhatsApp or Instagram
                         </p>
                     </div>
-                    <button
-                        onClick={() => setShowAddStore(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/20"
-                    >
-                        <Plus size={18} />
-                        Add Store
-                    </button>
+                    {stores.length < 2 ? (
+                        <button
+                            onClick={() => { setEditingStore(null); setStoreForm({ type: 'whatsapp', storeName: '', contact: '', description: '' }); setShowAddStore(true); }}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/20"
+                        >
+                            <Plus size={18} />
+                            Add Store
+                        </button>
+                    ) : (
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-medium">
+                            Limit reached (2/2)
+                        </div>
+                    )}
                 </div>
 
                 {stores.length === 0 ? (
@@ -206,7 +251,7 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                             Add your WhatsApp or Instagram store to start creating products and sharing links with customers.
                         </p>
                         <button
-                            onClick={() => setShowAddStore(true)}
+                            onClick={() => { setEditingStore(null); setStoreForm({ type: 'whatsapp', storeName: '', contact: '', description: '' }); setShowAddStore(true); }}
                             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20"
                         >
                             <Plus size={18} />
@@ -253,6 +298,13 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                                                 <ExternalLink size={18} />
                                             </a>
                                             <button
+                                                onClick={(e) => { e.stopPropagation(); handleEditStore(store); }}
+                                                className="p-2 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-500/10 transition-all"
+                                                title="Edit Store"
+                                            >
+                                                <Settings size={18} />
+                                            </button>
+                                            <button
                                                 onClick={(e) => { e.stopPropagation(); setShowAddProduct(store.id); }}
                                                 className="p-2 rounded-lg text-blue-500 hover:bg-blue-500/10 transition-colors"
                                                 title="Add Product"
@@ -288,8 +340,8 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                                                     {store.products.map(product => (
                                                         <div key={product.id} className={`flex items-center gap-3 p-3 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} shadow-sm`}>
                                                             <div className="w-14 h-14 rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden flex-shrink-0">
-                                                                {product.image ? (
-                                                                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                                                                {product.images && product.images.length > 0 ? (
+                                                                    <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center">
                                                                         <Package size={20} className="text-gray-400" />
@@ -316,6 +368,13 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                                                                     title="Share product"
                                                                 >
                                                                     <Share2 size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleEditProduct(product)}
+                                                                    className="p-2 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-500/10 transition-all"
+                                                                    title="Edit product"
+                                                                >
+                                                                    <Edit3 size={16} />
                                                                 </button>
                                                                 <a
                                                                     href={`/p/${product.slug}`}
@@ -352,9 +411,9 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                         <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                             <h3 className="font-bold text-lg flex items-center gap-2">
                                 <Store size={20} className="text-purple-500" />
-                                Add Social Store
+                                {editingStore ? 'Edit Social Store' : 'Add Social Store'}
                             </h3>
-                            <button onClick={() => setShowAddStore(false)} className="text-gray-400 hover:text-gray-200">
+                            <button onClick={() => { setShowAddStore(false); setEditingStore(null); }} className="text-gray-400 hover:text-gray-200">
                                 <X size={20} />
                             </button>
                         </div>
@@ -427,7 +486,7 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                             <div className="flex gap-3 pt-2">
                                 <button
                                     type="button"
-                                    onClick={() => setShowAddStore(false)}
+                                    onClick={() => { setShowAddStore(false); setEditingStore(null); }}
                                     className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                                 >
                                     Cancel
@@ -437,7 +496,7 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                                     disabled={saving}
                                     className="flex-1 px-4 py-3 rounded-xl font-medium bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white transition-all disabled:opacity-50"
                                 >
-                                    {saving ? 'Creating...' : 'Create Store'}
+                                    {saving ? (editingStore ? 'Updating...' : 'Creating...') : (editingStore ? 'Update Store' : 'Create Store')}
                                 </button>
                             </div>
                         </form>
@@ -445,15 +504,15 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                 </div>
             )}
 
-            {showAddProduct && (
+            {(showAddProduct || editingProduct) && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
                         <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                             <h3 className="font-bold text-lg flex items-center gap-2">
                                 <Package size={20} className="text-blue-500" />
-                                Add Product
+                                {editingProduct ? 'Edit Product' : 'Add Product'}
                             </h3>
-                            <button onClick={() => setShowAddProduct(null)} className="text-gray-400 hover:text-gray-200">
+                            <button onClick={() => { setShowAddProduct(null); setEditingProduct(null); }} className="text-gray-400 hover:text-gray-200">
                                 <X size={20} />
                             </button>
                         </div>
@@ -523,22 +582,68 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                                         className={`w-full p-3 rounded-xl border outline-none transition-all focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Image URL</label>
-                                    <input
-                                        type="url"
-                                        value={productForm.image}
-                                        onChange={(e) => setProductForm(f => ({ ...f, image: e.target.value }))}
-                                        placeholder="https://..."
-                                        className={`w-full p-3 rounded-xl border outline-none transition-all focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
-                                    />
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium mb-2">Product Images (Upload multi)</label>
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {productForm.images.map((url, i) => (
+                                            <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border">
+                                                <img src={url} className="w-full h-full object-cover" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setProductForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }))}
+                                                    className="absolute top-0 right-0 bg-red-500 text-white rounded-bl-lg p-0.5"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {uploading && (
+                                            <div className="w-16 h-16 rounded-lg border-2 border-dashed flex items-center justify-center animate-pulse">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                                            </div>
+                                        )}
+                                        {productForm.images.length < 10 && !uploading && (
+                                            <label className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-500/5 transition-all">
+                                                <Plus size={20} className="text-gray-400" />
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    onChange={async (e) => {
+                                                        const files = Array.from(e.target.files);
+                                                        if (files.length === 0) return;
+
+                                                        setUploading(true);
+                                                        const formData = new FormData();
+                                                        files.forEach(f => formData.append('images', f));
+
+                                                        try {
+                                                            const res = await fetch(`${IMAGES_API_URL}/upload`, {
+                                                                method: 'POST',
+                                                                body: formData,
+                                                            });
+                                                            if (res.ok) {
+                                                                const { urls } = await res.json();
+                                                                setProductForm(f => ({ ...f, images: [...f.images, ...urls] }));
+                                                            }
+                                                        } catch (err) {
+                                                            console.error('Upload failed:', err);
+                                                        } finally {
+                                                            setUploading(false);
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="flex gap-3 pt-2">
                                 <button
                                     type="button"
-                                    onClick={() => setShowAddProduct(null)}
+                                    onClick={() => { setShowAddProduct(null); setEditingProduct(null); }}
                                     className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                                 >
                                     Cancel
@@ -548,7 +653,7 @@ const SocialStoresPanel = ({ activeStoreId, onProductAdded, triggerAddProduct, o
                                     disabled={saving}
                                     className="flex-1 px-4 py-3 rounded-xl font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all disabled:opacity-50"
                                 >
-                                    {saving ? 'Creating...' : 'Create Product'}
+                                    {saving ? (editingProduct ? 'Updating...' : 'Creating...') : (editingProduct ? 'Update Product' : 'Create Product')}
                                 </button>
                             </div>
                         </form>
