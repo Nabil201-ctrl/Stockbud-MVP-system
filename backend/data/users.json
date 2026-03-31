@@ -31,7 +31,8 @@
       "2026-03-26",
       "2026-03-26"
     ],
-    "shopifyStores": []
+    "shopifyStores": [],
+    "socialStores": []
   },
   {
     "id": "f87b6da6ff9d976d",
@@ -46,7 +47,7 @@
     "retentionMonths": 3,
     "createdAt": "2026-03-26T11:10:11.501Z",
     "isOnboardingComplete": true,
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzQ5OTEwMDAsImV4cCI6MTc3NzU4MzAwMH0.PP00l9s6y0mHZYZOTWqkFm3FRGqnoktG2GBEI2lLHo8",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzQ5OTM1NTQsImV4cCI6MTc3NzU4NTU1NH0.RJbRYPw2_aSMova6-AE4XQuo6GngCYz0kFqHZ_Tf2XI",
     "aiTokens": 500,
     "reportTokens": 250,
     "botSettings": null,
@@ -57,8 +58,8 @@
     "ipAddress": "::1",
     "location": null,
     "currency": null,
-    "signInCount": 13,
-    "lastLoginDate": "2026-03-31T20:17:20.796Z",
+    "signInCount": 15,
+    "lastLoginDate": "2026-03-31T21:45:54.453Z",
     "loginDates": [
       "2026-03-26",
       "2026-03-27",
@@ -72,8 +73,30 @@
       "2026-03-28",
       "2026-03-31",
       "2026-03-31",
+      "2026-03-31",
+      "2026-03-31",
       "2026-03-31"
     ],
-    "shopifyStores": []
+    "shopifyStores": [],
+    "socialStores": [
+      {
+        "id": "d4e4852093047454",
+        "userId": "f87b6da6ff9d976d",
+        "name": "STore",
+        "type": "whatsapp",
+        "contact": "23408058784589",
+        "description": null,
+        "visits": 2,
+        "inquiries": 0,
+        "dailyStats": [
+          {
+            "date": "2026-03-31",
+            "visits": 2,
+            "inquiries": 0
+          }
+        ],
+        "createdAt": "2026-03-31T21:47:34.891Z"
+      }
+    ]
   }
 ]

@@ -2,13 +2,14 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { User, ShopifyStore } from './interfaces';
+import { User, ShopifyStore, SocialStore } from './interfaces';
 
 @Injectable()
 export class JsonDatabaseService implements OnModuleInit {
     private users: User[] = [];
     private readonly usersFilePath = path.join(process.cwd(), 'data', 'users.json');
     private readonly storesFilePath = path.join(process.cwd(), 'data', 'shopify_stores.json');
+    private readonly socialStoresFilePath = path.join(process.cwd(), 'data', 'social_stores.json');
 
     async onModuleInit() {
         this.ensureDataDir();
@@ -27,6 +28,9 @@ export class JsonDatabaseService implements OnModuleInit {
         if (!fs.existsSync(this.storesFilePath)) {
             fs.writeFileSync(this.storesFilePath, '[]', 'utf8');
         }
+        if (!fs.existsSync(this.socialStoresFilePath)) {
+            fs.writeFileSync(this.socialStoresFilePath, '[]', 'utf8');
+        }
     }
 
     private loadData() {
@@ -37,9 +41,15 @@ export class JsonDatabaseService implements OnModuleInit {
             const storesRaw = fs.readFileSync(this.storesFilePath, 'utf8');
             const stores: ShopifyStore[] = JSON.parse(storesRaw);
 
+            const socialRaw = fs.readFileSync(this.socialStoresFilePath, 'utf8');
+            const socialStores: SocialStore[] = JSON.parse(socialRaw);
+
             for (const user of this.users) {
                 if (!user.shopifyStores) {
                     user.shopifyStores = stores.filter(s => s.userId === user.id);
+                }
+                if (!user.socialStores) {
+                    user.socialStores = socialStores.filter(s => s.userId === user.id);
                 }
             }
         } catch (error) {
@@ -60,6 +70,14 @@ export class JsonDatabaseService implements OnModuleInit {
                 }
             }
             fs.writeFileSync(this.storesFilePath, JSON.stringify(allStores, null, 2), 'utf8');
+
+            const allSocial: SocialStore[] = [];
+            for (const user of this.users) {
+                if (user.socialStores) {
+                    allSocial.push(...user.socialStores);
+                }
+            }
+            fs.writeFileSync(this.socialStoresFilePath, JSON.stringify(allSocial, null, 2), 'utf8');
         } catch (error) {
             console.error('[JsonDB] Error saving data:', error);
         }
@@ -98,6 +116,7 @@ export class JsonDatabaseService implements OnModuleInit {
             lastLoginDate: data.lastLoginDate || null,
             loginDates: data.loginDates || [],
             shopifyStores: data.shopifyStores || [],
+            socialStores: data.socialStores || [],
         };
     }
 
@@ -123,7 +142,7 @@ export class JsonDatabaseService implements OnModuleInit {
         const user = this.users[idx];
 
         for (const [key, value] of Object.entries(data)) {
-            if (key === 'id' || key === 'shopifyStores') continue;
+            if (key === 'id' || key === 'shopifyStores' || key === 'socialStores') continue;
 
             if (value !== undefined) {
                 if (typeof value === 'object' && value !== null && 'increment' in value) {
@@ -145,7 +164,7 @@ export class JsonDatabaseService implements OnModuleInit {
         let count = 0;
         for (let i = 0; i < this.users.length; i++) {
             for (const [key, value] of Object.entries(data)) {
-                if (key === 'id' || key === 'shopifyStores') continue;
+                if (key === 'id' || key === 'shopifyStores' || key === 'socialStores') continue;
                 if (value !== undefined) {
                     (this.users[i] as any)[key] = value;
                 }
@@ -224,7 +243,72 @@ export class JsonDatabaseService implements OnModuleInit {
         const user = this.findUserById(userId);
         if (user) {
             user.shopifyStores = [];
+            user.socialStores = [];
             this.saveUsers();
         }
+    }
+
+    createSocialStore(userId: string, data: Partial<SocialStore>): SocialStore {
+        const user = this.findUserById(userId);
+        if (!user) throw new Error('User not found');
+
+        const store: SocialStore = {
+            id: data.id || this.generateId(),
+            userId,
+            name: data.name || '',
+            type: data.type || 'whatsapp',
+            contact: data.contact || '',
+            description: data.description || null,
+            visits: 0,
+            inquiries: 0,
+            dailyStats: [],
+            createdAt: new Date().toISOString(),
+        };
+
+        if (!user.socialStores) user.socialStores = [];
+        user.socialStores.push(store);
+        this.saveUsers();
+        return store;
+    }
+
+    findSocialStoreById(storeId: string): SocialStore | null {
+        for (const user of this.users) {
+            if (user.socialStores) {
+                const store = user.socialStores.find(s => s.id === storeId);
+                if (store) return store;
+            }
+        }
+        return null;
+    }
+
+    updateSocialStore(storeId: string, data: Partial<SocialStore>): SocialStore {
+        for (const user of this.users) {
+            const idx = user.socialStores.findIndex(s => s.id === storeId);
+            if (idx !== -1) {
+                const store = user.socialStores[idx];
+                for (const [key, value] of Object.entries(data)) {
+                    if (key === 'id' || key === 'userId') continue;
+                    if (value !== undefined) {
+                        (store as any)[key] = value;
+                    }
+                }
+                user.socialStores[idx] = store;
+                this.saveUsers();
+                return store;
+            }
+        }
+        throw new Error('Social store not found');
+    }
+
+    deleteSocialStore(storeId: string): void {
+        for (const user of this.users) {
+            const idx = user.socialStores.findIndex(s => s.id === storeId);
+            if (idx !== -1) {
+                user.socialStores.splice(idx, 1);
+                this.saveUsers();
+                return;
+            }
+        }
+        throw new Error('Social store not found');
     }
 }

@@ -10,6 +10,19 @@ export interface ShopifyStore {
     userId: string;
 }
 
+export interface SocialStore {
+    id: string;
+    userId: string;
+    name: string;
+    type: 'whatsapp' | 'instagram';
+    contact: string;
+    description: string | null;
+    visits: number;
+    inquiries: number;
+    dailyStats: { date: string; visits: number; inquiries: number }[];
+    createdAt: string;
+}
+
 export interface User {
     id: string;
     email: string;
@@ -38,4 +51,5 @@ export interface User {
     lastLoginDate: string | null;
     loginDates: string[];
     shopifyStores: ShopifyStore[];
+    socialStores: SocialStore[];
 }
