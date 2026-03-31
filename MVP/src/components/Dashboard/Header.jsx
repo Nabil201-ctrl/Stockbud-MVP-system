@@ -14,7 +14,6 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   const [showShopMenu, setShowShopMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [socialStores, setSocialStores] = useState([]);
 
   const menuRef = useRef(null);
   const shopMenuRef = useRef(null);
@@ -32,22 +31,9 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
     }
   };
 
-  const fetchSocialStores = async () => {
-    try {
-      const response = await authenticatedFetch('http://localhost:3000/social-stores');
-      if (response.ok) {
-        const data = await response.json();
-        setSocialStores(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch social stores", error);
-    }
-  };
-
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      fetchSocialStores();
     }
   }, [user]);
 
@@ -133,8 +119,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   };
 
   const allStores = [
-    ...(user?.shopifyStores?.map(s => ({ ...s, isShopify: true })) || []),
-    ...(socialStores.map(s => ({ ...s, isSocial: true, name: s.storeName, shop: s.type })))
+    ...(user?.shopifyStores?.map(s => ({ ...s, isShopify: true })) || [])
   ];
 
   const activeStore = allStores.find(s => s.id === user?.activeShopId);

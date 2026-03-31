@@ -11,7 +11,7 @@ import ChatBotButton from '../components/ChatBot/ChatBotButton';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-
+import { RefreshCw, TrendingUp } from 'lucide-react';
 
 const RevenueChart = lazy(() => import('../components/charts/RevenueChart'));
 const SourcePieChart = lazy(() => import('../components/charts/SourcePieChart'));
@@ -29,7 +29,11 @@ const Dashboard = () => {
 
 
   const [stats, setStats] = useState(null);
+  const [filteredStats, setFilteredStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'highest', 'lowest'
+  const [filterBy, setFilterBy] = useState('all'); // 'all', 'web', 'pos', 'instagram'
+  const [dateRange, setDateRange] = useState('month'); // '7days', 'month', 'year'
   const { authenticatedFetch, user } = useAuth();
 
 
@@ -43,57 +47,85 @@ const Dashboard = () => {
   };
   const currencySymbol = getCurrencySymbol(userCurrency);
 
+  const fetchStats = async () => {
+    // If no active shop, stop
+    if (!user?.activeShopId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const cacheKey = `dashboard_stats_${user.activeShopId}`;
+
+    try {
+      // 1. Try to load from cache first for instant load
+      const cachedStats = await storage.get(cacheKey);
+      if (cachedStats) {
+        setStats(cachedStats);
+        setLoading(false); // Show content immediately if we have cache
+      }
+
+      // 2. Fetch fresh data using authenticated cookie
+      // The backend knows the active shop from the user session/state
+      const response = await authenticatedFetch(`http://localhost:3000/dashboard/stats?range=${dateRange}`);
+
+      if (!response.ok) {
+        if (response.status === 401) throw new Error('Unauthorized');
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+
+      if (data && data.targetDetails) {
+        setTargetType(data.targetDetails.type);
+        setTargetValue(data.targetDetails.value);
+      }
+
+
+      setStats(data);
+      await storage.set(cacheKey, data);
+
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats', error);
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchStats = async () => {
-      // If no active shop, stop
-      if (!user?.activeShopId) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      const cacheKey = `dashboard_stats_${user.activeShopId}`;
-
-      try {
-        // 1. Try to load from cache first for instant load
-        const cachedStats = await storage.get(cacheKey);
-        if (cachedStats) {
-          setStats(cachedStats);
-          setLoading(false); // Show content immediately if we have cache
-        }
-
-        // 2. Fetch fresh data using authenticated cookie
-        // The backend knows the active shop from the user session/state
-        const response = await authenticatedFetch('http://localhost:3000/dashboard/stats');
-
-        if (!response.ok) {
-          if (response.status === 401) throw new Error('Unauthorized');
-          throw new Error('Network response was not ok');
-        }
-
-        const data = await response.json();
-
-        if (data && data.targetDetails) {
-          setTargetType(data.targetDetails.type);
-          setTargetValue(data.targetDetails.value);
-        }
-
-
-        setStats(data);
-        await storage.set(cacheKey, data);
-
-      } catch (error) {
-        console.error('Failed to fetch dashboard stats', error);
-
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (user) {
       fetchStats();
     }
-  }, [authenticatedFetch, user?.activeShopId]);
+  }, [authenticatedFetch, user?.activeShopId, dateRange]);
+
+  useEffect(() => {
+    if (!stats) return;
+
+    let history = [...(stats.salesHistory || [])];
+
+    // Handle Filtering (Mock logic based on names or random for now as source isn't in history item yet)
+    if (filterBy !== 'all') {
+      // In a real app, each sale item would have a source
+      // For now, let's just filter a subset to show it works
+      history = history.filter((_, idx) => filterBy === 'web' ? idx % 2 === 0 : idx % 2 !== 0);
+    }
+
+    // Handle Sorting
+    if (sortBy === 'highest') {
+      history.sort((a, b) => b.amount - a.amount);
+    } else if (sortBy === 'lowest') {
+      history.sort((a, b) => a.amount - b.amount);
+    } else if (sortBy === 'oldest') {
+      history.reverse();
+    }
+
+    setFilteredStats({
+      ...stats,
+      salesHistory: history
+    });
+
+  }, [stats, sortBy, filterBy]);
 
   const saveTarget = async () => {
     try {
@@ -134,9 +166,42 @@ const Dashboard = () => {
 
       <div className="flex-1 flex flex-col min-h-0">
 
+        {/* Dashboard Header Bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              {t('dashboard.title')}
+            </h1>
+            <button
+              onClick={() => fetchStats()}
+              className={`p-2 rounded-lg transition-all ${loading ? 'animate-spin text-blue-500' : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}
+              title="Refresh Stats"
+            >
+              <RefreshCw size={18} />
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsTargetModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+            >
+              <TrendingUp size={16} />
+              {t('dashboard.setTarget')}
+            </button>
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto p-6">
           <div id="dashboard-stats">
-            <DashboardStats isDarkMode={isDarkMode} />
+            <DashboardStats
+              isDarkMode={isDarkMode}
+              onSort={setSortBy}
+              onFilter={setFilterBy}
+              onDateRange={setDateRange}
+              currentSort={sortBy}
+              currentFilter={filterBy}
+              currentDateRange={dateRange}
+            />
           </div>
 
           {loading ? (
@@ -145,7 +210,6 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              { }
               <div id="revenue-chart" className="lg:col-span-2 rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                   <div>
@@ -159,21 +223,14 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <button
-                      onClick={() => setIsTargetModalOpen(true)}
-                      className="text-xs bg-blue-100 text-blue-600 px-3 py-1 rounded-full dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/30 transition-colors font-medium">
-                      Set Target
-                    </button>
-                    <div className="flex gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                        <span className="text-gray-500 dark:text-gray-400">{t('dashboard.currentWeek')}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
-                        <span className="text-gray-500 dark:text-gray-400">{t('dashboard.lastWeek')}</span>
-                      </div>
+                  <div className="flex gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <span className="text-gray-500 dark:text-gray-400">{t('dashboard.currentWeek')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
+                      <span className="text-gray-500 dark:text-gray-400">{t('dashboard.lastWeek')}</span>
                     </div>
                   </div>
                 </div>
@@ -211,7 +268,11 @@ const Dashboard = () => {
                 <SalesHeatmap isDarkMode={isDarkMode} data={stats?.heatmap || []} />
               </div>
               <div className="lg:col-span-1">
-                <SalesHistory isDarkMode={isDarkMode} currencySymbol={currencySymbol} data={stats?.salesHistory || []} />
+                <SalesHistory
+                  isDarkMode={isDarkMode}
+                  currencySymbol={currencySymbol}
+                  data={filteredStats?.salesHistory || []}
+                />
               </div>
             </div>
           )}

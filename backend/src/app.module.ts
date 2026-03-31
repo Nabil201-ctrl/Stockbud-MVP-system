@@ -16,6 +16,7 @@ import { EmailModule } from './email/email.module';
 import { DatabaseModule } from './database/database.module';
 import { OrdersModule } from './orders/orders.module';
 import { ImageMicroserviceModule } from './image-microservice/image-microservice.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
     imports: [
@@ -38,6 +39,7 @@ import { ImageMicroserviceModule } from './image-microservice/image-microservice
         PaymentsModule,
         OrdersModule,
         ImageMicroserviceModule,
+        AdminModule,
     ],
 })
 export class AppModule { }

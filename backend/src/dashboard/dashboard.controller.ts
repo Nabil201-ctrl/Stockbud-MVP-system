@@ -14,6 +14,7 @@ export class DashboardController {
     @UseGuards(AuthGuard('jwt'))
     async getStats(@Req() req) {
         const user = req.user;
+        const range = req.query.range as '7days' | 'month' | 'year' || 'month';
         const fullUser = await this.usersService.findById(user.id);
         const userCurrency = fullUser?.currency || 'USD';
 
@@ -23,9 +24,9 @@ export class DashboardController {
         const targetValue = shopStore?.targetValue || 0;
         const token = shopStore?.token ? await this.usersService.getDecryptedShopifyToken(user.id) : undefined;
 
-        if (!shop) return this.dashboardService.getStats(null, undefined, targetType as 'weekly' | 'monthly', targetValue, userCurrency);
+        if (!shop) return this.dashboardService.getStats(null, undefined, targetType as 'weekly' | 'monthly', targetValue, userCurrency, range);
 
-        return this.dashboardService.getStats(shop, token, targetType as 'weekly' | 'monthly', targetValue, userCurrency);
+        return this.dashboardService.getStats(shop, token, targetType as 'weekly' | 'monthly', targetValue, userCurrency, range);
     }
 
     @Post('target')

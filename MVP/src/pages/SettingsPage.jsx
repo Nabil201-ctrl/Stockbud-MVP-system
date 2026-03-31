@@ -6,7 +6,6 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import Timeline from '../components/Shopify/Timeline';
-import SocialStoresPanel from '../components/Dashboard/SocialStoresPanel';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -38,25 +37,9 @@ const SettingsPage = () => {
     const [pairingCode, setPairingCode] = useState(null);
     const [pairingLoading, setPairingLoading] = useState(false);
     const [codeCopied, setCodeCopied] = useState(false);
-    const [socialStores, setSocialStores] = useState([]);
     const prevStoreCountRef = useRef(user?.shopifyStores?.length || 0);
-
-    const fetchSocialStores = async () => {
-        try {
-            const response = await authenticatedFetch(`${API_URL}/social-stores`);
-            if (response.ok) {
-                const data = await response.json();
-                setSocialStores(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch social stores", error);
-        }
-    };
-
     useEffect(() => {
-        if (activeTab === 'integrations') {
-            fetchSocialStores();
-        }
+        // No longer fetching social stores as they have been removed.
     }, [activeTab]);
 
     // Polling for new store connection when pairing code is active
@@ -270,18 +253,13 @@ const SettingsPage = () => {
         }
 
         try {
-            const url = type === 'social'
-                ? `${API_URL}/social-stores/${storeId}`
-                : `${API_URL}/users/shopify-stores/${storeId}`;
+            const url = `${API_URL}/users/shopify-stores/${storeId}`;
 
             const response = await authenticatedFetch(url, {
                 method: 'DELETE'
             });
 
             if (response.ok) {
-                if (type === 'social') {
-                    fetchSocialStores();
-                }
                 await refreshUser();
             } else {
                 alert('Failed to remove store');
@@ -789,7 +767,7 @@ const SettingsPage = () => {
                         <div className="flex items-center gap-2">
                             <h2 className="text-lg sm:text-xl font-bold dark:text-white">{t('settings.connectedStores')}</h2>
                             <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500">
-                                {(user?.shopifyStores?.length || 0) + (socialStores.length || 0)} / {user?.storeLimit || 2}
+                                {(user?.shopifyStores?.length || 0)} / {user?.storeLimit || 2}
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -836,8 +814,7 @@ const SettingsPage = () => {
                     {/* Connected Stores List (Combined Shopify + Social) */}
                     {(() => {
                         const allStores = [
-                            ...(user?.shopifyStores?.map(s => ({ ...s, type: 'shopify' })) || []),
-                            ...(socialStores.map(s => ({ ...s, name: s.storeName, shop: s.contact, type: 'social', platform: s.type })))
+                            ...(user?.shopifyStores?.map(s => ({ ...s, type: 'shopify' })) || [])
                         ];
 
                         if (allStores.length > 0) {
@@ -922,11 +899,6 @@ const SettingsPage = () => {
                             <Timeline currentStepOverride={5} />
                         </div>
                     )}
-
-                    {/* Social Stores System */}
-                    <div className="mt-8">
-                        <SocialStoresPanel />
-                    </div>
                 </div>
             )}
         </div>

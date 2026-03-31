@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, LogOut } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, LogOut, Cpu } from 'lucide-react';
 import axios from 'axios';
 
 export const Sidebar = () => {
@@ -16,6 +16,7 @@ export const Sidebar = () => {
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: MessageSquare, label: 'Feedback', path: '/feedback' },
+        { icon: Cpu, label: 'Token Usage', path: '/usage' },
     ];
 
     return (

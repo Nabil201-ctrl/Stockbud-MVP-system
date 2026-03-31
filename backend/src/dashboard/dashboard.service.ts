@@ -8,7 +8,7 @@ export class DashboardService {
 
     constructor(private readonly shopifyService: ShopifyService) { }
 
-    async getStats(shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD') {
+    async getStats(shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month') {
         let totalRevenue = 0;
         let revenueChange = 0;
         let revenueData = [];
@@ -20,7 +20,9 @@ export class DashboardService {
 
         if (shop && token) {
             try {
-                const ordersData = await this.shopifyService.getOrders(shop, token, { first: 50 });
+                // Fetch more orders if range is year
+                const limit = range === 'year' ? 150 : (range === 'month' ? 100 : 50);
+                const ordersData = await this.shopifyService.getOrders(shop, token, { first: limit });
                 let orders: any[] = [];
 
                 if (Array.isArray(ordersData)) {
@@ -28,6 +30,14 @@ export class DashboardService {
                 } else {
                     orders = ordersData.orders;
                 }
+
+                const now = new Date();
+                let filterDate = new Date();
+                if (range === '7days') filterDate.setDate(now.getDate() - 7);
+                else if (range === 'month') filterDate.setMonth(now.getMonth() - 1);
+                else if (range === 'year') filterDate.setFullYear(now.getFullYear() - 1);
+
+                orders = orders.filter(o => new Date(o.created_at) >= filterDate);
 
                 let exchangeRate = 1;
                 if (orders.length > 0) {
@@ -56,7 +66,6 @@ export class DashboardService {
                     }
                 });
 
-                const now = new Date();
                 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                 const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 

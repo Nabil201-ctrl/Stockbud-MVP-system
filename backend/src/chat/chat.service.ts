@@ -4,6 +4,7 @@ import { DashboardService } from '../dashboard/dashboard.service';
 import { ReportsService } from '../reports/reports.service';
 import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '../common/gemini.service';
+import { UsageService } from '../common/usage.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -33,6 +34,7 @@ export class ChatService implements OnModuleInit {
         private readonly configService: ConfigService,
         private readonly reportsService: ReportsService,
         private readonly geminiService: GeminiService,
+        private readonly usageService: UsageService,
     ) { }
 
     async onModuleInit() {
@@ -256,6 +258,18 @@ export class ChatService implements OnModuleInit {
                 });
 
                 responseContent = result.response.text();
+
+                // Log token usage
+                if (result.response.usageMetadata) {
+                    await this.usageService.logUsage({
+                        userId: userId,
+                        model: "gemini-flash-latest",
+                        inputTokens: result.response.usageMetadata.promptTokenCount,
+                        outputTokens: result.response.usageMetadata.candidatesTokenCount,
+                        totalTokens: result.response.usageMetadata.totalTokenCount,
+                        source: 'chat'
+                    });
+                }
 
             } catch (error) {
                 console.error("Gemini API Error:", error);

@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Feedback } from './pages/Feedback';
+import { TokenUsage } from './pages/TokenUsage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/feedback" element={<Feedback />} />
+                <Route path="/usage" element={<TokenUsage />} />
             </Route>
         </Routes>
     );

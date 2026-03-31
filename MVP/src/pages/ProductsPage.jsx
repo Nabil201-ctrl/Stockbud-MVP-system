@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical, Store, AlertCircle, Bell, X } from 'lucide-react';
-import SocialStoresPanel from '../components/Dashboard/SocialStoresPanel';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +14,6 @@ const ProductsPage = () => {
   const { isDarkMode } = useTheme();
   const { authenticatedFetch, user } = useAuth();
   const { t } = useLanguage();
-  const [socialStores, setSocialStores] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
 
@@ -51,20 +49,12 @@ const ProductsPage = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [triggerAddProduct, setTriggerAddProduct] = useState(false);
 
-  // Get active store for context
-  const activeStore = useMemo(() => {
-    return socialStores.find(s => s.id === user?.activeShopId);
-  }, [socialStores, user?.activeShopId]);
-
   const activeCurrency = useMemo(() => {
-    if (activeStore && activeStore.products?.[0]?.currency) {
-      return activeStore.products[0].currency;
-    }
     if (products.length > 0 && products[0].currency) {
       return products[0].currency;
     }
     return user?.currency || 'USD';
-  }, [activeStore, products, user?.currency]);
+  }, [products, user?.currency]);
 
   useEffect(() => {
     const loadThresholds = async () => {
@@ -76,21 +66,8 @@ const ProductsPage = () => {
     loadThresholds();
   }, [user?.activeShopId]);
 
-  const fetchSocialStores = async () => {
-    try {
-      const response = await authenticatedFetch(`${API_URL}/social-stores`);
-      if (response.ok) {
-        const data = await response.json();
-        setSocialStores(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch social stores:', err);
-    }
-  };
-
   useEffect(() => {
     const init = async () => {
-      await fetchSocialStores();
       await fetchProducts();
       await fetchDashboardStats();
     };
@@ -155,27 +132,7 @@ const ProductsPage = () => {
     setThresholdInput('');
   };
 
-  const isActiveStoreSocial = useMemo(() => {
-    return socialStores.some(s => s.id === user?.activeShopId);
-  }, [socialStores, user?.activeShopId]);
-
   const fetchProducts = async (cursor = null, direction = 'next') => {
-    // 1. Ensure we have social stores list before proceeding
-    let currentSocialStores = socialStores;
-    if (socialStores.length === 0) {
-      try {
-        const response = await authenticatedFetch(`${API_URL}/social-stores`);
-        if (response.ok) {
-          currentSocialStores = await response.json();
-          setSocialStores(currentSocialStores);
-        }
-      } catch (err) {
-        console.error('Failed to pre-fetch social stores in products:', err);
-      }
-    }
-
-    const isCurrentlySocial = currentSocialStores.some(s => s.id === user?.activeShopId);
-
     if (!user?.activeShopId) {
       setLoading(false);
       setShopifyNotConnected(true);
@@ -200,42 +157,6 @@ const ProductsPage = () => {
         }
       } else {
         setPaginationLoading(true);
-      }
-
-      // Handle Social Store Products
-      if (isCurrentlySocial) {
-        url = `${API_URL}/social-stores/${user.activeShopId}/products`;
-        const response = await authenticatedFetch(url);
-        if (!response.ok) throw new Error('Failed to fetch social products');
-        const data = await response.json();
-
-        const mappedProducts = data.map(p => ({
-          id: p.id,
-          name: p.name,
-          images: p.images || [],
-          image: p.images?.[0] || '',
-          price: p.price,
-          currency: p.currency,
-          stock: p.stock,
-          category: 'Social',
-          status: p.stock <= 0 ? 'out' : p.stock <= 5 ? 'low' : 'active'
-        }));
-
-        setProducts(mappedProducts);
-        setProductStats(prev => ({
-          ...prev,
-          total: data.length,
-          active: data.filter(p => p.stock > 0).length,
-          outOfStock: data.filter(p => p.stock <= 0).length,
-          lowStock: data.filter(p => p.stock > 0 && p.stock <= 5).length,
-          totalRevenue: 0 // Default to zero before we fetch real dashboard stats
-        }));
-        setPageInfo({ hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null });
-        setTotalCount(data.length);
-        setLoading(false);
-        setPaginationLoading(false);
-        setShopifyNotConnected(false);
-        return;
       }
 
       // Construct Shopify URL with pagination
@@ -446,23 +367,7 @@ const ProductsPage = () => {
               {t('products.subtitle')}
             </p>
           </div>
-          {isActiveStoreSocial && (
-            <button
-              onClick={() => setTriggerAddProduct(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20 active:scale-95"
-            >
-              <Package size={20} />
-              {t('products.addNew')}
-            </button>
-          )}
         </div>
-
-        <SocialStoresPanel
-          activeStoreId={isActiveStoreSocial ? user?.activeShopId : null}
-          onProductAdded={handleProductAdded}
-          triggerAddProduct={triggerAddProduct}
-          onAddProductModalClose={() => setTriggerAddProduct(false)}
-        />
 
         { }
         <div id="products-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

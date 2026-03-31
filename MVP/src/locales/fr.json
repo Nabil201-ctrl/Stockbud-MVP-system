@@ -38,6 +38,9 @@
         "decemberWeeks": "DÉCEMBRE 01 - 08 (7 JOURS)",
         "sortBy": "Trier par",
         "filterBy": "Filtrer par",
+        "setTarget": "Définir l'objectif",
+        "salesHistory": "Historique des ventes",
+        "download": "Télécharger CSV",
         "december2021": "Décembre 2021"
     },
     "settings": {

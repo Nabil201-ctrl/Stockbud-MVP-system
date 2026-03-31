@@ -4,6 +4,7 @@ import { ShopifyService } from '../shopify/shopify.service';
 import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '../common/gemini.service';
+import { UsageService } from '../common/usage.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
@@ -40,6 +41,7 @@ export class ReportsService {
         private readonly emailBatchService: EmailBatchService,
         private readonly docxGeneratorService: DocxGeneratorService,
         private readonly geminiService: GeminiService,
+        private readonly usageService: UsageService,
     ) {
         this.ensureDataFile();
     }
@@ -141,7 +143,7 @@ export class ReportsService {
                 case 'weekly':
                 case 'sales': {
                     const prompt = this.buildWeeklyPrompt(statsSummary);
-                    aiContent = await this.generateAIContent(prompt);
+                    aiContent = await this.generateAIContent(prompt, userId);
                     reportData = {
                         content: aiContent,
                         stats: {
@@ -176,14 +178,14 @@ export class ReportsService {
                             };
 
                             const inventoryPrompt = this.buildInventoryPrompt(products.length, totalStock, lowStockProducts, outOfStockProducts, stats.topProducts);
-                            inventorySummary = await this.generateAIContent(inventoryPrompt);
+                            inventorySummary = await this.generateAIContent(inventoryPrompt, userId);
                         }
                     } catch (err) {
                         console.error('Failed to fetch inventory data for report', err);
                     }
 
                     if (!inventorySummary) {
-                        inventorySummary = await this.generateAIContent(this.buildWeeklyPrompt(statsSummary));
+                        inventorySummary = await this.generateAIContent(this.buildWeeklyPrompt(statsSummary), userId);
                     }
 
                     reportData = {
@@ -197,7 +199,7 @@ export class ReportsService {
 
                 case 'revenue': {
                     const prompt = this.buildRevenuePrompt(statsSummary);
-                    aiContent = await this.generateAIContent(prompt);
+                    aiContent = await this.generateAIContent(prompt, userId);
                     reportData = {
                         content: aiContent,
                         stats: {
@@ -236,7 +238,7 @@ export class ReportsService {
                     const avgRev = recentWeeklyReports.length > 0 ? totalRev / recentWeeklyReports.length : 0;
 
                     const monthlyPrompt = this.buildMonthlyPrompt(weeklyAggregation, totalRev, avgRev, recentWeeklyReports.length, statsSummary);
-                    aiContent = await this.generateAIContent(monthlyPrompt);
+                    aiContent = await this.generateAIContent(monthlyPrompt, userId);
 
                     reportData = {
                         content: aiContent,
@@ -254,7 +256,7 @@ export class ReportsService {
 
                 case 'welcome': {
                     const prompt = this.buildWelcomePrompt(statsSummary, shop);
-                    aiContent = await this.generateAIContent(prompt);
+                    aiContent = await this.generateAIContent(prompt, userId);
                     reportData = {
                         content: aiContent,
                         stats: {
@@ -270,7 +272,7 @@ export class ReportsService {
 
                 case 'instant': {
                     const prompt = this.buildInstantReviewPrompt(statsSummary);
-                    aiContent = await this.generateAIContent(prompt);
+                    aiContent = await this.generateAIContent(prompt, userId);
                     reportData = {
                         content: aiContent,
                         stats: {
@@ -556,15 +558,28 @@ export class ReportsService {
 
 
 
-    private async generateAIContent(prompt: string): Promise<string> {
+    private async generateAIContent(prompt: string, userId: string): Promise<string> {
         if (!this.geminiService.hasKeys()) {
             return "## AI Not Configured\n\nPlease configure the GEMINI_API_KEY to enable AI-generated reports.";
         }
 
         try {
-            const result = await this.geminiService.executeWithRetry("gemini-2.0-flash", async (model) => {
+            const result = await this.geminiService.executeWithRetry("gemini-1.5-flash", async (model) => {
                 return await model.generateContent(prompt);
             });
+
+            // Log token usage
+            if (result.response.usageMetadata) {
+                await this.usageService.logUsage({
+                    userId: userId,
+                    model: "gemini-1.5-flash",
+                    inputTokens: result.response.usageMetadata.promptTokenCount,
+                    outputTokens: result.response.usageMetadata.candidatesTokenCount,
+                    totalTokens: result.response.usageMetadata.totalTokenCount,
+                    source: 'report'
+                });
+            }
+
             return result.response.text();
         } catch (err) {
             console.error("AI Generation failed:", err.message);

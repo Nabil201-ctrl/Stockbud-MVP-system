@@ -49,8 +49,8 @@ const SourcePieChart = ({ data }) => {
   };
 
   return (
-    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={256}>
-      <div className="relative h-full">
+    <div className="relative h-64 w-full">
+      <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
             data={sourceData}
@@ -80,16 +80,16 @@ const SourcePieChart = ({ data }) => {
             wrapperStyle={{ fontSize: '12px', color: isDarkMode ? '#9CA3AF' : '#4B5563' }}
           />
         </PieChart>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-          <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            100%
-          </div>
-          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            +8% Goal
-          </div>
+      </ResponsiveContainer>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+        <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          100%
+        </div>
+        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          +8% Goal
         </div>
       </div>
-    </ResponsiveContainer>
+    </div>
   );
 };
 
