@@ -9,7 +9,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
 import { EmailBatchService } from '../email/email-batch.service';
 import { DocxGeneratorService } from '../email/docx-generator.service';
-import { SocialStoresService } from '../social-stores/social-stores.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -41,7 +40,6 @@ export class ReportsService {
         private readonly emailBatchService: EmailBatchService,
         private readonly docxGeneratorService: DocxGeneratorService,
         private readonly geminiService: GeminiService,
-        private readonly socialStoresService: SocialStoresService,
     ) {
         this.ensureDataFile();
     }
@@ -493,16 +491,9 @@ export class ReportsService {
         const shop = user?.shopifyShop;
         const activeShopId = user?.activeShopId;
 
-        // 1. Check if the active store is a social store
-        const socialStores = await this.socialStoresService.getStores(userId);
-        const activeSocialStore = socialStores.find(s => s.id === activeShopId);
-
         let stats: any;
 
-        if (activeSocialStore) {
-            const products = await this.socialStoresService.getProducts(activeShopId, userId);
-            stats = await this.dashboardService.getSocialStats(activeShopId, products, userId);
-        } else if (shop) {
+        if (shop) {
             const token = await this.usersService.getDecryptedShopifyToken(userId);
             stats = await this.dashboardService.getStats(shop, token);
         } else {

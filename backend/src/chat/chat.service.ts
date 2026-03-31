@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { ReportsService } from '../reports/reports.service';
-import { SocialStoresService } from '../social-stores/social-stores.service';
 import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '../common/gemini.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -34,7 +33,6 @@ export class ChatService implements OnModuleInit {
         private readonly configService: ConfigService,
         private readonly reportsService: ReportsService,
         private readonly geminiService: GeminiService,
-        private readonly socialStoresService: SocialStoresService
     ) { }
 
     async onModuleInit() {
@@ -121,14 +119,12 @@ export class ChatService implements OnModuleInit {
 
         chat.messages.push(userMessage);
 
-
         if (chat.messages.length === 1 && chat.title === 'New Chat') {
             chat.title = content.length > 30 ? content.substring(0, 30) + '...' : content;
         }
 
         chat.updatedAt = Date.now();
         this.saveChats();
-
 
         const botResponse = await this.generateBotResponse(userId, content, chat.messages, language);
         chat.messages.push(botResponse);
@@ -154,7 +150,6 @@ export class ChatService implements OnModuleInit {
         return this.generateBotResponse(userId, content, fullHistory, language);
     }
 
-
     private async generateBotResponse(userId: string, userMessage: string, history: Message[], languageOverride?: string): Promise<Message> {
         let responseContent = "I'm having trouble connecting to my brain right now.";
 
@@ -163,9 +158,7 @@ export class ChatService implements OnModuleInit {
         const s = settings as any;
         const personality = s?.personality || 'Professional';
 
-
         const tokenCost = 10;
-
 
         if ((user.aiTokens ?? 0) < tokenCost) {
             return {
@@ -181,71 +174,42 @@ export class ChatService implements OnModuleInit {
         const language = languageOverride || s?.language || 'English';
         const dataAccess = s?.dataAccess || 'Limited';
 
-
         let storeStats = "No store connected.";
         const activeShopId = user.activeShopId;
 
-        if (activeShopId) {
+        if (activeShopId && user.shopifyShop && user.shopifyToken) {
             try {
-                // Check if active store is a social store
-                const socialStores = await this.socialStoresService.getStores(userId);
-                const socialStore = socialStores.find(s => s.id === activeShopId);
+                if (dataAccess === 'Limited') {
+                    storeStats = "Access to detailed store data is disabled in Bot Customization settings.";
+                } else {
+                    const decryptedToken = await this.usersService.getDecryptedShopifyToken(userId);
+                    const stats = await this.dashboardService.getStats(user.shopifyShop, decryptedToken);
 
-                if (socialStore) {
-                    const products = await this.socialStoresService.getProducts(activeShopId, userId);
-                    const stats = await this.dashboardService.getSocialStats(activeShopId, products, userId);
+                    const recentSales = stats.salesHistory.map(s => `${s.name} ($${s.amount})`).join(', ');
+                    const revenueTrend = stats.revenue.chartData.map(d => `${d.date}: $${d.revenue}`).join(', ');
+                    const trafficSources = stats.source.map(s => `${s.name}: ${s.value}%`).join(', ');
                     const topProducts = stats.topProducts ? stats.topProducts.map(p => `${p.name} (${p.count})`).join(', ') : 'No data';
 
                     storeStats = `
-                        Storefront Type: Social (${socialStore.type})
+                        Storefront Type: Shopify
                         Overview:
-                        - Store Name: ${socialStore.storeName}
-                        - Sales Revenue (Actual): ${user.currency || 'NGN'} ${stats.revenue.total.toLocaleString()}
-                        - Potential Inventory Value: ${user.currency || 'NGN'} ${stats.revenue.potential?.toLocaleString() || '0'}
-                        - In-Stock Items: ${products.filter(p => p.stock > 0).length}
-                        - Out-of-Stock Items: ${products.filter(p => p.stock <= 0).length}
-
+                        - Total Revenue (All Time): $${stats.revenue.total}
+                        - Revenue Change (This Week vs Last): ${stats.revenue.change}%
+                        - Lost Revenue (Cancelled): $${stats.revenue.lost || 0}
+    
                         Breakdowns:
-                        - Top Stocked Products: ${topProducts}
-                        - Platform Sources: WhatsApp (Main), Instagram (Secondary)
-
-                        AI Context: This is a social commerce store where products are shared manually.
+                        - Revenue Trend (Last 7 Days): ${revenueTrend || 'No data'}
+                        - Traffic Sources: ${trafficSources || 'No data'}
+                        - Top Selling Products: ${topProducts}
+    
+                        Recent Activity:
+                        - Last 5 Sales: ${recentSales || 'None'}
                     `;
-                } else if (user.shopifyShop && user.shopifyToken) {
-                    // It's a shopify store
-                    if (dataAccess === 'Limited') {
-                        storeStats = "Access to detailed store data is disabled in Bot Customization settings.";
-                    } else {
-                        const decryptedToken = await this.usersService.getDecryptedShopifyToken(userId);
-                        const stats = await this.dashboardService.getStats(user.shopifyShop, decryptedToken);
-
-                        const recentSales = stats.salesHistory.map(s => `${s.name} ($${s.amount})`).join(', ');
-                        const revenueTrend = stats.revenue.chartData.map(d => `${d.date}: $${d.revenue}`).join(', ');
-                        const trafficSources = stats.source.map(s => `${s.name}: ${s.value}%`).join(', ');
-                        const topProducts = stats.topProducts ? stats.topProducts.map(p => `${p.name} (${p.count})`).join(', ') : 'No data';
-
-                        storeStats = `
-                            Storefront Type: Shopify
-                            Overview:
-                            - Total Revenue (All Time): $${stats.revenue.total}
-                            - Revenue Change (This Week vs Last): ${stats.revenue.change}%
-                            - Lost Revenue (Cancelled): $${stats.revenue.lost || 0}
-        
-                            Breakdowns:
-                            - Revenue Trend (Last 7 Days): ${revenueTrend || 'No data'}
-                            - Traffic Sources: ${trafficSources || 'No data'}
-                            - Top Selling Products: ${topProducts}
-        
-                            Recent Activity:
-                            - Last 5 Sales: ${recentSales || 'None'}
-                        `;
-                    }
                 }
             } catch (err) {
                 console.error("Error fetching stats for chat context", err);
             }
         }
-
 
         let systemInstruction = `You are ${name}, a ${personality} AI assistant for an e-commerce dashboard called StockBud.`;
         if (personality === 'Friendly') systemInstruction += " Be warm, helpful, and use emojis occasionally.";
@@ -256,7 +220,6 @@ export class ChatService implements OnModuleInit {
         systemInstruction += ` Respond in ${language}.`;
         systemInstruction += ` ${name} acts as a Dashboard Explainer, Navigation Guide, and Business Tutor.`;
 
-
         systemInstruction += `\n\n**Navigation Guide**:\n`;
         systemInstruction += `- **Dashboard**: Main overview, revenue charts, traffic sources, heatmap.\n`;
         systemInstruction += `- **Products**: Manage inventory, add new products, view stock levels.\n`;
@@ -265,12 +228,10 @@ export class ChatService implements OnModuleInit {
         systemInstruction += `- **Settings**: Connect Shopify store, manage preferences, toggle theme.\n`;
         systemInstruction += `If asked "How do I..." or "Where is...", guide them to the correct page.\n`;
 
-
         systemInstruction += `\n\n**Limitations (CRITICAL)**:\n`;
         systemInstruction += `- You CANNOT generate downloadable reports (PDF/CSV). Guide them to the Reports page.\n`;
         systemInstruction += `- You CANNOT duplicate, refund, or edit orders/products. You are Read-Only.\n`;
         systemInstruction += `- You ONLY see the snapshot provided below. You DO NOT have access to historical data (last year, last month) unless it's in the snapshot.\n`;
-
 
         systemInstruction += `\n\n**Current Data Snapshot**:\n${storeStats}\n`;
         systemInstruction += `Use this data to answer questions accurately. If asked about metric definitions (e.g. "What is AOV?"), explain them simply.`;
@@ -278,7 +239,6 @@ export class ChatService implements OnModuleInit {
 
         if (this.geminiService.hasKeys()) {
             try {
-
                 const apiHistory = history.slice(0, -1).map(msg => ({
                     role: msg.role === 'user' ? 'user' : 'model',
                     parts: [{ text: msg.content }]
@@ -302,7 +262,6 @@ export class ChatService implements OnModuleInit {
                 responseContent = "I apologize, but I'm encountering an error processing your request.";
             }
         } else {
-
             responseContent = `[Mock ${name} (${personality})]: ${userMessage} (Gemini API Key missing)`;
         }
 
@@ -313,19 +272,15 @@ export class ChatService implements OnModuleInit {
         };
     }
 
-
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async handleTokenReplenishment() {
         await this.usersService.checkAndReplenishTokens();
     }
 
-
     @Cron(CronExpression.EVERY_WEEK)
     async handleWeeklyReport() {
         console.log('Running Weekly Report Job...');
-
         const allUsers = await this.usersService.getAllUsers();
-
         for (const user of allUsers) {
             if (user.shopifyShop && user.shopifyToken) {
                 await this.generateWeeklyReportForUser(user.id);
@@ -333,26 +288,20 @@ export class ChatService implements OnModuleInit {
         }
     }
 
-
     async generateWeeklyReportForUser(userId: string) {
         const user = await this.usersService.findById(userId);
-
         if (!user || !user.shopifyShop || !user.shopifyToken) return;
-
 
         if ((user.reportTokens ?? 0) < 50) {
             console.log(`Skipping weekly report for ${userId}: Not enough tokens.`);
             return;
         }
 
-
         await this.usersService.updateProfile(userId, { reportTokens: (user.reportTokens ?? 0) - 50 });
 
         try {
-
             const report = await this.reportsService.generateReport(userId, 'weekly' as any);
             const content = report.data.content;
-
 
             const chats = await this.getUserChats(userId);
             let chat = chats.find(c => c.title === 'StockBud Official' || c.title.includes('StockBud'));
@@ -360,7 +309,6 @@ export class ChatService implements OnModuleInit {
             if (!chat) {
                 chat = await this.createChat(userId, 'StockBud Updates');
             }
-
 
             const botMsg: Message = {
                 role: 'assistant',
@@ -370,7 +318,6 @@ export class ChatService implements OnModuleInit {
             chat.messages.push(botMsg);
             chat.updatedAt = Date.now();
             this.saveChats();
-
         } catch (error) {
             console.error(`Failed to generate report for user ${userId}`, error);
         }

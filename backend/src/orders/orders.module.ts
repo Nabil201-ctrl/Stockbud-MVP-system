@@ -1,12 +1,9 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { OrdersController } from './orders.controller';
 import { OrdersProducerService } from './orders.producer.service';
-import { SocialStoresModule } from '../social-stores/social-stores.module';
 
 @Module({
     imports: [
-        forwardRef(() => SocialStoresModule),
         ClientsModule.register([{
             name: 'ORDERS_SERVICE',
             transport: Transport.RMQ,
@@ -19,7 +16,7 @@ import { SocialStoresModule } from '../social-stores/social-stores.module';
             },
         }]),
     ],
-    controllers: [OrdersController],
+    controllers: [],
     providers: [OrdersProducerService],
     exports: [OrdersProducerService],
 })

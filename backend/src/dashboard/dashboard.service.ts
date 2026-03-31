@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ShopifyService } from '../shopify/shopify.service';
 import axios from 'axios';
-import * as path from 'path';
-import * as fs from 'fs';
 
 @Injectable()
 export class DashboardService {
@@ -31,9 +29,6 @@ export class DashboardService {
                     orders = ordersData.orders;
                 }
 
-
-
-
                 let exchangeRate = 1;
                 if (orders.length > 0) {
                     const shopCurrency = orders[0].currency || 'USD';
@@ -52,7 +47,6 @@ export class DashboardService {
                     }
                 }
 
-
                 orders.forEach(order => {
                     const amount = Number(order.total_price) * exchangeRate;
                     if (order.financial_status === 'voided' || order.cancelled_at) {
@@ -61,7 +55,6 @@ export class DashboardService {
                         totalRevenue += amount;
                     }
                 });
-
 
                 const now = new Date();
                 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -89,8 +82,6 @@ export class DashboardService {
                     revenueChange = 0;
                 }
 
-
-
                 const last7Days = [...Array(7)].map((_, i) => {
                     const d = new Date();
                     d.setDate(d.getDate() - (6 - i));
@@ -114,7 +105,6 @@ export class DashboardService {
                     };
                 });
 
-
                 const sources = {};
                 orders.forEach(o => {
                     const source = o.source_name || 'direct';
@@ -128,7 +118,6 @@ export class DashboardService {
                     color: this.getColorForSource(name)
                 }));
 
-
                 const heatMapCounts = {};
                 orders.forEach(o => {
                     const date = o.created_at.split('T')[0];
@@ -140,7 +129,6 @@ export class DashboardService {
                     count: Number(count),
                     level: Math.min(4, Math.ceil(Number(count) / 2))
                 }));
-
 
                 salesHistoryData = orders.slice(0, 5).map(o => {
                     const first = o.customer?.first_name || 'Guest';
@@ -155,7 +143,6 @@ export class DashboardService {
                     };
                 });
 
-                // 7. Top Selling Products
                 const productCounts = {};
                 orders.forEach(o => {
                     if (!o.cancelled_at) {
@@ -189,146 +176,6 @@ export class DashboardService {
             source: sourceData,
             heatmap: heatmapData,
             salesHistory: salesHistoryData,
-            topProducts: topProducts
-        };
-    }
-
-    private async getSocialOrders(userId: string): Promise<any[]> {
-        const ordersPath = path.join(process.cwd(), 'orders.json');
-        const dataOrdersPath = path.join(process.cwd(), 'data', 'orders.json');
-
-        let orders = [];
-        try {
-            if (fs.existsSync(ordersPath)) {
-                const content = fs.readFileSync(ordersPath, 'utf8');
-                const data = JSON.parse(content);
-                orders = Array.isArray(data) ? data : (data.orders || []);
-            } else if (fs.existsSync(dataOrdersPath)) {
-                const content = fs.readFileSync(dataOrdersPath, 'utf8');
-                const data = JSON.parse(content);
-                orders = Array.isArray(data) ? data : (data.orders || []);
-            }
-        } catch (e) {
-            console.error('Failed to load social orders:', e.message);
-        }
-
-        return orders; // Filtering by userId might miss some orders if not properly linked
-    }
-
-    async getSocialStats(storeId: string, products: any[], userId: string) {
-        let totalRevenue = 0;
-        let potentialRevenue = 0;
-        let heatmapData = [];
-        let sourceData: { name: string; value: number; color: string }[] = [];
-        let topProducts = [];
-
-        // Calculate potential inventory value
-        products.forEach(p => {
-            potentialRevenue += (Number(p.price) || 0) * (Number(p.stock) || 0);
-        });
-
-        // 1. Get real orders for this store
-        const allOrders = await this.getSocialOrders(userId);
-        const storeOrders = allOrders.filter(o => o.storeId === storeId);
-
-        // Calculate total revenue from orders
-        storeOrders.forEach(order => {
-            if (order.status !== 'cancelled') {
-                totalRevenue += (Number(order.totalAmount) || 0);
-            }
-        });
-
-        // 2. Generate 7-day chart data
-        const last7Days = [...Array(7)].map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - (6 - i));
-            return d.toISOString().split('T')[0];
-        });
-
-        const revenueData = last7Days.map(date => {
-            const dayRevenue = storeOrders
-                .filter(o => o.createdAt && o.createdAt.startsWith(date) && o.status !== 'cancelled')
-                .reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
-
-            const dateObj = new Date(date);
-            const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
-
-            // Mock target for now (e.g. 500 per day)
-            const target = 500;
-
-            return {
-                date: formattedDate,
-                revenue: dayRevenue,
-                target: target
-            };
-        });
-
-        // 3. Heatmap
-        const heatMapCounts = {};
-        storeOrders.forEach(o => {
-            const date = o.createdAt?.split('T')[0];
-            if (date) heatMapCounts[date] = (heatMapCounts[date] || 0) + 1;
-        });
-
-        heatmapData = Object.entries(heatMapCounts).map(([date, count]) => ({
-            date,
-            count: Number(count),
-            level: Math.min(4, Math.ceil(Number(count) / 2))
-        }));
-
-        // 4. Source
-        const mainSourceSource = products.length > 0 && products[0].type === 'instagram' ? 'Instagram' : 'WhatsApp';
-        sourceData = [
-            { name: mainSourceSource, value: 100, color: mainSourceSource === 'WhatsApp' ? '#10B981' : '#8B5CF6' }
-        ];
-
-        // 5. Top Products
-        const productStats = {};
-        storeOrders.forEach(o => {
-            if (o.status !== 'cancelled' && o.items) {
-                o.items.forEach(item => {
-                    if (!productStats[item.productName]) {
-                        productStats[item.productName] = { count: 0, revenue: 0 };
-                    }
-                    productStats[item.productName].count += (item.quantity || 1);
-                    productStats[item.productName].revenue += (item.price * (item.quantity || 1));
-                });
-            }
-        });
-
-        topProducts = Object.entries(productStats)
-            .map(([name, stats]: [string, any]) => ({ name, count: stats.count, revenue: stats.revenue }))
-            .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, 5);
-
-        // Fallback to stock if no orders yet (show stock instead of revenue)
-        if (topProducts.length === 0) {
-            topProducts = [...products]
-                .sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))
-                .slice(0, 5)
-                .map(p => ({ name: p.name, count: p.stock, revenue: 0 }));
-        }
-
-        return {
-            revenue: {
-                total: totalRevenue,
-                potential: potentialRevenue,
-                change: 0,
-                chartData: revenueData,
-                lost: 0
-            },
-            targetDetails: {
-                type: 'monthly',
-                value: 15000 // Mock target
-            },
-            source: sourceData,
-            heatmap: heatmapData,
-            salesHistory: storeOrders.slice(-5).reverse().map(o => ({
-                name: o.customerName || 'Customer',
-                amount: o.totalAmount,
-                avatar: (o.customerName || 'C')[0].toUpperCase(),
-                color: this.getRandomColor()
-            })),
             topProducts: topProducts
         };
     }

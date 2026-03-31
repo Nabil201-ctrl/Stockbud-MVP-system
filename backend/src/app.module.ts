@@ -14,7 +14,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import { EmailModule } from './email/email.module';
 import { DatabaseModule } from './database/database.module';
-import { SocialStoresModule } from './social-stores/social-stores.module';
 import { OrdersModule } from './orders/orders.module';
 import { ImageMicroserviceModule } from './image-microservice/image-microservice.module';
 
@@ -37,7 +36,6 @@ import { ImageMicroserviceModule } from './image-microservice/image-microservice
         ReportsModule,
         NotificationsModule,
         PaymentsModule,
-        SocialStoresModule,
         OrdersModule,
         ImageMicroserviceModule,
     ],

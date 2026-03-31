@@ -30,7 +30,6 @@ import { AuthProvider } from './context/AuthContext';
 import AuthSuccess from './pages/AuthSuccess';
 
 import LandingPage from './pages/LandingPage';
-import StorefrontPage from './pages/StorefrontPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
@@ -66,10 +65,6 @@ function App() {
             <Route path="/" element={<LandingPage />} />
 
             { }
-            <Route path="/p/:slug" element={<StorefrontPage />} />
-            <Route path="/s/:storeId" element={<StorefrontPage />} />
-
-            { }
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/signup" element={<Signup />} />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
@@ -95,11 +90,11 @@ function App() {
             </Route>
 
             { }
-          </Routes>
-        </Router>
+          </Routes >
+        </Router >
         <ReloadPrompt />
-      </AuthProvider>
-    </ThemeProvider>
+      </AuthProvider >
+    </ThemeProvider >
   );
 }
 
