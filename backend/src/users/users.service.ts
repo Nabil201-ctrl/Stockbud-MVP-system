@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { EncryptionService } from '../common/encryption.service';
+import { PlanService } from '../common/plan.service';
 import axios from 'axios';
 import { JsonDatabaseService } from '../database/json-database.service';
 import { User, ShopifyStore } from '../database/interfaces';
@@ -21,6 +22,7 @@ export interface BotSettings {
 export class UsersService implements OnModuleInit {
     constructor(
         private readonly encryptionService: EncryptionService,
+        private readonly planService: PlanService,
         private db: JsonDatabaseService
     ) { }
 
@@ -105,8 +107,10 @@ export class UsersService implements OnModuleInit {
         if (existingStore) {
             this.db.updateStore(existingStore.id, { token: encryptedToken });
         } else {
-            if (user.shopifyStores.length >= user.storeLimit) {
-                throw new Error('Store limit reached. Please upgrade to add more stores.');
+            // Plan-based store limit check
+            const check = this.planService.canAddStore(user);
+            if (!check.allowed) {
+                throw new Error(check.reason || 'Store limit reached. Please upgrade to add more stores.');
             }
 
             const store = this.db.createStore(userId, {
@@ -248,6 +252,8 @@ export class UsersService implements OnModuleInit {
         if (data.signInCount !== undefined) payload.signInCount = data.signInCount;
         if (data.lastLoginDate !== undefined) payload.lastLoginDate = data.lastLoginDate;
         if (data.loginDates !== undefined) payload.loginDates = data.loginDates;
+        if (data.aiActionsUsed !== undefined) payload.aiActionsUsed = data.aiActionsUsed;
+        if (data.aiActionsResetDate !== undefined) payload.aiActionsResetDate = data.aiActionsResetDate;
 
         return this.db.updateUser(userId, payload);
     }

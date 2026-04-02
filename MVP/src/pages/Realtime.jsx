@@ -11,7 +11,7 @@ const Realtime = () => {
   const [conversionRate, setConversionRate] = useState(3.2);
 
   useEffect(() => {
-    
+
     const interval = setInterval(() => {
       setActiveUsers(prev => prev + Math.floor(Math.random() * 10 - 5));
       setPageViews(prev => prev + Math.floor(Math.random() * 50));
@@ -45,12 +45,12 @@ const Realtime = () => {
   ];
 
   return (
-    <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`p-3 sm:p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {}
+        { }
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8" id="realtime-header">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Realtime Analytics</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Realtime Analytics</h1>
             <p className="text-gray-500 dark:text-gray-400">
               Live tracking of user activity and interactions
             </p>
@@ -61,15 +61,15 @@ const Realtime = () => {
           </div>
         </div>
 
-        {}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" id="realtime-stats">
+        { }
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8" id="realtime-stats">
           {[
             { icon: <Users size={24} />, label: 'Active Users', value: activeUsers.toLocaleString(), change: '+2.1%', color: 'bg-blue-500' },
             { icon: <Eye size={24} />, label: 'Page Views', value: pageViews.toLocaleString(), change: '+4.7%', color: 'bg-green-500' },
             { icon: <MousePointer size={24} />, label: 'Clicks', value: clicks.toLocaleString(), change: '+3.2%', color: 'bg-purple-500' },
             { icon: <TrendingUp size={24} />, label: 'Conversion Rate', value: `${conversionRate}%`, change: '+0.8%', color: 'bg-orange-500' }
           ].map((stat, idx) => (
-            <div key={idx} className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <div key={idx} className={`rounded-xl p-4 sm:p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-lg ${stat.color} bg-opacity-10`}>
                   <div className={stat.color.replace('bg-', 'text-')}>
@@ -78,14 +78,14 @@ const Realtime = () => {
                 </div>
                 <span className="text-green-600 dark:text-green-400 font-medium">{stat.change}</span>
               </div>
-              <div className="text-2xl font-bold mb-1">{stat.value}</div>
+              <div className="text-xl sm:text-2xl font-bold mb-1">{stat.value}</div>
               <div className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</div>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+          { }
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="realtime-activity">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold">Live Activity Stream</h2>
@@ -122,7 +122,7 @@ const Realtime = () => {
               ))}
             </div>
 
-            {}
+            { }
             <div className="mt-8">
               <h3 className="text-lg font-semibold mb-4">Live User Locations</h3>
               <div className={`rounded-lg p-4 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} relative h-64 overflow-hidden`}>
@@ -144,9 +144,9 @@ const Realtime = () => {
             </div>
           </div>
 
-          {}
+          { }
           <div className="space-y-6" id="realtime-analytics">
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">User Distribution</h3>
               <div className="space-y-4">
@@ -170,7 +170,7 @@ const Realtime = () => {
               </div>
             </div>
 
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">Device Usage</h3>
               <div className="space-y-4">
@@ -191,7 +191,7 @@ const Realtime = () => {
               </div>
             </div>
 
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">System Status</h3>
               <div className="space-y-3">
@@ -214,7 +214,7 @@ const Realtime = () => {
               </div>
             </div>
 
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center gap-3 mb-4">
                 <AlertCircle className="text-yellow-500" />

@@ -5,6 +5,7 @@ import { ReportsService } from '../reports/reports.service';
 import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '../common/gemini.service';
 import { UsageService } from '../common/usage.service';
+import { PlanService } from '../common/plan.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -35,6 +36,7 @@ export class ChatService implements OnModuleInit {
         private readonly reportsService: ReportsService,
         private readonly geminiService: GeminiService,
         private readonly usageService: UsageService,
+        private readonly planService: PlanService,
     ) { }
 
     async onModuleInit() {
@@ -160,17 +162,16 @@ export class ChatService implements OnModuleInit {
         const s = settings as any;
         const personality = s?.personality || 'Professional';
 
-        const tokenCost = 10;
-
-        if ((user.aiTokens ?? 0) < tokenCost) {
+        const aiCheck = this.planService.canUseAiAction(user!);
+        if (!aiCheck.allowed) {
             return {
                 role: 'assistant',
-                content: `You need ${tokenCost} AI tokens for this request, but you only have ${user.aiTokens ?? 0}. Please upgrade your plan.`,
+                content: aiCheck.reason || 'You have reached your AI action limit for this month. Please upgrade your plan.',
                 timestamp: Date.now()
             };
         }
 
-        await this.usersService.updateProfile(userId, { aiTokens: (user.aiTokens ?? 0) - tokenCost });
+        this.planService.consumeAiAction(userId);
 
         const name = s?.name || 'StockBud';
         const language = languageOverride || s?.language || 'English';

@@ -10,6 +10,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../email/email.service';
 import { EmailBatchService } from '../email/email-batch.service';
 import { DocxGeneratorService } from '../email/docx-generator.service';
+import { PlanService } from '../common/plan.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -42,6 +43,7 @@ export class ReportsService {
         private readonly docxGeneratorService: DocxGeneratorService,
         private readonly geminiService: GeminiService,
         private readonly usageService: UsageService,
+        private readonly planService: PlanService,
     ) {
         this.ensureDataFile();
     }
@@ -79,12 +81,19 @@ export class ReportsService {
 
 
     async generateReport(userId: string, type: 'sales' | 'inventory' | 'revenue' | 'weekly' | 'monthly' | 'welcome' | 'instant'): Promise<Report> {
+        const user = await this.usersService.findById(userId);
+        if (!user) throw new Error('User not found');
+
+        // Check if plan allows this report type
+        const check = this.planService.canGenerateReport(user, type);
+        if (!check.allowed) {
+            throw new Error(check.reason || `Your plan does not support generating '${type}' reports.`);
+        }
 
         if (type === 'sales' || type === 'inventory' || type === 'revenue' || type === 'instant') {
             await this.usersService.deductReportToken(userId, 1);
         }
 
-        const user = await this.usersService.findById(userId);
         const shop = user?.shopifyShop;
         const token = await this.usersService.getDecryptedShopifyToken(userId);
 

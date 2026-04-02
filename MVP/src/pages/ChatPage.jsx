@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     MessageSquare, Plus, Send, User, Bot,
-    MoreHorizontal, Trash2, Menu, X
+    MoreHorizontal, Trash2, Menu, X, Lock
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -45,7 +45,7 @@ const ChatPage = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    
+
     useEffect(() => {
         loadChats();
     }, []);
@@ -107,19 +107,24 @@ const ChatPage = () => {
         }
     };
 
-    const handleSend = async (e) => {
-        e.preventDefault();
-        if (!input.trim()) return;
+    const handleSend = async (eOrText) => {
+        let messageContent = input;
 
-        
-        
+        if (eOrText && eOrText.preventDefault) {
+            eOrText.preventDefault();
+        } else if (typeof eOrText === 'string') {
+            messageContent = eOrText;
+        }
+
+        if (!messageContent.trim()) return;
+
         let targetChatId = currentChatId;
         if (!targetChatId) {
             try {
                 const response = await authenticatedFetch(`${API_URL}/chats`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: input.slice(0, 30), firstMessage: input, language }) 
+                    body: JSON.stringify({ title: messageContent.slice(0, 30), firstMessage: messageContent, language })
                 });
                 if (response.ok) {
                     const newChat = await response.json();
@@ -134,7 +139,6 @@ const ChatPage = () => {
             }
         }
 
-        const messageContent = input;
         setInput('');
         setIsTyping(true);
 
@@ -153,7 +157,7 @@ const ChatPage = () => {
             const response = await authenticatedFetch(`${API_URL}/chats/${targetChatId}/messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: messageContent, language }) 
+                body: JSON.stringify({ content: messageContent, language })
             });
 
             if (response.ok) {
@@ -171,7 +175,7 @@ const ChatPage = () => {
     return (
         <div className={`flex h-[calc(100vh-64px)] overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
 
-            {}
+            { }
             {sidebarOpen && (
                 <div
                     className="md:hidden fixed inset-0 z-20 bg-black/50"
@@ -179,7 +183,7 @@ const ChatPage = () => {
                 />
             )}
 
-            {}
+            { }
             <div className={`
         fixed md:static inset-y-0 left-0 z-30
         w-[260px] flex-shrink-0 flex flex-col transition-transform duration-300 transform
@@ -224,7 +228,7 @@ const ChatPage = () => {
                                         {chat.title}
                                     </div>
 
-                                    {}
+                                    { }
                                     {(currentChatId === chat.id || true) && (
                                         <div className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
@@ -240,7 +244,7 @@ const ChatPage = () => {
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <div className={`p-3 border-t flex items-center gap-3 cursor-pointer rounded-md m-2 ${isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-100'}`}>
                         {user?.picture ? (
                             <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-sm object-cover" />
@@ -255,9 +259,9 @@ const ChatPage = () => {
                 </div>
             </div>
 
-            {}
+            { }
             <div className="flex-1 flex flex-col h-full relative w-full">
-                {}
+                { }
                 <div className={`
           flex items-center justify-between p-2 md:p-4 border-b 
           ${isDarkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}
@@ -274,16 +278,132 @@ const ChatPage = () => {
                     </div>
                 </div>
 
-                {}
+                { }
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth">
                     <div className="max-w-3xl mx-auto flex flex-col gap-6 pb-24">
                         {currentChat?.messages.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-[50vh] text-center opacity-50">
-                                <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4">
+                            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center mt-10">
+                                <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mb-4 opacity-90 shadow-lg">
                                     <Bot size={32} className="text-white" />
                                 </div>
-                                <h2 className="text-2xl font-bold mb-2">{t('chat.welcomeTitle')}</h2>
-                                <p className="text-sm">{t('chat.welcomeSubtitle')}</p>
+                                <h2 className="text-2xl font-bold mb-2">{t('chat.welcomeTitle') || 'How can I help you today?'}</h2>
+                                <p className={`text-sm mb-8 max-w-md ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    {t('chat.welcomeSubtitle') || 'Ask about your store, request insights, or get started with these suggestions.'}
+                                </p>
+
+                                <div className="w-full mt-4 pb-8">
+                                    {(() => {
+                                        const plan = user?.plan || 'free';
+
+                                        const freeCards = [
+                                            { title: "Store Overview", hint: "Give me a quick review of my store's overall performance." },
+                                            { title: "Recent Orders", hint: "What were my last 5 orders?" },
+                                            { title: "Total Revenue", hint: "What is my total revenue so far?" },
+                                            { title: "AI Assistant Help", hint: "What kind of questions can I ask you?" }
+                                        ];
+
+                                        const beginnerCards = [
+                                            { title: "Weekly Summary", hint: "Summarize my performance for the last 7 days." },
+                                            { title: "Top Products", hint: "What are my best selling products right now?" },
+                                            { title: "Low Stock Alert", hint: "Are any of my important items running low on inventory?" },
+                                            { title: "Traffic Sources", hint: "Where are my customers coming from this month?" }
+                                        ];
+
+                                        const proCards = [
+                                            { title: "Advanced Revenue Analysis", hint: "Give me a detailed breakdown of revenue including cancellations and changing trends." },
+                                            { title: "Cross-Channel Performance", hint: "Compare my sales across Shopify, Instagram, and WhatsApp." },
+                                            { title: "Predictive Analytics", hint: "Based on current trends, what products might run out of stock next week?" },
+                                            { title: "Customer Lifetime Value", hint: "Which products lead to the highest repeat purchase rate?" }
+                                        ];
+
+                                        let unlockedCards = [];
+                                        let lockedCards = [];
+                                        let upgradeMessage = "";
+
+                                        if (plan === 'pro') {
+                                            unlockedCards = proCards;
+                                            lockedCards = [];
+                                            upgradeMessage = "You have full access to all StockBud AI features.";
+                                        } else if (plan === 'beginner') {
+                                            unlockedCards = beginnerCards;
+                                            lockedCards = proCards.slice(0, 2);
+                                            upgradeMessage = "Upgrade to Pro to unlock predictive analytics and advanced metrics.";
+                                        } else {
+                                            unlockedCards = freeCards;
+                                            lockedCards = beginnerCards.slice(0, 2);
+                                            upgradeMessage = "Upgrade to Beginner or Pro to unlock deeper insights.";
+                                        }
+
+                                        return (
+                                            <div className="w-full flex flex-col items-center">
+                                                <div className={`mb-5 px-4 py-1.5 rounded-full text-xs font-bold border flex items-center justify-center
+                                                    ${plan === 'pro' ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800'
+                                                        : plan === 'beginner' ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+                                                            : 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'}
+                                                `}>
+                                                    {plan.toUpperCase()} PLAN ACTIVE
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl px-2 mb-8">
+                                                    {unlockedCards.map((suggestion, i) => (
+                                                        <button
+                                                            key={`unlocked-${i}`}
+                                                            onClick={() => handleSend(suggestion.hint)}
+                                                            className={`
+                                                                flex flex-col text-left p-4 rounded-xl border transition-all cursor-pointer group hover:-translate-y-0.5 shadow-sm
+                                                                ${plan === 'pro'
+                                                                    ? (isDarkMode ? 'bg-purple-900/10 border-purple-800/50 hover:bg-purple-900/30 hover:border-purple-600' : 'bg-purple-50 hover:bg-purple-100 border-purple-200')
+                                                                    : plan === 'beginner'
+                                                                        ? (isDarkMode ? 'bg-blue-900/10 border-blue-800/50 hover:bg-blue-900/30 hover:border-blue-600' : 'bg-blue-50 hover:bg-blue-100 border-blue-200')
+                                                                        : (isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700 hover:border-gray-500' : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300')
+                                                                }
+                                                            `}
+                                                        >
+                                                            <span className={`font-semibold text-sm mb-1 transition-colors
+                                                                ${plan === 'pro' ? 'text-purple-700 dark:text-purple-300'
+                                                                    : plan === 'beginner' ? 'text-blue-700 dark:text-blue-300'
+                                                                        : isDarkMode ? 'text-gray-200' : 'text-gray-800'} 
+                                                            `}>{suggestion.title}</span>
+                                                            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{suggestion.hint}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                {lockedCards.length > 0 && (
+                                                    <div className="w-full max-w-2xl px-2 mt-2 border-t border-dashed dark:border-gray-700 pt-6">
+                                                        <div className="flex items-center gap-2 mb-4 px-2 justify-center">
+                                                            <Lock size={14} className="text-gray-400" />
+                                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Plan Exclusives</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                                                            {lockedCards.map((suggestion, i) => (
+                                                                <div
+                                                                    key={`locked-${i}`}
+                                                                    className={`
+                                                                        flex flex-col text-left p-4 rounded-xl border border-dashed opacity-60 cursor-not-allowed
+                                                                        ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-300'}
+                                                                    `}
+                                                                >
+                                                                    <span className="font-semibold text-sm text-gray-500 mb-1 flex items-center justify-between">
+                                                                        {suggestion.title}
+                                                                        <Lock size={12} />
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-400">{suggestion.hint}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="text-center mt-6">
+                                                            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                                {upgradeMessage}{' '}
+                                                                <a href="/settings" className="font-bold text-blue-500 hover:text-blue-600 hover:underline">Manage Plan</a>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             </div>
                         ) : (
                             currentChat?.messages.map((msg, idx) => (
@@ -332,7 +452,7 @@ const ChatPage = () => {
                     </div>
                 </div>
 
-                {}
+                { }
                 <div className={`
           absolute bottom-0 left-0 right-0 p-4 
           ${isDarkMode ? 'bg-gradient-to-t from-gray-900 via-gray-900 to-transparent' : 'bg-gradient-to-t from-white via-white to-transparent'}

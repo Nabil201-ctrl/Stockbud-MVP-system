@@ -26,6 +26,9 @@ const SettingsPage = () => {
     const [profileLoading, setProfileLoading] = useState(false);
     const [profileMessage, setProfileMessage] = useState(null);
 
+    const [planData, setPlanData] = useState(null);
+    const [planLoading, setPlanLoading] = useState(false);
+
     const [passwordData, setPasswordData] = useState({
         oldPassword: '',
         newPassword: '',
@@ -81,6 +84,47 @@ const SettingsPage = () => {
             verifyPayment(pendingRef);
         }
     }, [location.search]);
+
+    const fetchPlanData = async () => {
+        setPlanLoading(true);
+        try {
+            const res = await authenticatedFetch(`${API_URL}/users/me/plan`);
+            if (res.ok) {
+                const data = await res.json();
+                setPlanData(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch plan:', error);
+        } finally {
+            setPlanLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'usage') {
+            fetchPlanData();
+        }
+    }, [activeTab]);
+
+    const handleUpgradePlan = async (newPlan) => {
+        try {
+            const res = await authenticatedFetch(`${API_URL}/users/me/plan/upgrade`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: newPlan })
+            });
+            if (res.ok) {
+                alert(`Successfully upgraded to ${newPlan.toUpperCase()} plan!`);
+                fetchPlanData();
+                refreshUser();
+            } else {
+                const data = await res.json();
+                alert(data.message || 'Upgrade failed');
+            }
+        } catch (error) {
+            console.error('Failed to upgrade:', error);
+        }
+    };
 
     const handlePurchase = () => {
         setPurchaseLoading(true);
@@ -371,26 +415,66 @@ const SettingsPage = () => {
             {/* Usage Tab */}
             {activeTab === 'usage' && (
                 <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                    <h2 className="text-lg font-bold mb-6 dark:text-white">Usage & Limits</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-blue-600 dark:text-blue-400">Buy Tokens</h3>
-                                <span className="text-xs font-bold">₦500 / 100</span>
+                    <h2 className="text-lg font-bold mb-6 dark:text-white">Plan & Limits</h2>
+                    {planLoading && !planData ? (
+                        <div className="flex justify-center p-8"><Loader2 className="animate-spin text-blue-500" /></div>
+                    ) : planData ? (
+                        <div className="space-y-8">
+                            <div className="p-6 bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl text-white shadow-lg flex justify-between items-center flex-wrap gap-4">
+                                <div>
+                                    <p className="text-blue-200 text-sm font-medium uppercase tracking-wide">Current Plan</p>
+                                    <h3 className="text-3xl font-black">{planData.planDisplayName}</h3>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-3xl font-bold">₦{planData.price.toLocaleString()}</div>
+                                    <div className="text-blue-200 text-sm">per month</div>
+                                </div>
                             </div>
-                            <input type="range" min="100" max="1000" step="100" value={purchaseAmount} onChange={e => setPurchaseAmount(Number(e.target.value))} className="w-full h-2 bg-blue-200 rounded-lg appearance-none mb-4" />
-                            <button onClick={handlePurchase} className="w-full py-2 bg-blue-600 text-white rounded-lg flex items-center justify-center gap-2">
-                                <ShoppingBag size={16} /> Buy {purchaseAmount} Tokens
-                            </button>
-                        </div>
-                        <div className="p-6 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
-                            <h3 className="font-bold text-purple-600 dark:text-purple-400 mb-4">Data Retention</h3>
-                            <div className="space-y-3">
-                                <button onClick={() => initiateRetentionPayment(3, 5000)} className="w-full py-2 bg-white dark:bg-gray-800 border border-purple-200 text-purple-600 rounded-lg">+3 Months (₦5,000)</button>
-                                <button onClick={() => initiateRetentionPayment(6, 9000)} className="w-full py-2 bg-purple-600 text-white rounded-lg">+6 Months (₦9,000)</button>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className={`p-6 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="font-bold flex items-center gap-2"><Zap className="text-yellow-500" size={18} /> AI Actions Remaining</h4>
+                                        <span className="text-sm font-semibold">{planData.aiActions.remaining} / {planData.aiActions.limit}</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
+                                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(planData.aiActions.used / planData.aiActions.limit) * 100}%` }}></div>
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Actions reset on the 1st of every month.</p>
+                                </div>
+
+                                <div className={`p-6 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                                    <h4 className="font-bold flex items-center gap-2 mb-4"><ShoppingBag className="text-blue-500" size={18} /> Connected Stores</h4>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm dark:text-gray-300">Active Connections</span>
+                                        <span className="font-semibold">{planData.stores.connected} / {planData.stores.limit}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-8">
+                                <h4 className="font-bold mb-4 dark:text-white">Upgrade Plan</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {planData.plan !== 'beginner' && (
+                                        <button disabled className="relative p-4 border border-blue-200 bg-blue-50/50 dark:bg-blue-900/10 dark:border-blue-800 rounded-xl text-left cursor-not-allowed opacity-80 overflow-hidden">
+                                            <div className="absolute top-2 right-2 bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Coming Soon</div>
+                                            <h5 className="font-bold text-blue-700/80 dark:text-blue-400/80">Beginner (₦4,000/mo)</h5>
+                                            <p className="text-xs text-blue-600/80 dark:text-blue-300/80 mt-1">2 stores, 30 AI actions, weekly full reports</p>
+                                        </button>
+                                    )}
+                                    {planData.plan !== 'pro' && (
+                                        <button disabled className="relative p-4 border border-purple-200 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-900/10 dark:to-pink-900/10 dark:border-purple-800 rounded-xl text-left cursor-not-allowed opacity-80 overflow-hidden">
+                                            <div className="absolute top-2 right-2 bg-purple-200 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Coming Soon</div>
+                                            <h5 className="font-bold text-purple-700/80 dark:text-purple-400/80">Pro (₦10,000/mo)</h5>
+                                            <p className="text-xs text-purple-600/80 dark:text-purple-300/80 mt-1">Unlimited stores, 200 AI actions, all reports</p>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    ) : (
+                        <p className="text-red-500">Failed to load plan data.</p>
+                    )}
                 </div>
             )}
 

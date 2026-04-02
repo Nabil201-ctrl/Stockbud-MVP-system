@@ -76,66 +76,9 @@ const ReportsPage = () => {
     };
 
 
-    const handleGenerateReport = () => {
+    const handleGenerateReport = async () => {
         setGenerating(true);
-
         try {
-            const handler = PaystackPop.setup({
-                key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-                email: user.email,
-                amount: 1000 * 100,
-                metadata: {
-                    userId: user.id,
-                    type: 'report_payment'
-                },
-                callback: (transaction) => {
-                    verifyAndGenerate(transaction.reference);
-                },
-                onClose: () => {
-                    setGenerating(false);
-                    alert('Payment cancelled. Report generation aborted.');
-                }
-            });
-            handler.openIframe();
-        } catch (error) {
-            console.error("Paystack error:", error);
-            setGenerating(false);
-            alert("Could not load payment window.");
-        }
-    };
-
-
-    const verifyWithRetry = async (reference, maxRetries = 3) => {
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                const response = await authenticatedFetch(`${API_URL}/payments/verify?reference=${reference}`);
-                const data = await response.json();
-                if (response.ok && data.success) {
-                    return data;
-                }
-                return { success: false, message: data.message || 'Verification failed' };
-            } catch (error) {
-                console.warn(`[Payment] Verify attempt ${attempt}/${maxRetries} failed:`, error.message);
-                if (attempt < maxRetries) {
-                    await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt - 1)));
-                } else {
-                    localStorage.setItem('pending_payment_ref', reference);
-                    return { success: false, message: 'Network error. Your payment is safe — please refresh to retry.' };
-                }
-            }
-        }
-    };
-
-    const verifyAndGenerate = async (reference) => {
-        try {
-            const result = await verifyWithRetry(reference);
-
-            if (!result.success) {
-                alert(result.message || 'Payment verification failed.');
-                setGenerating(false);
-                return;
-            }
-
             const response = await authenticatedFetch(`${API_URL}/reports/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -145,7 +88,12 @@ const ReportsPage = () => {
             if (response.ok) {
                 await fetchReports();
             } else {
-                alert('Failed to generate report');
+                const data = await response.json();
+                if (response.status === 403) {
+                    alert('Upgrade to the Beginner or Pro plan to generate ' + selectedType + ' reports.');
+                } else {
+                    alert(data.message || 'Failed to generate report.');
+                }
             }
         } catch (error) {
             console.error('Report generation error:', error);
@@ -155,55 +103,29 @@ const ReportsPage = () => {
         }
     };
 
-
-    const handleInstantReview = () => {
+    const handleInstantReview = async () => {
         setInstantGenerating(true);
-
         try {
-            const handler = PaystackPop.setup({
-                key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-                email: user.email,
-                amount: 2500 * 100,
-                metadata: {
-                    userId: user.id,
-                    type: 'instant_review_payment'
-                },
-                callback: async (transaction) => {
-                    try {
-                        const result = await verifyWithRetry(transaction.reference);
-
-                        if (!result.success) {
-                            alert(result.message || 'Payment verification failed.');
-                            setInstantGenerating(false);
-                            return;
-                        }
-
-                        const response = await authenticatedFetch(`${API_URL}/reports/instant-review`, {
-                            method: 'POST',
-                        });
-
-                        if (response.ok) {
-                            await fetchReports();
-                            alert(' Your instant review is being generated! It will be emailed to you shortly.');
-                        } else {
-                            alert('Failed to generate instant review.');
-                        }
-                    } catch (err) {
-                        console.error('Instant review error:', err);
-                        alert(`Error: ${err.message}`);
-                    } finally {
-                        setInstantGenerating(false);
-                    }
-                },
-                onClose: () => {
-                    setInstantGenerating(false);
-                }
+            const response = await authenticatedFetch(`${API_URL}/reports/instant-review`, {
+                method: 'POST',
             });
-            handler.openIframe();
-        } catch (error) {
-            console.error("Paystack error:", error);
+
+            if (response.ok) {
+                await fetchReports();
+                alert('Your instant review is being generated! It will be emailed to you shortly.');
+            } else {
+                const data = await response.json();
+                if (response.status === 403) {
+                    alert('Upgrade to the Beginner or Pro plan to generate Instant Reviews.');
+                } else {
+                    alert(data.message || 'Failed to generate instant review.');
+                }
+            }
+        } catch (err) {
+            console.error('Instant review error:', err);
+            alert(`Error: ${err.message}`);
+        } finally {
             setInstantGenerating(false);
-            alert("Could not load payment window.");
         }
     };
 
@@ -499,7 +421,7 @@ const ReportsPage = () => {
                     ) : (
                         <Zap size={18} />
                     )}
-                    Get Instant Review — ₦2,500
+                    Generate Review
                 </button>
             </div>
 

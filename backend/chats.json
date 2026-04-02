@@ -118,5 +118,12 @@
       }
     ],
     "updatedAt": 1769555541428
+  },
+  {
+    "id": "euzuf32ga",
+    "userId": "f87b6da6ff9d976d",
+    "title": "New Chat",
+    "messages": [],
+    "updatedAt": 1775129929534
   }
 ]

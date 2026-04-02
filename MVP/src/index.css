@@ -12,6 +12,45 @@ body,
   padding: 0;
 }
 
+/* Mobile safe-area support for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Hide scrollbar while keeping functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Minimum tap target on mobile */
+@media (max-width: 768px) {
+
+  button,
+  a,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Exception for inline buttons inside text */
+  .inline-btn button,
+  .inline-btn a {
+    min-height: unset;
+    min-width: unset;
+  }
+}
+
 /* Smooth scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

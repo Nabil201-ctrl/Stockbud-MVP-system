@@ -47,7 +47,7 @@
     "retentionMonths": 3,
     "createdAt": "2026-03-26T11:10:11.501Z",
     "isOnboardingComplete": true,
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzUxMTg2MzUsImV4cCI6MTc3NzcxMDYzNX0.UhTEHXNly57NAdns1l-UWTCmQrXgT7RKRN9NM0AeEUE",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzUxMzIzOTgsImV4cCI6MTc3NzcyNDM5OH0.AmguqFnRih2vOgiNunAPZaSB2BFaI8E2LeiZupXgQ9U",
     "aiTokens": 500,
     "reportTokens": 250,
     "botSettings": null,
@@ -58,8 +58,8 @@
     "ipAddress": "::ffff:127.0.0.1",
     "location": null,
     "currency": null,
-    "signInCount": 20,
-    "lastLoginDate": "2026-04-02T08:30:35.104Z",
+    "signInCount": 24,
+    "lastLoginDate": "2026-04-02T12:19:58.914Z",
     "loginDates": [
       "2026-03-26",
       "2026-03-27",
@@ -77,6 +77,10 @@
       "2026-03-31",
       "2026-03-31",
       "2026-03-31",
+      "2026-04-02",
+      "2026-04-02",
+      "2026-04-02",
+      "2026-04-02",
       "2026-04-02",
       "2026-04-02",
       "2026-04-02",
@@ -152,6 +156,9 @@
           }
         ]
       }
-    ]
+    ],
+    "plan": "beginner",
+    "aiActionsUsed": 0,
+    "aiActionsResetDate": "2026-04-02T12:01:04.654Z"
   }
 ]

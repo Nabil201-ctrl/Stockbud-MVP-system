@@ -1,10 +1,14 @@
 import { Controller, Get, Post, Put, Patch, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
+import { PlanService } from '../common/plan.service';
 
 @Controller('users')
 export class UsersController {
-    constructor(private readonly usersService: UsersService) { }
+    constructor(
+        private readonly usersService: UsersService,
+        private readonly planService: PlanService
+    ) { }
 
     @Get()
     findAll() {
@@ -82,6 +86,18 @@ export class UsersController {
     async setAllFreeReports(@Body() body: { enable: boolean }) {
         const count = await this.usersService.setAllFreeReports(body.enable);
         return { success: true, count };
+    }
+
+    @Get('me/plan')
+    @UseGuards(AuthGuard('jwt'))
+    async getPlanSummary(@Req() req) {
+        return this.planService.getUsageSummary(req.user);
+    }
+
+    @Post('me/plan/upgrade')
+    @UseGuards(AuthGuard('jwt'))
+    async upgradePlan(@Req() req, @Body() body: { plan: 'free' | 'beginner' | 'pro' }) {
+        return this.planService.upgradePlan(req.user.id, body.plan);
     }
 
     @Patch(':id/free-reports')

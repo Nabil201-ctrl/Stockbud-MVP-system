@@ -203,14 +203,15 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
 
 
           <div
-            id="ai-tokens"
+            id="plan-badge"
             onClick={() => navigate('/settings', { state: { activeTab: 'usage' } })}
-            className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}
+            className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-colors font-bold text-[10px] sm:text-xs tracking-wider uppercase
+              ${user?.plan === 'pro' ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800'
+                : user?.plan === 'beginner' ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+                  : 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'}
+            `}
           >
-            <Zap size={14} className="text-yellow-500 fill-yellow-500" />
-            <span className={`text-xs font-semibold ${isDarkMode ? 'text-gray-200' : 'text-slate-700'}`}>
-              {user?.aiTokens || 0}
-            </span>
+            {user?.plan || 'Free'} PLAN
           </div>
 
           <button

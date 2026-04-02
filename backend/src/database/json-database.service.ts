@@ -99,7 +99,7 @@ export class JsonDatabaseService implements OnModuleInit {
             shopifyShop: data.shopifyShop || null,
             shopifyToken: data.shopifyToken || null,
             activeShopId: data.activeShopId || null,
-            storeLimit: data.storeLimit ?? 2,
+            storeLimit: data.storeLimit ?? 1,
             retentionMonths: data.retentionMonths ?? 3,
             createdAt: data.createdAt || new Date().toISOString(),
             isOnboardingComplete: data.isOnboardingComplete ?? false,
@@ -119,6 +119,11 @@ export class JsonDatabaseService implements OnModuleInit {
             loginDates: data.loginDates || [],
             shopifyStores: data.shopifyStores || [],
             socialStores: data.socialStores || [],
+            telegramChatId: data.telegramChatId || null,
+            // Plan system
+            plan: data.plan || 'free',
+            aiActionsUsed: data.aiActionsUsed ?? 0,
+            aiActionsResetDate: data.aiActionsResetDate || null,
         };
     }
 

@@ -160,16 +160,16 @@ const Dashboard = () => {
   };
 
   return (
-    <div className={`flex h-screen min-h-screen ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
+    <div className={`flex min-h-screen h-screen overflow-hidden ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
 
       <ChatBotButton />
 
       <div className="flex-1 flex flex-col min-h-0">
 
         {/* Dashboard Header Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               {t('dashboard.title')}
             </h1>
             <button
@@ -180,10 +180,10 @@ const Dashboard = () => {
               <RefreshCw size={18} />
             </button>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={() => setIsTargetModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20 active:scale-95 w-full sm:w-auto justify-center"
             >
               <TrendingUp size={16} />
               {t('dashboard.setTarget')}
@@ -191,7 +191,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
           <div id="dashboard-stats">
             <DashboardStats
               isDarkMode={isDarkMode}
@@ -209,8 +209,8 @@ const Dashboard = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div id="revenue-chart" className="lg:col-span-2 rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[400px]">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div id="revenue-chart" className="lg:col-span-2 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[300px] sm:min-h-[400px]">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                   <div>
                     <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dashboard.totalRevenue')}</div>

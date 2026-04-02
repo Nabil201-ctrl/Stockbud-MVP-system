@@ -427,13 +427,13 @@ const ProductsPage = () => {
   }
 
   return (
-    <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`p-3 sm:p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
         { }
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-3xl font-bold">{t('products.title')}</h1>
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold">{t('products.title')}</h1>
               {user?.activeShopId && (
                 <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${user.socialStores?.some(s => s.id === user.activeShopId)
                   ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800'
@@ -464,15 +464,15 @@ const ProductsPage = () => {
           )}
         </div>
 
-        { }
-        <div id="products-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats cards – 2-col on mobile, 4-col on lg */}
+        <div id="products-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           {[
             { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total || 0, change: null, color: 'bg-blue-500' },
             { icon: <DollarSign size={24} />, label: t('products.revenue'), value: `${activeCurrency} ${(productStats.totalRevenue || 0).toLocaleString()}`, change: productStats.revenueChange ? `${productStats.revenueChange > 0 ? '+' : ''}${productStats.revenueChange}%` : null, color: 'bg-green-500' },
             { icon: <ShoppingCart size={24} />, label: t('products.activeProducts'), value: productStats.active || 0, change: null, color: 'bg-purple-500' },
             { icon: <Star size={24} />, label: t('products.avgRating'), value: productStats.avgRating || 'N/A', change: null, color: 'bg-orange-500' }
           ].map((stat, idx) => (
-            <div key={idx} className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <div key={idx} className={`rounded-xl p-4 sm:p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-lg ${stat.color} bg-opacity-10`}>
                   <div className={stat.color.replace('bg-', 'text-')}>
@@ -483,15 +483,15 @@ const ProductsPage = () => {
                   <span className={`${stat.change.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600'} font-medium`}>{stat.change}</span>
                 )}
               </div>
-              <div className="text-2xl font-bold mb-1">{stat.value}</div>
+              <div className="text-xl sm:text-2xl font-bold mb-1">{stat.value}</div>
               <div className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</div>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
           { }
-          <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+          <div className={`xl:col-span-2 rounded-xl p-4 sm:p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold">{t('products.catalog')}</h2>
               <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
@@ -646,7 +646,7 @@ const ProductsPage = () => {
             </div>
 
             {/* Pagination Controls */}
-            <div className={`px-6 py-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between`}>
+            <div className={`px-3 sm:px-6 py-3 sm:py-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between flex-wrap gap-2`}>
               <button
                 onClick={() => fetchProducts(pageInfo.startCursor, 'prev')}
                 disabled={!pageInfo.hasPreviousPage || paginationLoading}

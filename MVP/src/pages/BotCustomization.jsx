@@ -32,7 +32,7 @@ const BotCustomization = () => {
           ...activeShop.botSettings
         }));
       } else if (user.botSettings) {
-        
+
         setBotSettings(prev => ({
           ...prev,
           ...user.botSettings
@@ -73,7 +73,7 @@ const BotCustomization = () => {
           setSaveStatus(t('bot.error'));
         }
       } else {
-        
+
         const result = await updateProfile({ botSettings });
         if (result.success) {
           setSaveStatus(t('bot.success'));
@@ -106,19 +106,19 @@ const BotCustomization = () => {
   ];
 
   return (
-    <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`p-3 sm:p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {}
+        { }
         <div className="mb-8" id="bot-header">
-          <h1 className="text-3xl font-bold mb-2">{t('bot.title')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t('bot.title')}</h1>
           <p className="text-gray-500 dark:text-gray-400">
             {t('bot.subtitle')}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {}
-          <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="bot-preview-card">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+          { }
+          <div className={`xl:col-span-2 rounded-xl p-4 sm:p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="bot-preview-card">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className={`w-16 h-16 rounded-full flex-shrink-0 ${themeOptions.find(t => t.id === botSettings.theme.toLowerCase())?.color || 'bg-blue-500'} flex items-center justify-center`}>
@@ -145,7 +145,7 @@ const BotCustomization = () => {
               </div>
             </div>
 
-            {}
+            { }
             <div className={`rounded-lg p-4 mb-6 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
               <div className="text-sm font-medium mb-2">{t('bot.previewChat')}</div>
               <div className="space-y-3">
@@ -177,10 +177,10 @@ const BotCustomization = () => {
               </div>
             </div>
 
-            {}
+            { }
             <div>
               <h3 className="text-lg font-semibold mb-4">{t('bot.capabilities')}</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {[
                   { icon: <Brain size={20} />, label: t('bot.dataAnalysis'), enabled: true },
                   { icon: <TrendingUp size={20} />, label: t('bot.trendPrediction'), enabled: true },
@@ -207,12 +207,12 @@ const BotCustomization = () => {
             </div>
           </div>
 
-          {}
+          { }
           <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="bot-settings-card">
             <h2 className="text-xl font-bold mb-6">{t('bot.configSettings')}</h2>
 
             <div className="space-y-6">
-              {}
+              { }
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.botName')}</label>
                 <input
@@ -223,7 +223,7 @@ const BotCustomization = () => {
                 />
               </div>
 
-              {}
+              { }
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.personalityType')}</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -246,7 +246,7 @@ const BotCustomization = () => {
                 </div>
               </div>
 
-              {}
+              { }
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.responseSpeed')}</label>
                 <div className="flex gap-2">
@@ -265,7 +265,7 @@ const BotCustomization = () => {
                 </div>
               </div>
 
-              {}
+              { }
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.themeColor')}</label>
                 <div className="flex gap-3">
@@ -284,7 +284,7 @@ const BotCustomization = () => {
                 </div>
               </div>
 
-              {}
+              { }
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.language')}</label>
                 <select
@@ -300,7 +300,7 @@ const BotCustomization = () => {
                 </select>
               </div>
 
-              {}
+              { }
               <div className="space-y-4">
                 {[
                   { label: 'bot.enableNotifications', setting: 'notifications', icon: <MessageSquare size={16} /> },
@@ -334,7 +334,7 @@ const BotCustomization = () => {
                 ))}
               </div>
 
-              {}
+              { }
               <div>
                 <label className="block text-sm font-medium mb-2">{t('bot.dataAccess')}</label>
                 <select
@@ -349,7 +349,7 @@ const BotCustomization = () => {
                 </select>
               </div>
 
-              {}
+              { }
               {saveStatus && (
                 <div className={`mb-4 p-3 rounded-lg text-sm ${saveStatus.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                   {saveStatus}

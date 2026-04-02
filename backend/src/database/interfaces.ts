@@ -53,4 +53,9 @@ export interface User {
     loginDates: string[];
     shopifyStores: ShopifyStore[];
     socialStores: SocialStore[];
+    telegramChatId?: string | null;
+    // Plan system
+    plan: 'free' | 'beginner' | 'pro';
+    aiActionsUsed: number;
+    aiActionsResetDate: string | null;
 }
