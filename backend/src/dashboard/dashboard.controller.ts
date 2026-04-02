@@ -31,6 +31,7 @@ export class DashboardController {
         }
 
         return this.dashboardService.getStats(
+            user.id,
             shop,
             token,
             targetType as 'weekly' | 'monthly',

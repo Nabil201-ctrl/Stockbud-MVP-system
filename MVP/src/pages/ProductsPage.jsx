@@ -34,8 +34,10 @@ const ProductsPage = () => {
     outOfStock: 0,
     lowStock: 0,
     totalRevenue: 0,
+    revenueChange: 0,
     avgRating: 0,
-    topProducts: []
+    topProducts: [],
+    categories: {}
   });
   const [loading, setLoading] = useState(true);
   const [paginationLoading, setPaginationLoading] = useState(false);
@@ -120,8 +122,9 @@ const ProductsPage = () => {
         setProductStats(prev => ({
           ...prev,
           totalRevenue: data.revenue?.total || 0,
+          revenueChange: data.revenue?.change || 0,
           topProducts: data.topProducts || [],
-          avgRating: 0 // Resetting mock avgRating
+          avgRating: 0
         }));
       }
     } catch (err) {
@@ -263,30 +266,41 @@ const ProductsPage = () => {
       // Transform data
       const transformedProducts = productsData.map(p => ({
         id: p.id,
-        name: p.title,
-        category: p.product_type || 'Uncategorized',
-        price: p.variants?.[0]?.price || '0.00',
-        stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || 0,
-        status: p.status === 'active' ? 'active' : 'archived',
-        image: p.images?.[0]?.src || '',
+        name: p.title || p.name,
+        category: p.product_type || p.category || 'Uncategorized',
+        price: p.variants?.[0]?.price || p.price || '0.00',
+        stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || p.stock || 0,
+        status: p.status === 'active' ? 'active' : (p.status === 'low' ? 'low' : 'out'),
+        image: p.images?.[0]?.src || p.image || '',
         revenue: 0,
         rating: 'N/A',
       }));
 
       setProducts(transformedProducts);
 
-      // Calculate stats from current page data
-      const active = transformedProducts.filter(p => p.stock >= 10).length;
-      const outOfStock = transformedProducts.filter(p => p.stock === 0).length;
-      const lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
+      // Prepare stats for UI and cache
+      let active = transformedProducts.filter(p => p.stock >= 10).length;
+      let outOfStock = transformedProducts.filter(p => p.stock === 0).length;
+      let lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
 
-      setProductStats(prev => ({
-        ...prev,
-        total: serverTotalCount || transformedProducts.length,
-        active,
-        outOfStock,
-        lowStock,
-      }));
+      if (data.summary) {
+        active = data.summary.active ?? active;
+        outOfStock = data.summary.outOfStock ?? outOfStock;
+        lowStock = data.summary.lowStock ?? lowStock;
+
+        setProductStats(prev => ({
+          ...prev,
+          ...data.summary
+        }));
+      } else {
+        setProductStats(prev => ({
+          ...prev,
+          total: serverTotalCount || transformedProducts.length,
+          active: prev.active || active,
+          outOfStock: prev.outOfStock || outOfStock,
+          lowStock: prev.lowStock || lowStock,
+        }));
+      }
 
       // PWA Offline Storage: Cache new fresh data
       if (!cursor) {
@@ -294,11 +308,11 @@ const ProductsPage = () => {
         await storage.set(cacheKey, {
           products: transformedProducts,
           stats: {
-            ...productStats,
             total: serverTotalCount || transformedProducts.length,
             active,
             outOfStock,
             lowStock,
+            categories: data.summary?.categories || {}
           },
           pageInfo: pageInfoData,
           totalCount: serverTotalCount
@@ -318,12 +332,19 @@ const ProductsPage = () => {
 
   // Dynamic Categories calculation
   const categories = useMemo(() => {
-    const cats = { 'all': 0 };
-    products.forEach(p => {
-      cats['all'] = (cats['all'] || 0) + 1;
-      const catName = p.category ? p.category.toLowerCase() : 'uncategorized';
-      cats[catName] = (cats[catName] || 0) + 1;
-    });
+    const cats = productStats.categories && Object.keys(productStats.categories).length > 0
+      ? { ...productStats.categories }
+      : {};
+
+    if (Object.keys(cats).length === 0) {
+      cats['all'] = products.length;
+      products.forEach(p => {
+        const catName = p.category || 'Uncategorized';
+        cats[catName] = (cats[catName] || 0) + 1;
+      });
+    } else {
+      cats['all'] = Object.values(cats).reduce((a, b) => a + b, 0);
+    }
 
     return Object.entries(cats).map(([name, count]) => ({
       name: name === 'all' ? t('products.allProducts') : name.charAt(0).toUpperCase() + name.slice(1),
@@ -446,10 +467,10 @@ const ProductsPage = () => {
         { }
         <div id="products-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
-            { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total || 0, change: '+12%', color: 'bg-blue-500' },
-            { icon: <DollarSign size={24} />, label: t('products.revenue'), value: `${activeCurrency} ${(productStats.totalRevenue || 0).toLocaleString()}`, change: '+8.5%', color: 'bg-green-500' },
-            { icon: <ShoppingCart size={24} />, label: t('products.activeProducts'), value: productStats.active || 0, change: '+3.2%', color: 'bg-purple-500' },
-            { icon: <Star size={24} />, label: t('products.avgRating'), value: productStats.avgRating || 0, change: '+0.2', color: 'bg-orange-500' }
+            { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total || 0, change: null, color: 'bg-blue-500' },
+            { icon: <DollarSign size={24} />, label: t('products.revenue'), value: `${activeCurrency} ${(productStats.totalRevenue || 0).toLocaleString()}`, change: productStats.revenueChange ? `${productStats.revenueChange > 0 ? '+' : ''}${productStats.revenueChange}%` : null, color: 'bg-green-500' },
+            { icon: <ShoppingCart size={24} />, label: t('products.activeProducts'), value: productStats.active || 0, change: null, color: 'bg-purple-500' },
+            { icon: <Star size={24} />, label: t('products.avgRating'), value: productStats.avgRating || 'N/A', change: null, color: 'bg-orange-500' }
           ].map((stat, idx) => (
             <div key={idx} className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center justify-between mb-4">
@@ -458,7 +479,9 @@ const ProductsPage = () => {
                     {stat.icon}
                   </div>
                 </div>
-                <span className="text-green-600 dark:text-green-400 font-medium">{stat.change}</span>
+                {stat.change && (
+                  <span className={`${stat.change.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600'} font-medium`}>{stat.change}</span>
+                )}
               </div>
               <div className="text-2xl font-bold mb-1">{stat.value}</div>
               <div className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</div>

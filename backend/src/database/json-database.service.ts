@@ -7,30 +7,26 @@ import { User, ShopifyStore, SocialStore } from './interfaces';
 @Injectable()
 export class JsonDatabaseService implements OnModuleInit {
     private users: User[] = [];
+    private orders: any[] = [];
     private readonly usersFilePath = path.join(process.cwd(), 'data', 'users.json');
     private readonly storesFilePath = path.join(process.cwd(), 'data', 'shopify_stores.json');
     private readonly socialStoresFilePath = path.join(process.cwd(), 'data', 'social_stores.json');
+    private readonly ordersFilePath = path.join(process.cwd(), 'data', 'orders.json');
 
     async onModuleInit() {
         this.ensureDataDir();
         this.loadData();
-        console.log(`[JsonDB] Loaded ${this.users.length} users from JSON files.`);
+        console.log(`[JsonDB] Loaded ${this.users.length} users and data from JSON files.`);
     }
 
     private ensureDataDir() {
         const dataDir = path.join(process.cwd(), 'data');
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
-        }
-        if (!fs.existsSync(this.usersFilePath)) {
-            fs.writeFileSync(this.usersFilePath, '[]', 'utf8');
-        }
-        if (!fs.existsSync(this.storesFilePath)) {
-            fs.writeFileSync(this.storesFilePath, '[]', 'utf8');
-        }
-        if (!fs.existsSync(this.socialStoresFilePath)) {
-            fs.writeFileSync(this.socialStoresFilePath, '[]', 'utf8');
-        }
+        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+        const files = [this.usersFilePath, this.storesFilePath, this.socialStoresFilePath, this.ordersFilePath];
+        files.forEach(f => {
+            if (!fs.existsSync(f)) fs.writeFileSync(f, '[]', 'utf8');
+        });
     }
 
     private loadData() {
@@ -52,9 +48,13 @@ export class JsonDatabaseService implements OnModuleInit {
                     user.socialStores = socialStores.filter(s => s.userId === user.id);
                 }
             }
+
+            const ordersRaw = fs.readFileSync(this.ordersFilePath, 'utf8');
+            this.orders = JSON.parse(ordersRaw);
         } catch (error) {
             console.error('[JsonDB] Error loading data:', error);
             this.users = [];
+            this.orders = [];
         }
     }
 
@@ -78,6 +78,8 @@ export class JsonDatabaseService implements OnModuleInit {
                 }
             }
             fs.writeFileSync(this.socialStoresFilePath, JSON.stringify(allSocial, null, 2), 'utf8');
+
+            fs.writeFileSync(this.ordersFilePath, JSON.stringify(this.orders, null, 2), 'utf8');
         } catch (error) {
             console.error('[JsonDB] Error saving data:', error);
         }
@@ -310,5 +312,16 @@ export class JsonDatabaseService implements OnModuleInit {
             }
         }
         throw new Error('Social store not found');
+    }
+
+    // Orders Functions
+    getOrdersByUserId(userId: string): any[] {
+        return this.orders.filter(o => o.userId === userId);
+    }
+
+    createOrder(order: any): any {
+        this.orders.push(order);
+        this.saveUsers();
+        return order;
     }
 }

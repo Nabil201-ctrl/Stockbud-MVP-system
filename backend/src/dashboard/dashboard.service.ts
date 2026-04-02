@@ -1,14 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { ShopifyService } from '../shopify/shopify.service';
+import { JsonDatabaseService } from '../database/json-database.service';
 import axios from 'axios';
 
 @Injectable()
 export class DashboardService {
     private cachedRates: Record<string, { rates: any, timestamp: number }> = {};
 
-    constructor(private readonly shopifyService: ShopifyService) { }
+    constructor(
+        private readonly shopifyService: ShopifyService,
+        private readonly jsonDatabaseService: JsonDatabaseService
+    ) { }
 
-    async getStats(shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string) {
+    async getStats(userId: string, shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string) {
         let totalRevenue = 0;
         let revenueChange = 0;
         let revenueData = [];
@@ -18,162 +22,148 @@ export class DashboardService {
         let topProducts = [];
         let lostRevenue = 0;
 
+        const now = new Date();
+        let filterDate = new Date();
+        if (range === '7days') filterDate.setDate(now.getDate() - 7);
+        else if (range === 'month') filterDate.setMonth(now.getMonth() - 1);
+        else if (range === 'year') filterDate.setFullYear(now.getFullYear() - 1);
+
+        let mergedOrders: any[] = [];
+
+        // 1. Fetch Shopify Orders
         if (shop && token) {
             try {
-                // Fetch more orders if range is year
                 const limit = range === 'year' ? 150 : (range === 'month' ? 100 : 50);
                 const ordersData = await this.shopifyService.getOrders(shop, token, { first: limit });
-                let orders: any[] = [];
+                let shopifyOrders = Array.isArray(ordersData) ? ordersData : (ordersData as any).orders || [];
 
-                if (Array.isArray(ordersData)) {
-                    orders = ordersData;
-                } else {
-                    orders = ordersData.orders;
-                }
-
-                const now = new Date();
-                let filterDate = new Date();
-                if (range === '7days') filterDate.setDate(now.getDate() - 7);
-                else if (range === 'month') filterDate.setMonth(now.getMonth() - 1);
-                else if (range === 'year') filterDate.setFullYear(now.getFullYear() - 1);
-
-                orders = orders.filter(o => new Date(o.created_at) >= filterDate);
-
-                if (sourceFilter) {
-                    orders = orders.filter(o => o.source_name?.toLowerCase() === sourceFilter.toLowerCase());
-                }
-
-                let exchangeRate = 1;
-                if (orders.length > 0) {
-                    const shopCurrency = orders[0].currency || 'USD';
-                    if (shopCurrency !== targetCurrency) {
-                        if (!this.cachedRates[shopCurrency] || Date.now() - this.cachedRates[shopCurrency].timestamp > 3600000) {
-                            try {
-                                const response = await axios.get(`https://open.er-api.com/v6/latest/${shopCurrency}`);
-                                if (response.data && response.data.rates) {
-                                    this.cachedRates[shopCurrency] = { rates: response.data.rates, timestamp: Date.now() };
-                                }
-                            } catch (e) {
-                                console.error('Failed to fetch exchange rates', e.message);
-                            }
-                        }
-                        exchangeRate = this.cachedRates[shopCurrency]?.rates[targetCurrency] || 1;
-                    }
-                }
-
-                orders.forEach(order => {
-                    const amount = Number(order.total_price) * exchangeRate;
-                    if (order.financial_status === 'voided' || order.cancelled_at) {
-                        lostRevenue += amount;
-                    } else {
-                        totalRevenue += amount;
-                    }
+                // Normalise Shopify orders to common format
+                shopifyOrders.forEach(o => {
+                    mergedOrders.push({
+                        ...o,
+                        source: o.source_name || 'Shopify',
+                        normalized_total: Number(o.total_price),
+                        type: 'shopify'
+                    });
                 });
-
-                const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-                const thisWeekRevenue = orders
-                    .filter(o => {
-                        const date = new Date(o.created_at);
-                        return date >= oneWeekAgo && !o.cancelled_at;
-                    })
-                    .reduce((sum, o) => sum + (Number(o.total_price) * exchangeRate), 0);
-
-                const lastWeekRevenue = orders
-                    .filter(o => {
-                        const date = new Date(o.created_at);
-                        return date >= twoWeeksAgo && date < oneWeekAgo && !o.cancelled_at;
-                    })
-                    .reduce((sum, o) => sum + (Number(o.total_price) * exchangeRate), 0);
-
-                if (lastWeekRevenue > 0) {
-                    revenueChange = Math.round(((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100);
-                } else if (thisWeekRevenue > 0) {
-                    revenueChange = 100;
-                } else {
-                    revenueChange = 0;
-                }
-
-                const last7Days = [...Array(7)].map((_, i) => {
-                    const d = new Date();
-                    d.setDate(d.getDate() - (6 - i));
-                    return d.toISOString().split('T')[0];
-                });
-
-                revenueData = last7Days.map(date => {
-                    const dayRevenue = orders
-                        .filter(o => o.created_at.startsWith(date) && !o.cancelled_at)
-                        .reduce((sum, o) => sum + (Number(o.total_price) * exchangeRate), 0);
-
-                    const dateObj = new Date(date);
-                    const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
-
-                    const dailyTarget = targetType === 'monthly' ? targetValue / 30 : targetValue / 7;
-
-                    return {
-                        date: formattedDate,
-                        revenue: dayRevenue,
-                        target: Math.round(dailyTarget)
-                    };
-                });
-
-                const sources = {};
-                orders.forEach(o => {
-                    const source = o.source_name || 'direct';
-                    sources[source] = (sources[source] || 0) + 1;
-                });
-
-                const totalOrders = orders.length || 1;
-                sourceData = Object.entries(sources).map(([name, count]) => ({
-                    name: name.charAt(0).toUpperCase() + name.slice(1),
-                    value: Math.round((Number(count) / totalOrders) * 100),
-                    color: this.getColorForSource(name)
-                }));
-
-                const heatMapCounts = {};
-                orders.forEach(o => {
-                    const date = o.created_at.split('T')[0];
-                    heatMapCounts[date] = (heatMapCounts[date] || 0) + 1;
-                });
-
-                heatmapData = Object.entries(heatMapCounts).map(([date, count]) => ({
-                    date,
-                    count: Number(count),
-                    level: Math.min(4, Math.ceil(Number(count) / 2))
-                }));
-
-                salesHistoryData = orders.slice(0, 5).map(o => {
-                    const first = o.customer?.first_name || 'Guest';
-                    const last = o.customer?.last_name || '';
-                    const initials = (first[0] || '') + (last[0] || '');
-
-                    return {
-                        name: `${first} ${last}`.trim(),
-                        amount: Math.round(Number(o.total_price) * exchangeRate),
-                        avatar: initials.toUpperCase(),
-                        color: this.getRandomColor()
-                    };
-                });
-
-                const productCounts = {};
-                orders.forEach(o => {
-                    if (!o.cancelled_at) {
-                        o.line_items.forEach(item => {
-                            productCounts[item.title] = (productCounts[item.title] || 0) + item.quantity;
-                        });
-                    }
-                });
-
-                topProducts = Object.entries(productCounts)
-                    .sort(([, a], [, b]) => Number(b) - Number(a))
-                    .slice(0, 5)
-                    .map(([name, count]) => ({ name, count }));
-
             } catch (error) {
                 console.error("Failed to fetch shopify orders for stats:", error.message);
             }
         }
+
+        // 2. Fetch Local Social Store Orders
+        const localOrders = this.jsonDatabaseService.getOrdersByUserId(userId);
+        localOrders.forEach(o => {
+            mergedOrders.push({
+                ...o,
+                source: o.source || 'Social Store',
+                created_at: o.createdAt || o.date,
+                normalized_total: Number(o.totalAmount || o.total || 0),
+                type: 'local'
+            });
+        });
+
+        // 3. Filter by date and source
+        let filteredOrders = mergedOrders.filter(o => new Date(o.created_at) >= filterDate);
+        if (sourceFilter) {
+            filteredOrders = filteredOrders.filter(o => o.source?.toLowerCase().includes(sourceFilter.toLowerCase()));
+        }
+
+        // 4. Calculate Revenue
+        filteredOrders.forEach(o => {
+            if (o.cancelled_at) {
+                lostRevenue += o.normalized_total;
+            } else {
+                totalRevenue += o.normalized_total;
+            }
+        });
+
+        // 5. Weekly Revenue Change
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+        const thisWeekRevenue = filteredOrders
+            .filter(o => {
+                const date = new Date(o.created_at);
+                return date >= oneWeekAgo && !o.cancelled_at;
+            })
+            .reduce((sum, o) => sum + o.normalized_total, 0);
+
+        const lastWeekRevenue = filteredOrders
+            .filter(o => {
+                const date = new Date(o.created_at);
+                return date >= twoWeeksAgo && date < oneWeekAgo && !o.cancelled_at;
+            })
+            .reduce((sum, o) => sum + o.normalized_total, 0);
+
+        if (lastWeekRevenue > 0) {
+            revenueChange = Math.round(((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100);
+        } else if (thisWeekRevenue > 0) {
+            revenueChange = 100;
+        }
+
+        // 6. Chart Data
+        const last7Days = [...Array(7)].map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            return d.toISOString().split('T')[0];
+        });
+
+        revenueData = last7Days.map(date => {
+            const dayRevenue = filteredOrders
+                .filter(o => o.created_at.startsWith(date) && !o.cancelled_at)
+                .reduce((sum, o) => sum + o.normalized_total, 0);
+
+            const dailyTarget = targetType === 'monthly' ? targetValue / 30 : targetValue / 7;
+
+            return {
+                date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase(),
+                revenue: dayRevenue,
+                target: Math.round(dailyTarget)
+            };
+        });
+
+        // 7. Sources breakdown
+        const sources = {};
+        filteredOrders.forEach(o => {
+            const source = o.source || 'Direct';
+            sources[source] = (sources[source] || 0) + 1;
+        });
+
+        const totalOrderCount = filteredOrders.length || 1;
+        sourceData = Object.entries(sources).map(([name, count]) => ({
+            name: name,
+            value: Math.round((Number(count) / totalOrderCount) * 100),
+            color: this.getColorForSource(name)
+        }));
+
+        // 8. Sales History
+        salesHistoryData = filteredOrders
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 5)
+            .map(o => ({
+                name: o.customerName || (o.customer ? `${o.customer.first_name} ${o.customer.last_name || ''}` : 'Customer'),
+                amount: Math.round(o.normalized_total),
+                avatar: (o.customerName?.[0] || 'C').toUpperCase(),
+                color: this.getRandomColor()
+            }));
+
+        // 9. Top Products
+        const productCounts = {};
+        filteredOrders.forEach(o => {
+            if (!o.cancelled_at) {
+                const items = o.line_items || o.items || [];
+                items.forEach(item => {
+                    const name = item.title || item.name || 'Product';
+                    productCounts[name] = (productCounts[name] || 0) + (item.quantity || 1);
+                });
+            }
+        });
+
+        topProducts = Object.entries(productCounts)
+            .sort(([, a], [, b]) => Number(b) - Number(a))
+            .slice(0, 5)
+            .map(([name, count]) => ({ name, count }));
 
         return {
             revenue: {
@@ -187,7 +177,6 @@ export class DashboardService {
                 value: targetValue
             },
             source: sourceData,
-            heatmap: heatmapData,
             salesHistory: salesHistoryData,
             topProducts: topProducts
         };
@@ -195,10 +184,9 @@ export class DashboardService {
 
     private getColorForSource(source: string): string {
         switch (source.toLowerCase()) {
-            case 'web': return '#3B82F6';
-            case 'pos': return '#10B981';
-            case 'instagram': return '#8B5CF6';
-            case 'facebook': return '#F59E0B';
+            case 'shopify': return '#3B82F6';
+            case 'social store': return '#10B981';
+            case 'whatsapp': return '#10B981';
             default: return '#6B7280';
         }
     }

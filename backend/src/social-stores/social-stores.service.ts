@@ -131,9 +131,38 @@ export class SocialStoresService {
             }
         }
 
+        // Calculate accurate statistics for all user products
+        const total = allProducts.length;
+        const active = allProducts.filter(p => {
+            const stock = p.variants?.reduce((sum, v) => sum + (parseFloat(v.inventory_quantity) || 0), 0) || 0;
+            return stock >= 10;
+        }).length;
+        const outOfStock = allProducts.filter(p => {
+            const stock = p.variants?.reduce((sum, v) => sum + (parseFloat(v.inventory_quantity) || 0), 0) || 0;
+            return stock === 0;
+        }).length;
+        const lowStock = allProducts.filter(p => {
+            const stock = p.variants?.reduce((sum, v) => sum + (parseFloat(v.inventory_quantity) || 0), 0) || 0;
+            return stock > 0 && stock < 10;
+        }).length;
+
+        const categorySummary = {};
+        allProducts.forEach(p => {
+            const cat = p.product_type || 'Uncategorized';
+            categorySummary[cat] = (categorySummary[cat] || 0) + 1;
+        });
+
         return {
             products: allProducts,
-            totalCount: allProducts.length
+            totalCount: total,
+            summary: {
+                total,
+                active,
+                outOfStock,
+                lowStock,
+                avgRating: 0,
+                categories: categorySummary
+            }
         };
     }
 

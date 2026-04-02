@@ -10,7 +10,7 @@ const port = process.env.ORDER_PROCESSOR_PORT || 3001;
 // Paths to JSON data (using the parent data directory)
 const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
-const STORES_FILE = path.join(DATA_DIR, 'social-stores.json');
+const STORES_FILE = path.join(DATA_DIR, 'social_stores.json');
 
 app.use(express.json());
 
@@ -89,38 +89,41 @@ async function processOrderInternal(order) {
     // Ensure data directory exists
     await fs.ensureDir(DATA_DIR);
 
-    // 1. Save order to orders.json
-    let ordersData = { orders: [] };
+    // 1. Save order to orders.json (using existing orders.json in data/)
+    let orders = [];
     if (await fs.pathExists(ORDERS_FILE)) {
         try {
-            ordersData = await fs.readJson(ORDERS_FILE);
+            orders = await fs.readJson(ORDERS_FILE);
         } catch (e) {
             console.error('Error reading orders file, resetting');
         }
     }
-    if (!ordersData.orders) ordersData.orders = [];
-    ordersData.orders.push(order);
-    await fs.writeJson(ORDERS_FILE, ordersData, { spaces: 2 });
+    orders.push(order);
+    await fs.writeJson(ORDERS_FILE, orders, { spaces: 2 });
     console.log(`[Order Processor] Order saved to ${ORDERS_FILE}`);
 
-    // 2. Update stock in social-stores.json
+    // 2. Update stock in social_stores.json
     if (await fs.pathExists(STORES_FILE)) {
-        const storesData = await fs.readJson(STORES_FILE);
-        if (storesData.products && Array.isArray(storesData.products)) {
-            let updated = false;
-            for (const item of order.items) {
-                const product = storesData.products.find(p => p.id === item.productId);
-                if (product) {
-                    const oldStock = product.stock;
-                    product.stock = Math.max(0, product.stock - item.quantity);
-                    console.log(`[Order Processor] Stock update for "${product.name}": ${oldStock} -> ${product.stock}`);
-                    updated = true;
+        const socialStores = await fs.readJson(STORES_FILE);
+        let updated = false;
+
+        for (const store of socialStores) {
+            if (store.products && Array.isArray(store.products)) {
+                for (const item of order.items) {
+                    const product = store.products.find(p => p.id === item.productId);
+                    if (product) {
+                        const oldStock = product.stock;
+                        product.stock = Math.max(0, product.stock - item.quantity);
+                        console.log(`[Order Processor] Stock update in store "${store.name}" for "${product.name}": ${oldStock} -> ${product.stock}`);
+                        updated = true;
+                    }
                 }
             }
-            if (updated) {
-                await fs.writeJson(STORES_FILE, storesData, { spaces: 2 });
-                console.log(`[Order Processor] social-stores.json updated successfully.`);
-            }
+        }
+
+        if (updated) {
+            await fs.writeJson(STORES_FILE, socialStores, { spaces: 2 });
+            console.log(`[Order Processor] social_stores.json updated successfully.`);
         }
     } else {
         console.warn(`[Order Processor] Stores file not found at ${STORES_FILE}, skipping stock update.`);
