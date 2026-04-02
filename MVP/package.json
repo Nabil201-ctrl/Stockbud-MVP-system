@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "autoprefixer": "^10.4.23",
+    "axios": "^1.13.6",
+    "dompurify": "^3.3.3",
     "driver": "^1.0.0",
     "driver.js": "^1.4.0",
     "idb": "^8.0.3",
+    "jsdom": "^29.0.1",
     "lucide-react": "^0.562.0",
     "postcss": "^8.5.6",
     "react": "^19.2.0",
@@ -24,6 +27,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/dompurify": "^3.0.5",
+    "@types/jsdom": "^28.0.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",

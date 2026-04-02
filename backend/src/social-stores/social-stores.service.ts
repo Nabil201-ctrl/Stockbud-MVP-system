@@ -19,11 +19,22 @@ export class SocialStoresService {
         return this.jsonDatabaseService.createSocialStore(userId, data);
     }
 
-    async update(id: string, data: Partial<SocialStore>): Promise<SocialStore> {
+    async update(userId: string, id: string, data: Partial<SocialStore>): Promise<SocialStore> {
+        const store = this.jsonDatabaseService.findSocialStoreById(id);
+        if (!store || store.userId !== userId) throw new Error('Unauthorized or store not found');
+
+        // Prevent manual override of sensitive fields
+        delete data.userId;
+        delete data.visits;
+        delete data.inquiries;
+        delete data.dailyStats;
+
         return this.jsonDatabaseService.updateSocialStore(id, data);
     }
 
-    async delete(id: string): Promise<void> {
+    async delete(userId: string, id: string): Promise<void> {
+        const store = this.jsonDatabaseService.findSocialStoreById(id);
+        if (!store || store.userId !== userId) throw new Error('Unauthorized or store not found');
         this.jsonDatabaseService.deleteSocialStore(id);
     }
 
@@ -78,9 +89,9 @@ export class SocialStoresService {
         });
     }
 
-    async getStats(id: string): Promise<any> {
+    async getStats(userId: string, id: string): Promise<any> {
         const store = this.jsonDatabaseService.findSocialStoreById(id);
-        if (!store) throw new Error('Store not found');
+        if (!store || store.userId !== userId) throw new Error('Unauthorized or store not found');
 
         // Last 7 days
         const last7Days = [...Array(7)].map((_, i) => {
@@ -166,9 +177,9 @@ export class SocialStoresService {
         };
     }
 
-    async addProduct(id: string, productData: any): Promise<any> {
+    async addProduct(userId: string, id: string, productData: any): Promise<any> {
         const store = this.jsonDatabaseService.findSocialStoreById(id);
-        if (!store) throw new Error('Store not found');
+        if (!store || store.userId !== userId) throw new Error('Unauthorized or store not found');
         const user = this.jsonDatabaseService.findUserById(store.userId);
 
         const newProductId = `local_${Date.now()}`;
@@ -195,9 +206,9 @@ export class SocialStoresService {
         return newProduct;
     }
 
-    async editProduct(storeId: string, productId: string, data: any): Promise<any> {
+    async editProduct(userId: string, storeId: string, productId: string, data: any): Promise<any> {
         const store = this.jsonDatabaseService.findSocialStoreById(storeId);
-        if (!store) throw new Error('Store not found');
+        if (!store || store.userId !== userId) throw new Error('Unauthorized or store not found');
         const user = this.jsonDatabaseService.findUserById(store.userId);
 
         if (user && user.socialStores) {
@@ -225,9 +236,9 @@ export class SocialStoresService {
         return { success: true };
     }
 
-    async deleteProduct(storeId: string, productId: string): Promise<any> {
+    async deleteProduct(userId: string, storeId: string, productId: string): Promise<any> {
         const store = this.jsonDatabaseService.findSocialStoreById(storeId);
-        if (!store) throw new Error('Store not found');
+        if (!store || store.userId !== userId) throw new Error('Unauthorized or store not found');
         const user = this.jsonDatabaseService.findUserById(store.userId);
 
         if (user && user.socialStores) {

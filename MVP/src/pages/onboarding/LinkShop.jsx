@@ -4,15 +4,16 @@ import { ShoppingBag, Globe, Code, ArrowRight, Loader2, CheckCircle2, ArrowLeft,
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
 import { storage } from '../../utils/db';
 import { useAuth } from '../../context/AuthContext';
+import { storesAPI } from '../../services/api';
 
 const LinkShop = () => {
     const navigate = useNavigate();
-    const { isAuthenticated, completeOnboarding, authenticatedFetch } = useAuth();
+    const { isAuthenticated, completeOnboarding } = useAuth();
     const [connecting, setConnecting] = useState(null);
     const [success, setSuccess] = useState(false);
     const [selectedPlatform, setSelectedPlatform] = useState(null);
 
-    
+
     const [pairingCode, setPairingCode] = useState(null);
     const [codeLoading, setCodeLoading] = useState(false);
     const [codeError, setCodeError] = useState(null);
@@ -27,14 +28,8 @@ const LinkShop = () => {
         setCodeLoading(true);
         setCodeError(null);
         try {
-            const response = await authenticatedFetch('/api/shopify/pairing-code', {
-                method: 'POST',
-            });
-            if (!response.ok) {
-                throw new Error('Failed to generate code');
-            }
-            const data = await response.json();
-            setPairingCode(data.code);
+            const res = await storesAPI.getPairingCode();
+            setPairingCode(res.data.pairingCode);
         } catch (error) {
             console.error('Failed to generate pairing code:', error);
             setCodeError('Failed to generate code. Please try again.');
@@ -46,17 +41,17 @@ const LinkShop = () => {
     const handlePlatformSelect = (platformId) => {
         if (platformId === 'shopify') {
             setSelectedPlatform('shopify');
-            
+
             handleGeneratePairingCode();
         } else {
-            
+
             handleConnect(platformId);
         }
     };
 
     const handleConnect = async (platformId) => {
         setConnecting(platformId);
-        
+
         setTimeout(async () => {
             await completeOnboarding();
             setSuccess(true);
@@ -67,7 +62,7 @@ const LinkShop = () => {
     };
 
     const handleSkipOrComplete = async () => {
-        
+
         await completeOnboarding();
         navigate('/dashboard');
     };

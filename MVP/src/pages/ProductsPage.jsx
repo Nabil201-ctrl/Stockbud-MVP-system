@@ -6,14 +6,13 @@ import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { storesAPI, dashboardAPI, imageAPI } from '../services/api';
 
 const ITEMS_PER_PAGE = 6;
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-const IMAGE_API_URL = import.meta.env.VITE_IMAGE_API_URL || 'http://localhost:3002';
 
 const ProductsPage = () => {
   const { isDarkMode } = useTheme();
-  const { authenticatedFetch, user } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
@@ -74,11 +73,8 @@ const ProductsPage = () => {
     try {
       const formData = new FormData();
       formData.append('images', imageFile);
-      const res = await fetch(`${IMAGE_API_URL}/upload`, {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
+      const res = await imageAPI.upload(formData);
+      const data = res.data;
       setUploadingImage(false);
       return data.urls?.[0];
     } catch (err) {
@@ -95,6 +91,123 @@ const ProductsPage = () => {
     return user?.currency || 'USD';
   }, [products, user?.currency]);
 
+  const fetchProducts = async (cursor = null, direction = 'next') => {
+    if (!user?.activeShopId) {
+      setLoading(false);
+      setShopifyNotConnected(true);
+      setProducts([]);
+      return;
+    }
+
+    const isSocialStore = user.socialStores?.some(s => s.id === user.activeShopId);
+    if (isSocialStore) {
+      setShopifyNotConnected(false);
+    }
+
+    try {
+      if (!cursor) {
+        // PWA Offline Storage: Immediately load from IndexedDB
+        const cacheKey = `products_${user.activeShopId}`;
+        const cachedProducts = await storage.get(cacheKey);
+        if (cachedProducts) {
+          setProducts(cachedProducts.products);
+          setProductStats(prev => ({ ...prev, ...(cachedProducts.stats || {}) }));
+          setPageInfo(cachedProducts.pageInfo);
+          setTotalCount(cachedProducts.totalCount);
+          setLoading(false);
+        } else {
+          setLoading(true);
+        }
+      } else {
+        setPaginationLoading(true);
+      }
+
+      // Construct params object
+      const params = { first: ITEMS_PER_PAGE };
+      if (cursor) {
+        if (direction === 'next') params.after = cursor;
+        else params.before = cursor;
+      }
+
+      const res = await storesAPI.getShopifyProducts(params);
+      const data = res.data;
+
+      // Successfully connected
+      setShopifyNotConnected(false);
+      setError(null);
+
+      // Handle response structure { products: [], pageInfo: {}, totalCount: number }
+      const productsData = Array.isArray(data) ? data : (data.products || []);
+      const pageInfoData = data.pageInfo || { hasNextPage: false, hasPreviousPage: false };
+      const serverTotalCount = data.totalCount || 0;
+
+      setPageInfo(pageInfoData);
+      setTotalCount(serverTotalCount);
+
+      // Update page number
+      if (!cursor) {
+        setCurrentPage(1);
+      } else if (direction === 'next') {
+        setCurrentPage(prev => prev + 1);
+      } else {
+        setCurrentPage(prev => Math.max(1, prev - 1));
+      }
+
+      // Transform data
+      const transformedProducts = productsData.map(p => ({
+        id: p.id,
+        name: p.title || p.name || 'Unknown Product',
+        category: p.product_type || p.category || 'Uncategorized',
+        price: p.variants?.[0]?.price || p.price || '0.00',
+        stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || p.stock || 0,
+        status: p.status === 'active' ? 'active' : (p.status === 'low' ? 'low' : 'out'),
+        image: p.images?.[0]?.src || p.image || '',
+        revenue: 0,
+      }));
+
+      setProducts(transformedProducts);
+
+      if (!cursor) {
+        const cacheKey = `products_${user.activeShopId}`;
+        await storage.set(cacheKey, {
+          products: transformedProducts,
+          pageInfo: pageInfoData,
+          totalCount: serverTotalCount,
+          timestamp: Date.now()
+        });
+      }
+    } catch (err) {
+      console.error('Fetch products error:', err);
+      if (err.isOffline) {
+        setError("You are currently offline. Showing cached data.");
+      } else if (err.response?.status === 403) {
+        setShopifyNotConnected(true);
+      } else {
+        setError("Failed to fetch products. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+      setPaginationLoading(false);
+    }
+  };
+
+  const fetchDashboardStats = async () => {
+    if (!user?.activeShopId) return;
+    try {
+      const response = await dashboardAPI.getStats();
+      const data = response.data;
+      setProductStats(prev => ({
+        ...prev,
+        totalRevenue: data.revenue?.total || 0,
+        revenueChange: data.revenue?.change || 0,
+        topProducts: data.topProducts || [],
+        avgRating: 0
+      }));
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err);
+    }
+  };
+
   useEffect(() => {
     const loadThresholds = async () => {
       const saved = await storage.get(`product_thresholds_${user?.activeShopId || 'default'}`);
@@ -103,34 +216,10 @@ const ProductsPage = () => {
       }
     };
     loadThresholds();
+
+    fetchProducts();
+    fetchDashboardStats();
   }, [user?.activeShopId]);
-
-  useEffect(() => {
-    const init = async () => {
-      await fetchProducts();
-      await fetchDashboardStats();
-    };
-    init();
-  }, [authenticatedFetch, user?.activeShopId]);
-
-  const fetchDashboardStats = async () => {
-    if (!user?.activeShopId) return;
-    try {
-      const response = await authenticatedFetch(`${API_URL}/dashboard/stats`);
-      if (response.ok) {
-        const data = await response.json();
-        setProductStats(prev => ({
-          ...prev,
-          totalRevenue: data.revenue?.total || 0,
-          revenueChange: data.revenue?.change || 0,
-          topProducts: data.topProducts || [],
-          avgRating: 0
-        }));
-      }
-    } catch (err) {
-      console.error('Failed to fetch dashboard stats:', err);
-    }
-  };
 
   const handleProductAdded = async () => {
     await fetchProducts();
@@ -179,156 +268,7 @@ const ProductsPage = () => {
     setImagePreview(null);
   };
 
-  const fetchProducts = async (cursor = null, direction = 'next') => {
-    if (!user?.activeShopId) {
-      setLoading(false);
-      setShopifyNotConnected(true);
-      setProducts([]);
-      return;
-    }
 
-    const isSocialStore = user.socialStores?.some(s => s.id === user.activeShopId);
-    if (isSocialStore) {
-      setShopifyNotConnected(false);
-    }
-
-    try {
-      let url;
-      if (!cursor) {
-        // PWA Offline Storage: Immediately load from IndexedDB
-        const cacheKey = `products_${user.activeShopId}`;
-        const cachedProducts = await storage.get(cacheKey);
-        if (cachedProducts) {
-          setProducts(cachedProducts.products);
-          setProductStats(prev => ({ ...prev, ...(cachedProducts.stats || {}) }));
-          setPageInfo(cachedProducts.pageInfo);
-          setTotalCount(cachedProducts.totalCount);
-          setLoading(false);
-        } else {
-          setLoading(true);
-        }
-      } else {
-        setPaginationLoading(true);
-      }
-
-      // Construct Shopify URL with pagination
-      url = `${API_URL}/shopify/products?first=${ITEMS_PER_PAGE}`;
-      if (cursor) {
-        if (direction === 'next') {
-          url = `${API_URL}/shopify/products?first=${ITEMS_PER_PAGE}&after=${encodeURIComponent(cursor)}`;
-        } else {
-          url = `${API_URL}/shopify/products?last=${ITEMS_PER_PAGE}&before=${encodeURIComponent(cursor)}`;
-        }
-      }
-
-      const response = await authenticatedFetch(url);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-
-        if (response.status === 401) {
-          setError('Session expired. Please log in again.');
-          return;
-        }
-
-        if (response.status === 400) {
-          setShopifyNotConnected(true);
-          setProducts([]);
-          return;
-        }
-
-        throw new Error(errorData.message || 'Failed to fetch from backend');
-      }
-
-      const data = await response.json();
-
-      // Successfully connected
-      setShopifyNotConnected(false);
-      setError(null);
-
-      // Handle response structure { products: [], pageInfo: {}, totalCount: number }
-      const productsData = Array.isArray(data) ? data : (data.products || []);
-      const pageInfoData = data.pageInfo || { hasNextPage: false, hasPreviousPage: false };
-      const serverTotalCount = data.totalCount || 0;
-
-      setPageInfo(pageInfoData);
-      setTotalCount(serverTotalCount);
-
-      // Update page number
-      if (!cursor) {
-        setCurrentPage(1);
-      } else if (direction === 'next') {
-        setCurrentPage(prev => prev + 1);
-      } else {
-        setCurrentPage(prev => Math.max(1, prev - 1));
-      }
-
-      // Transform data
-      const transformedProducts = productsData.map(p => ({
-        id: p.id,
-        name: p.title || p.name,
-        category: p.product_type || p.category || 'Uncategorized',
-        price: p.variants?.[0]?.price || p.price || '0.00',
-        stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || p.stock || 0,
-        status: p.status === 'active' ? 'active' : (p.status === 'low' ? 'low' : 'out'),
-        image: p.images?.[0]?.src || p.image || '',
-        revenue: 0,
-        rating: 'N/A',
-      }));
-
-      setProducts(transformedProducts);
-
-      // Prepare stats for UI and cache
-      let active = transformedProducts.filter(p => p.stock >= 10).length;
-      let outOfStock = transformedProducts.filter(p => p.stock === 0).length;
-      let lowStock = transformedProducts.filter(p => p.stock > 0 && p.stock < 10).length;
-
-      if (data.summary) {
-        active = data.summary.active ?? active;
-        outOfStock = data.summary.outOfStock ?? outOfStock;
-        lowStock = data.summary.lowStock ?? lowStock;
-
-        setProductStats(prev => ({
-          ...prev,
-          ...data.summary
-        }));
-      } else {
-        setProductStats(prev => ({
-          ...prev,
-          total: serverTotalCount || transformedProducts.length,
-          active: prev.active || active,
-          outOfStock: prev.outOfStock || outOfStock,
-          lowStock: prev.lowStock || lowStock,
-        }));
-      }
-
-      // PWA Offline Storage: Cache new fresh data
-      if (!cursor) {
-        const cacheKey = `products_${user?.activeShopId || 'default'}`;
-        await storage.set(cacheKey, {
-          products: transformedProducts,
-          stats: {
-            total: serverTotalCount || transformedProducts.length,
-            active,
-            outOfStock,
-            lowStock,
-            categories: data.summary?.categories || {}
-          },
-          pageInfo: pageInfoData,
-          totalCount: serverTotalCount
-        });
-      }
-
-    } catch (err) {
-      console.error('Failed to fetch products:', err);
-      if (!products.length && !cursor) {
-        setError(err.message || 'Failed to load products. You might be offline.');
-      }
-    } finally {
-      setLoading(false);
-      setPaginationLoading(false);
-    }
-  };
 
   // Dynamic Categories calculation
   const categories = useMemo(() => {
@@ -615,8 +555,8 @@ const ProductsPage = () => {
                                 onClick={async () => {
                                   if (window.confirm('Are you sure you want to delete this product?')) {
                                     try {
-                                      const res = await authenticatedFetch(`${API_URL}/social-stores/${user.activeShopId}/products/${product.id}`, { method: 'DELETE' });
-                                      if (res.ok) await fetchProducts();
+                                      await storesAPI.socialStores.deleteProduct(user.activeShopId, product.id);
+                                      await fetchProducts();
                                     } catch (err) { alert('Failed to delete product') }
                                   }
                                 }}
@@ -840,176 +780,168 @@ const ProductsPage = () => {
         )}
       </div>
 
-      {triggerAddProduct && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              <h3 className="font-bold text-xl flex items-center gap-2">
-                <Package className="text-blue-500" />
-                Add Social Product
-              </h3>
-              <button onClick={closeModals} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-                <X size={20} />
-              </button>
-            </div>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const data = Object.fromEntries(formData.entries());
-
-                const uploadedUrl = await uploadImage();
-                if (uploadedUrl) {
-                  data.image = uploadedUrl;
-                }
-
-                try {
-                  const res = await authenticatedFetch(`${API_URL}/social-stores/${user.activeShopId}/products`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                  });
-                  if (res.ok) {
-                    await fetchProducts();
-                    closeModals();
-                  }
-                } catch (err) {
-                  alert("Failed to add product");
-                }
-              }}
-              className="p-6 space-y-4"
-            >
-              <div>
-                <label className="block text-sm font-bold mb-1">Product Title</label>
-                <input name="title" required placeholder="e.g. Vintage Sunglasses" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold mb-1">Price</label>
-                  <input name="price" type="number" step="0.01" required placeholder="0.00" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-1">Stock Level</label>
-                  <input name="stock" type="number" required placeholder="10" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">Category</label>
-                <input name="category" placeholder="e.g. Eyewear" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
-              </div>
-              <div className="pt-2">
-                <label className="block text-sm font-bold mb-2">Product Image</label>
-                <div className="flex items-center gap-4">
-                  <div className={`w-24 h-24 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden ${isDarkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
-                    {imagePreview ? (
-                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <ImageIcon size={32} className="text-gray-400" />
-                    )}
-                  </div>
-                  <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
-                    <Upload size={18} />
-                    <span className="text-sm font-medium">Upload Image</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                  </label>
-                </div>
-              </div>
-              <div className={`p-4 border-t mt-6 flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-                <button type="button" onClick={closeModals} className="px-6 py-2.5 rounded-xl font-bold">Cancel</button>
-                <button type="submit" disabled={uploadingImage} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50">
-                  {uploadingImage ? 'Uploading...' : 'Create Product'}
+      {
+        triggerAddProduct && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <h3 className="font-bold text-xl flex items-center gap-2">
+                  <Package className="text-blue-500" />
+                  Add Social Product
+                </h3>
+                <button onClick={closeModals} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                  <X size={20} />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const data = Object.fromEntries(formData.entries());
 
-      {productToEdit && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              <h3 className="font-bold text-xl flex items-center gap-2">
-                <Package className="text-blue-500" />
-                Edit Product
-              </h3>
-              <button onClick={closeModals} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-                <X size={20} />
-              </button>
-            </div>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const data = Object.fromEntries(formData.entries());
+                  const uploadedUrl = await uploadImage();
+                  if (uploadedUrl) {
+                    data.image = uploadedUrl;
+                  }
 
-                const uploadedUrl = await uploadImage();
-                if (uploadedUrl) {
-                  data.image = uploadedUrl;
-                }
-
-                try {
-                  const res = await authenticatedFetch(`${API_URL}/social-stores/${user.activeShopId}/products/${productToEdit.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                  });
-                  if (res.ok) {
+                  try {
+                    await storesAPI.socialStores.createProduct(user.activeShopId, data);
                     await fetchProducts();
                     closeModals();
+                  } catch (err) {
+                    alert("Failed to add product");
                   }
-                } catch (err) {
-                  alert("Failed to update product");
-                }
-              }}
-              className="p-6 space-y-4"
-            >
-              <div>
-                <label className="block text-sm font-bold mb-1">Product Title</label>
-                <input name="title" defaultValue={productToEdit.name} required className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+                }}
+                className="p-6 space-y-4"
+              >
                 <div>
-                  <label className="block text-sm font-bold mb-1">Price</label>
-                  <input name="price" type="number" step="0.01" defaultValue={productToEdit.price} required className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                  <label className="block text-sm font-bold mb-1">Product Title</label>
+                  <input name="title" required placeholder="e.g. Vintage Sunglasses" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
                 </div>
-                <div>
-                  <label className="block text-sm font-bold mb-1">Stock Level</label>
-                  <input name="stock" type="number" defaultValue={productToEdit.stock} required className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">Category</label>
-                <input name="category" defaultValue={productToEdit.category} className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
-              </div>
-              <div className="pt-2">
-                <label className="block text-sm font-bold mb-2">Product Image</label>
-                <div className="flex items-center gap-4">
-                  <div className={`w-24 h-24 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden ${isDarkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
-                    {imagePreview ? (
-                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <ImageIcon size={32} className="text-gray-400" />
-                    )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold mb-1">Price</label>
+                    <input name="price" type="number" step="0.01" required placeholder="0.00" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
                   </div>
-                  <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
-                    <Upload size={18} />
-                    <span className="text-sm font-medium">Change Image</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                  </label>
+                  <div>
+                    <label className="block text-sm font-bold mb-1">Stock Level</label>
+                    <input name="stock" type="number" required placeholder="10" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                  </div>
                 </div>
-              </div>
-              <div className={`p-4 border-t mt-6 flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
-                <button type="button" onClick={closeModals} className="px-6 py-2.5 rounded-xl font-bold">Cancel</button>
-                <button type="submit" disabled={uploadingImage} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50">
-                  {uploadingImage ? 'Saving...' : 'Save Changes'}
+                <div>
+                  <label className="block text-sm font-bold mb-1">Category</label>
+                  <input name="category" placeholder="e.g. Eyewear" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                </div>
+                <div className="pt-2">
+                  <label className="block text-sm font-bold mb-2">Product Image</label>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-24 h-24 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden ${isDarkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
+                      {imagePreview ? (
+                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon size={32} className="text-gray-400" />
+                      )}
+                    </div>
+                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                      <Upload size={18} />
+                      <span className="text-sm font-medium">Upload Image</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                    </label>
+                  </div>
+                </div>
+                <div className={`p-4 border-t mt-6 flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                  <button type="button" onClick={closeModals} className="px-6 py-2.5 rounded-xl font-bold">Cancel</button>
+                  <button type="submit" disabled={uploadingImage} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50">
+                    {uploadingImage ? 'Uploading...' : 'Create Product'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        productToEdit && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <h3 className="font-bold text-xl flex items-center gap-2">
+                  <Package className="text-blue-500" />
+                  Edit Product
+                </h3>
+                <button onClick={closeModals} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                  <X size={20} />
                 </button>
               </div>
-            </form>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const data = Object.fromEntries(formData.entries());
+
+                  const uploadedUrl = await uploadImage();
+                  if (uploadedUrl) {
+                    data.image = uploadedUrl;
+                  }
+
+                  try {
+                    await storesAPI.socialStores.updateProduct(user.activeShopId, productToEdit.id, data);
+                    await fetchProducts();
+                    closeModals();
+                  } catch (err) {
+                    alert("Failed to update product");
+                  }
+                }}
+                className="p-6 space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-bold mb-1">Product Title</label>
+                  <input name="title" defaultValue={productToEdit.name} required className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold mb-1">Price</label>
+                    <input name="price" type="number" step="0.01" defaultValue={productToEdit.price} required className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-1">Stock Level</label>
+                    <input name="stock" type="number" defaultValue={productToEdit.stock} required className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Category</label>
+                  <input name="category" defaultValue={productToEdit.category} className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                </div>
+                <div className="pt-2">
+                  <label className="block text-sm font-bold mb-2">Product Image</label>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-24 h-24 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden ${isDarkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
+                      {imagePreview ? (
+                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon size={32} className="text-gray-400" />
+                      )}
+                    </div>
+                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                      <Upload size={18} />
+                      <span className="text-sm font-medium">Change Image</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                    </label>
+                  </div>
+                </div>
+                <div className={`p-4 border-t mt-6 flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                  <button type="button" onClick={closeModals} className="px-6 py-2.5 rounded-xl font-bold">Cancel</button>
+                  <button type="submit" disabled={uploadingImage} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50">
+                    {uploadingImage ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 

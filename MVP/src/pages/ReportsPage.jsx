@@ -5,12 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { storage } from '../utils/db';
-
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+import { reportsAPI } from '../services/api';
 
 const ReportsPage = () => {
     const { isDarkMode } = useTheme();
-    const { authenticatedFetch, user } = useAuth();
+    const { user } = useAuth();
     const { t } = useLanguage();
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -43,12 +42,10 @@ const ReportsPage = () => {
                 setLoading(true);
             }
 
-            const response = await authenticatedFetch(`${API_URL}/reports`);
-            if (response.ok) {
-                const data = await response.json();
-                setReports(data);
-                await storage.set(cacheKey, data);
-            }
+            const response = await reportsAPI.getAll();
+            const data = response.data;
+            setReports(data);
+            await storage.set(cacheKey, data);
         } catch (error) {
             console.error('Failed to fetch reports:', error);
         } finally {
@@ -64,12 +61,10 @@ const ReportsPage = () => {
                 setStats(cachedStats);
             }
 
-            const response = await authenticatedFetch(`${API_URL}/reports/stats`);
-            if (response.ok) {
-                const data = await response.json();
-                setStats(data);
-                await storage.set(cacheKey, data);
-            }
+            const response = await reportsAPI.getStats();
+            const data = response.data;
+            setStats(data);
+            await storage.set(cacheKey, data);
         } catch (error) {
             console.error('Failed to fetch stats:', error);
         }
@@ -79,25 +74,15 @@ const ReportsPage = () => {
     const handleGenerateReport = async () => {
         setGenerating(true);
         try {
-            const response = await authenticatedFetch(`${API_URL}/reports/generate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: selectedType })
-            });
-
-            if (response.ok) {
-                await fetchReports();
-            } else {
-                const data = await response.json();
-                if (response.status === 403) {
-                    alert('Upgrade to the Beginner or Pro plan to generate ' + selectedType + ' reports.');
-                } else {
-                    alert(data.message || 'Failed to generate report.');
-                }
-            }
+            await reportsAPI.generate(selectedType);
+            await fetchReports();
         } catch (error) {
-            console.error('Report generation error:', error);
-            alert(`Error: ${error.message}`);
+            if (error.response?.status === 403) {
+                alert('Upgrade to the Beginner or Pro plan to generate ' + selectedType + ' reports.');
+            } else {
+                console.error('Report generation error:', error);
+                alert(error.response?.data?.message || `Error: ${error.message}`);
+            }
         } finally {
             setGenerating(false);
         }
@@ -106,24 +91,16 @@ const ReportsPage = () => {
     const handleInstantReview = async () => {
         setInstantGenerating(true);
         try {
-            const response = await authenticatedFetch(`${API_URL}/reports/instant-review`, {
-                method: 'POST',
-            });
-
-            if (response.ok) {
-                await fetchReports();
-                alert('Your instant review is being generated! It will be emailed to you shortly.');
+            await reportsAPI.instantReview();
+            await fetchReports();
+            alert('Your instant review is being generated! It will be emailed to you shortly.');
+        } catch (error) {
+            if (error.response?.status === 403) {
+                alert('Upgrade to the Beginner or Pro plan to generate Instant Reviews.');
             } else {
-                const data = await response.json();
-                if (response.status === 403) {
-                    alert('Upgrade to the Beginner or Pro plan to generate Instant Reviews.');
-                } else {
-                    alert(data.message || 'Failed to generate instant review.');
-                }
+                console.error('Instant review error:', error);
+                alert(error.response?.data?.message || `Error: ${error.message}`);
             }
-        } catch (err) {
-            console.error('Instant review error:', err);
-            alert(`Error: ${err.message}`);
         } finally {
             setInstantGenerating(false);
         }
@@ -133,30 +110,17 @@ const ReportsPage = () => {
         if (!window.confirm('Delete this report?')) return;
 
         try {
-            const response = await authenticatedFetch(`${API_URL}/reports/${reportId}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                setReports(reports.filter(r => r.id !== reportId));
-            }
+            await reportsAPI.delete(reportId);
+            setReports(reports.filter(r => r.id !== reportId));
         } catch (error) {
             alert(`Error: ${error.message}`);
         }
     };
 
-
     const handleDownloadDocx = async (report) => {
         try {
-            const response = await authenticatedFetch(`${API_URL}/reports/${report.id}/download`);
-
-            if (!response.ok) {
-
-                downloadReportFallback(report);
-                return;
-            }
-
-            const blob = await response.blob();
+            const response = await reportsAPI.download(report.id);
+            const blob = response.data; // Already a blob due to responseType in api.js
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -164,7 +128,7 @@ const ReportsPage = () => {
             a.click();
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Download failed, using fallback:', error);
+            console.error('Download error:', error);
             downloadReportFallback(report);
         }
     };

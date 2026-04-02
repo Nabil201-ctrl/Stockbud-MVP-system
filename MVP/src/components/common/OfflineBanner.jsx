@@ -8,25 +8,26 @@ const OfflineBanner = () => {
     const [hasLoaded, setHasLoaded] = useState(false);
 
     useEffect(() => {
-        
-        setIsVisible(true);
+        if (!isOnline) {
+            setIsVisible(true);
+        } else if (hasLoaded) {
+            // When back online, show message for 3 seconds then hide
+            setIsVisible(true);
+            const timer = setTimeout(() => {
+                setIsVisible(false);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
         setHasLoaded(true);
-
-        
-        const timer = setTimeout(() => {
-            setIsVisible(false);
-        }, 60000);
-
-        return () => clearTimeout(timer);
     }, [isOnline]);
 
-    if (!isVisible && hasLoaded) return null; 
-    
+    if (!isVisible && hasLoaded) return null;
+
     if (!isVisible && !hasLoaded) {
-        
-        
-        
-        
+
+
+
+
     }
 
     return (

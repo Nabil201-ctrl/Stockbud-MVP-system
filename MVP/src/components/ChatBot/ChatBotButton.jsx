@@ -4,30 +4,31 @@ import { MessageCircle, X, Send, Bot, Loader2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { chatsAPI } from '../../services/api';
 
 const ChatBotButton = () => {
   const { isDarkMode } = useTheme();
-  const { authenticatedFetch, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const { language, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
-  
-  
-  
-  
-  
+
+
+
+
+
   const [messages, setMessages] = useState([
     { id: 1, text: t('chat.initialMessage1', {}, "Hello! I'm your AI assistant. How can I help you today?"), isBot: true, time: "Just now" },
     { id: 2, text: t('chat.initialMessage2', {}, "Try asking me about your dashboard metrics or data insights!"), isBot: true, time: "Just now" }
   ]);
 
-  
+
   useEffect(() => {
     setMessages([
       { id: 1, text: t('chat.initialMessage1', {}, "Hello! I'm your AI assistant. How can I help you today?"), isBot: true, time: "Just now" },
       { id: 2, text: t('chat.initialMessage2', {}, "Try asking me about your dashboard metrics or data insights!"), isBot: true, time: "Just now" }
     ]);
-  }, [language]); 
+  }, [language]);
 
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -47,7 +48,7 @@ const ChatBotButton = () => {
 
     const userMessageText = inputText;
 
-    
+
     const userMessage = {
       id: Date.now(),
       text: userMessageText,
@@ -60,43 +61,26 @@ const ChatBotButton = () => {
     setIsTyping(true);
 
     try {
-      // Prepare history for API
       const history = messages.map(m => ({
         role: m.isBot ? 'assistant' : 'user',
         content: m.text
       }));
 
-      const response = await authenticatedFetch('/api/chats/quick', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: userMessageText, history, language }) 
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const botResponse = {
-          id: Date.now() + 1,
-          text: data.content,
-          isBot: true,
-          time: new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, botResponse]);
-        await refreshUser();
-      } else {
-        const errorData = await response.json();
-        const botResponse = {
-          id: Date.now() + 1,
-          text: errorData.message || t('common.error'),
-          isBot: true,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, botResponse]);
-      }
+      const res = await chatsAPI.quickChat({ content: userMessageText, history, language });
+      const data = res.data;
+      const botResponse = {
+        id: Date.now() + 1,
+        text: data.content,
+        isBot: true,
+        time: new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botResponse]);
+      await refreshUser();
     } catch (error) {
       console.error("Failed to send message", error);
       const botResponse = {
         id: Date.now() + 1,
-        text: t('common.error'),
+        text: error.response?.data?.message || t('common.error'),
         isBot: true,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
@@ -119,7 +103,7 @@ const ChatBotButton = () => {
 
   return (
     <>
-      {}
+      { }
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 z-50 ${isDarkMode
@@ -131,13 +115,13 @@ const ChatBotButton = () => {
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
 
-      {}
+      { }
       {isOpen && (
         <div className={`fixed bottom-0 right-0 w-full h-[100dvh] sm:h-[700px] sm:w-[500px] sm:bottom-24 sm:right-6 sm:rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${isDarkMode
           ? 'bg-gray-800 border-t sm:border border-gray-700'
           : 'bg-white border-t sm:border border-gray-200'
           }`}>
-          {}
+          { }
           <div className={`p-4 sm:rounded-t-2xl flex items-center justify-between ${isDarkMode ? 'bg-gray-900' : 'bg-white border-b border-gray-100'
             }`}>
             <div className="flex items-center gap-3">
@@ -164,7 +148,7 @@ const ChatBotButton = () => {
             </button>
           </div>
 
-          {}
+          { }
           <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
             {messages.map((message) => (
               <div
@@ -197,7 +181,7 @@ const ChatBotButton = () => {
               </div>
             ))}
 
-            {}
+            { }
             {isTyping && (
               <div className="flex justify-start">
                 <div className={`max-w-[80%] rounded-2xl p-3 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
@@ -212,7 +196,7 @@ const ChatBotButton = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {}
+          { }
           <div className="px-4 pb-3">
             <p className={`text-xs mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               Suggested questions:
@@ -233,7 +217,7 @@ const ChatBotButton = () => {
             </div>
           </div>
 
-          {}
+          { }
           <div className={`p-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <input

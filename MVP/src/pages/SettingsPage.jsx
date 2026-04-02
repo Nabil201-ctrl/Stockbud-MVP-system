@@ -7,13 +7,12 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import Timeline from '../components/Shopify/Timeline';
 import SocialStoresPanel from '../components/Dashboard/SocialStoresPanel';
-
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+import { authAPI, userAPI, storesAPI } from '../services/api';
 
 const SettingsPage = () => {
     const isOnline = useOnlineStatus();
     const { isDarkMode, fontSize, changeFontSize } = useTheme();
-    const { user, updateProfile, authenticatedFetch, refreshUser } = useAuth();
+    const { user, updateProfile, refreshUser } = useAuth();
     const { t, language, changeLanguage, availableLanguages } = useLanguage();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile');
@@ -88,11 +87,8 @@ const SettingsPage = () => {
     const fetchPlanData = async () => {
         setPlanLoading(true);
         try {
-            const res = await authenticatedFetch(`${API_URL}/users/me/plan`);
-            if (res.ok) {
-                const data = await res.json();
-                setPlanData(data);
-            }
+            const res = await userAPI.getPlan();
+            setPlanData(res.data);
         } catch (error) {
             console.error('Failed to fetch plan:', error);
         } finally {
@@ -108,21 +104,13 @@ const SettingsPage = () => {
 
     const handleUpgradePlan = async (newPlan) => {
         try {
-            const res = await authenticatedFetch(`${API_URL}/users/me/plan/upgrade`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan: newPlan })
-            });
-            if (res.ok) {
-                alert(`Successfully upgraded to ${newPlan.toUpperCase()} plan!`);
-                fetchPlanData();
-                refreshUser();
-            } else {
-                const data = await res.json();
-                alert(data.message || 'Upgrade failed');
-            }
+            await userAPI.upgradePlan(newPlan);
+            alert(`Successfully upgraded to ${newPlan.toUpperCase()} plan!`);
+            fetchPlanData();
+            refreshUser();
         } catch (error) {
             console.error('Failed to upgrade:', error);
+            alert(error.response?.data?.message || 'Upgrade failed');
         }
     };
 
@@ -153,10 +141,8 @@ const SettingsPage = () => {
     const verifyWithRetry = async (reference, maxRetries = 3) => {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                const response = await authenticatedFetch(`${API_URL}/payments/verify?reference=${reference}`);
-                const data = await response.json();
-                if (response.ok && data.success) return data;
-                return { success: false, message: data.message || 'Verification failed' };
+                const response = await userAPI.verifyPayment(reference);
+                return response.data;
             } catch (error) {
                 if (attempt < maxRetries) {
                     await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt - 1)));
@@ -196,32 +182,19 @@ const SettingsPage = () => {
         }
         setPasswordLoading(true);
         try {
-            const response = await authenticatedFetch(`${API_URL}/auth/change-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ oldPassword: passwordData.oldPassword, newPassword: passwordData.newPassword })
-            });
-            if (response.ok) {
-                setPasswordMessage({ type: 'success', text: 'Password changed' });
-                setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-            } else {
-                const data = await response.json();
-                setPasswordMessage({ type: 'error', text: data.message || 'Failed' });
-            }
+            await authAPI.changePassword(passwordData.oldPassword, passwordData.newPassword);
+            setPasswordMessage({ type: 'success', text: 'Password changed' });
+            setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
         } catch (error) {
-            setPasswordMessage({ type: 'error', text: 'Error' });
+            setPasswordMessage({ type: 'error', text: error.response?.data?.message || 'Error' });
         }
         setPasswordLoading(false);
     };
 
     const handleSetActiveShop = async (storeId) => {
         try {
-            const response = await authenticatedFetch(`${API_URL}/users/shopify-stores/active`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ storeId })
-            });
-            if (response.ok) await refreshUser();
+            await storesAPI.setActiveShop(storeId);
+            await refreshUser();
         } catch (error) {
             alert(`Error: ${error.message}`);
         }
@@ -230,8 +203,8 @@ const SettingsPage = () => {
     const handleRemoveStore = async (storeId, shopName) => {
         if (!window.confirm(`Remove ${shopName}?`)) return;
         try {
-            const response = await authenticatedFetch(`${API_URL}/users/shopify-stores/${storeId}`, { method: 'DELETE' });
-            if (response.ok) await refreshUser();
+            await storesAPI.deleteShop(storeId);
+            await refreshUser();
         } catch (error) {
             alert(`Error: ${error.message}`);
         }
@@ -246,12 +219,9 @@ const SettingsPage = () => {
         }
         setPairingLoading(true);
         try {
-            const response = await authenticatedFetch(`${API_URL}/shopify/pairing-code`, { method: 'POST' });
-            if (response.ok) {
-                const data = await response.json();
-                setPairingCode(data.code);
-                setCodeCopied(false);
-            }
+            const res = await storesAPI.getPairingCode();
+            setPairingCode(res.data.pairingCode);
+            setCodeCopied(false);
         } catch (error) {
             alert(`Error: ${error.message}`);
         }
@@ -525,7 +495,7 @@ const SettingsPage = () => {
                     </div>
 
                     <div className="pt-8 border-t border-gray-200 dark:border-gray-700">
-                        <SocialStoresPanel isDarkMode={isDarkMode} authenticatedFetch={authenticatedFetch} user={user} />
+                        <SocialStoresPanel isDarkMode={isDarkMode} user={user} />
                     </div>
                 </div>
             )}

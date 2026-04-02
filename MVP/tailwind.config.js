@@ -6,7 +6,12 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['"Glacial Indifference"', 'sans-serif'],
+        heading: ['"League Spartan"', 'sans-serif'],
+      }
+    },
   },
   plugins: [],
 }

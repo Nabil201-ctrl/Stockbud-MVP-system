@@ -7,12 +7,13 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { storage } from '../utils/db';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+import { chatsAPI } from '../services/api';
 
 const ChatPage = () => {
     const { isDarkMode } = useTheme();
-    const { authenticatedFetch, user, refreshUser } = useAuth();
+    const { user, refreshUser } = useAuth();
     const { language, t } = useLanguage();
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
@@ -56,13 +57,21 @@ const ChatPage = () => {
 
     const loadChats = async () => {
         try {
-            const response = await authenticatedFetch(`${API_URL}/chats`);
-            if (response.ok) {
-                const data = await response.json();
-                setChats(data);
-                if (data.length > 0 && !currentChatId) {
-                    setCurrentChatId(data[0].id);
+            const cachedChats = await storage.get('stockbud_chats');
+            if (cachedChats) {
+                setChats(cachedChats);
+                if (cachedChats.length > 0 && !currentChatId) {
+                    setCurrentChatId(cachedChats[0].id);
                 }
+            }
+
+            const response = await chatsAPI.getAll();
+            const data = response.data;
+            setChats(data);
+            await storage.set('stockbud_chats', data);
+
+            if (data.length > 0 && !currentChatId) {
+                setCurrentChatId(data[0].id);
             }
         } catch (error) {
             console.error("Failed to load chats", error);
@@ -71,18 +80,13 @@ const ChatPage = () => {
 
     const createNewChat = async () => {
         try {
-            const response = await authenticatedFetch(`${API_URL}/chats`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: 'New Chat' })
-            });
-
-            if (response.ok) {
-                const newChat = await response.json();
-                setChats([newChat, ...chats]);
-                setCurrentChatId(newChat.id);
-                if (window.innerWidth < 768) setSidebarOpen(false);
-            }
+            const res = await chatsAPI.create({ title: 'New Chat' });
+            const newChat = res.data;
+            const updatedChats = [newChat, ...chats];
+            setChats(updatedChats);
+            await storage.set('stockbud_chats', updatedChats);
+            setCurrentChatId(newChat.id);
+            if (window.innerWidth < 768) setSidebarOpen(false);
         } catch (error) {
             console.error("Failed to create chat", error);
         }
@@ -91,16 +95,12 @@ const ChatPage = () => {
     const deleteChat = async (e, id) => {
         e.stopPropagation();
         try {
-            const response = await authenticatedFetch(`${API_URL}/chats/${id}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                const updatedChats = chats.filter(c => c.id !== id);
-                setChats(updatedChats);
-                if (currentChatId === id) {
-                    setCurrentChatId(updatedChats.length > 0 ? updatedChats[0].id : null);
-                }
+            await chatsAPI.delete(id);
+            const updatedChats = chats.filter(c => c.id !== id);
+            setChats(updatedChats);
+            await storage.set('stockbud_chats', updatedChats);
+            if (currentChatId === id) {
+                setCurrentChatId(updatedChats.length > 0 ? updatedChats[0].id : null);
             }
         } catch (error) {
             console.error("Failed to delete chat", error);
@@ -121,18 +121,12 @@ const ChatPage = () => {
         let targetChatId = currentChatId;
         if (!targetChatId) {
             try {
-                const response = await authenticatedFetch(`${API_URL}/chats`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: messageContent.slice(0, 30), firstMessage: messageContent, language })
-                });
-                if (response.ok) {
-                    const newChat = await response.json();
-                    setChats([newChat, ...chats]);
-                    setCurrentChatId(newChat.id);
-                    setInput('');
-                    return; // The backend creates the chat with the first message, so we are done
-                }
+                const response = await chatsAPI.create({ title: messageContent.slice(0, 30), firstMessage: messageContent, language });
+                const newChat = response.data;
+                setChats([newChat, ...chats]);
+                setCurrentChatId(newChat.id);
+                setInput('');
+                return; // The backend creates the chat with the first message, so we are done
             } catch (err) {
                 console.error("Error creating initial chat", err);
                 return;
@@ -154,17 +148,10 @@ const ChatPage = () => {
         }));
 
         try {
-            const response = await authenticatedFetch(`${API_URL}/chats/${targetChatId}/messages`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: messageContent, language })
-            });
-
-            if (response.ok) {
-                const updatedChat = await response.json();
-                setChats(prev => prev.map(c => c.id === targetChatId ? updatedChat : c));
-                await refreshUser();
-            }
+            const res = await chatsAPI.sendMessage(targetChatId, { content: messageContent, language });
+            const updatedChat = res.data;
+            setChats(prev => prev.map(c => c.id === targetChatId ? updatedChat : c));
+            await refreshUser();
         } catch (error) {
             console.error("Failed to send message", error);
         } finally {

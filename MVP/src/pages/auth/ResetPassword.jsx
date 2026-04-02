@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { authAPI } from '../../services/api';
 
 const ResetPassword = () => {
     const navigate = useNavigate();
@@ -24,20 +25,10 @@ const ResetPassword = () => {
         }
 
         try {
-            const response = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, newPassword: password })
-            });
-
-            if (response.ok) {
-                navigate('/auth/login');
-            } else {
-                const data = await response.json();
-                setError(data.message || 'Reset failed');
-            }
+            await authAPI.resetPassword(token, password);
+            navigate('/auth/login');
         } catch (err) {
-            setError('Something went wrong');
+            setError(err.response?.data?.message || 'Reset failed');
         }
         setLoading(false);
     };

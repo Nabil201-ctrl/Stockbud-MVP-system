@@ -4,9 +4,10 @@ import { Menu, Search, Bell, ChevronDown, Sun, Moon, LogOut, User as UserIcon, Z
 
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { notificationsAPI, storesAPI } from '../../services/api';
 
 const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
-  const { user, logout, authenticatedFetch, refreshUser } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { language, changeLanguage, t } = useLanguage();
 
@@ -21,11 +22,8 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await authenticatedFetch('/api/notifications');
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data);
-      }
+      const response = await notificationsAPI.getAll();
+      setNotifications(response.data);
     } catch (error) {
       console.error("Failed to fetch notifications", error);
     }
@@ -72,12 +70,8 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
 
   const markAllAsRead = async () => {
     try {
-      const response = await authenticatedFetch('/api/notifications/read-all', {
-        method: 'PATCH'
-      });
-      if (response.ok) {
-        setNotifications(notifications.map(n => ({ ...n, read: true })));
-      }
+      await notificationsAPI.readAll();
+      setNotifications(notifications.map(n => ({ ...n, read: true })));
     } catch (error) {
       console.error("Failed to mark all as read", error);
     }
@@ -86,12 +80,8 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   const markAsRead = async (id, e) => {
     e.stopPropagation();
     try {
-      const response = await authenticatedFetch(`/api/notifications/${id}/read`, {
-        method: 'PATCH'
-      });
-      if (response.ok) {
-        setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
-      }
+      await notificationsAPI.readById(id);
+      setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
     } catch (error) {
       console.error("Failed to mark notification as read", error);
     }
@@ -102,17 +92,10 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   const handleShopSwitch = async (storeId) => {
     if (storeId === user.activeShopId) return;
     try {
-      const response = await authenticatedFetch('/api/users/shopify-stores/active', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId })
-      });
-      if (response.ok) {
-        await refreshUser();
-        setShowShopMenu(false);
-
-        window.location.reload();
-      }
+      await storesAPI.setActiveShop(storeId);
+      await refreshUser();
+      setShowShopMenu(false);
+      window.location.reload();
     } catch (error) {
       console.error("Failed to switch shop", error);
     }

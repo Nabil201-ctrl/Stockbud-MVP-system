@@ -15,9 +15,9 @@ import {
     Cloud
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+import { storesAPI } from '../../services/api';
 
-const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
+const SocialStoresPanel = ({ isDarkMode, user }) => {
     const [stores, setStores] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
@@ -32,13 +32,11 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
 
     const fetchStores = async () => {
         try {
-            const response = await authenticatedFetch(`${API_URL}/social-stores`);
-            if (response.ok) {
-                const data = await response.json();
-                setStores(data);
-                if (data.length > 0 && !activeStoreId) {
-                    setActiveStoreId(data[0].id);
-                }
+            const response = await storesAPI.socialStores.getAll();
+            const data = response.data;
+            setStores(data);
+            if (data.length > 0 && !activeStoreId) {
+                setActiveStoreId(data[0].id);
             }
         } catch (error) {
             console.error("Failed to fetch social stores", error);
@@ -51,11 +49,9 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
         if (!storeId) return;
         setProductsLoading(true);
         try {
-            const response = await authenticatedFetch(`${API_URL}/social-stores/${storeId}/products`);
-            if (response.ok) {
-                const data = await response.json();
-                setProducts(data.products || []);
-            }
+            const response = await storesAPI.socialStores.getProducts(storeId);
+            const data = response.data;
+            setProducts(data.products || []);
         } catch (error) {
             console.error("Failed to fetch products for social store", error);
         } finally {
@@ -77,16 +73,10 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
         e.preventDefault();
         setAddLoading(true);
         try {
-            const response = await authenticatedFetch(`${API_URL}/social-stores`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newStore)
-            });
-            if (response.ok) {
-                await fetchStores();
-                setIsAdding(false);
-                setNewStore({ name: '', contact: '', type: 'instagram' });
-            }
+            await storesAPI.socialStores.create(newStore);
+            await fetchStores();
+            setIsAdding(false);
+            setNewStore({ name: '', contact: '', type: 'instagram' });
         } catch (error) {
             alert("Failed to add store");
         } finally {
@@ -97,15 +87,11 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
     const handleDeleteStore = async (id) => {
         if (!window.confirm("Are you sure you want to remove this social sync?")) return;
         try {
-            const response = await authenticatedFetch(`${API_URL}/social-stores/${id}`, {
-                method: 'DELETE'
-            });
-            if (response.ok) {
-                const remaining = stores.filter(s => s.id !== id);
-                setStores(remaining);
-                if (activeStoreId === id) {
-                    setActiveStoreId(remaining.length > 0 ? remaining[0].id : null);
-                }
+            await storesAPI.deleteShop(id);
+            const remaining = stores.filter(s => s.id !== id);
+            setStores(remaining);
+            if (activeStoreId === id) {
+                setActiveStoreId(remaining.length > 0 ? remaining[0].id : null);
             }
         } catch (error) {
             alert("Failed to delete store");
@@ -197,8 +183,8 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
                                 key={store.id}
                                 onClick={() => setActiveStoreId(store.id)}
                                 className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${activeStoreId === store.id
-                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-2 ring-blue-500'
-                                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-2 ring-blue-500'
+                                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                                     }`}
                             >
                                 <div className="flex items-center gap-3">

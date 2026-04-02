@@ -2,6 +2,8 @@ import { Controller, Get, Post, Put, Patch, Delete, Body, Param, UseGuards, Req 
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import { PlanService } from '../common/plan.service';
+import { AdminGuard } from '../auth/guards/admin.guard';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -11,6 +13,7 @@ export class UsersController {
     ) { }
 
     @Get()
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     findAll() {
         return this.usersService.getAllUsers();
     }
@@ -23,7 +26,7 @@ export class UsersController {
 
     @Put('me')
     @UseGuards(AuthGuard('jwt'))
-    async updateProfile(@Req() req, @Body() body: any) {
+    async updateProfile(@Req() req, @Body() body: UpdateUserDto) {
         return this.usersService.updateProfile(req.user.id, body);
     }
 
@@ -82,7 +85,7 @@ export class UsersController {
 
 
     @Patch('free-reports-all')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async setAllFreeReports(@Body() body: { enable: boolean }) {
         const count = await this.usersService.setAllFreeReports(body.enable);
         return { success: true, count };
@@ -101,7 +104,7 @@ export class UsersController {
     }
 
     @Patch(':id/free-reports')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async setFreeReports(@Param('id') id: string, @Body() body: { enable: boolean }) {
         return this.usersService.setFreeReports(id, body.enable);
     }

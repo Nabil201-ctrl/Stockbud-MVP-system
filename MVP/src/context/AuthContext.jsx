@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import api, { authAPI, userAPI } from '../services/api';
+import { storage } from '../utils/db';
 
 const AuthContext = createContext();
-
-const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -11,55 +10,34 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const authenticatedFetch = async (url, options = {}) => {
-        let response = await fetch(url, {
-            ...options,
-            credentials: 'include', 
-            headers: {
-                ...options.headers,
-                
-            }
-        });
-
-        if (response.status === 401) {
-            
-            try {
-                const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-
-                if (refreshResponse.ok) {
-                    
-                    response = await fetch(url, {
-                        ...options,
-                        credentials: 'include'
-                    });
-                } else {
-                    
-                    setUser(null);
-                }
-            } catch (error) {
-                console.error("Token refresh failed", error);
-                setUser(null);
-            }
-        }
-        return response;
-    };
-
     const checkAuth = async () => {
         try {
-            
-            const response = await authenticatedFetch(`${API_URL}/users/me?t=${Date.now()}`);
-            if (response.ok) {
-                const userData = await response.json();
-                setUser(userData);
+            // Optimistically load user from cache if available for immediate render
+            const cachedUser = await storage.get('stockbud_cached_user');
+            if (cachedUser) {
+                setUser(cachedUser);
+            }
+
+            const response = await userAPI.getProfile();
+            setUser(response.data);
+            await storage.set('stockbud_cached_user', response.data);
+        } catch (error) {
+            if (error.isOffline) {
+                console.warn('Network offline. Using cached user session.');
+                const cachedUser = await storage.get('stockbud_cached_user');
+                if (cachedUser) {
+                    setUser(cachedUser);
+                } else {
+                    setUser(null);
+                }
+            } else if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                // explicit unauthorization
+                setUser(null);
+                await storage.delete('stockbud_cached_user');
             } else {
+                console.error('Failed to check auth', error);
                 setUser(null);
             }
-        } catch (error) {
-            console.error('Failed to check auth', error);
-            setUser(null);
         } finally {
             setLoading(false);
         }
@@ -67,77 +45,77 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         checkAuth();
+
+        const handleOnline = () => {
+            console.log('App back online, re-syncing auth profile...');
+            checkAuth();
+        };
+
+        // Listen for internal unauthorized logout triggers from api.js
+        const handleAuthLogout = async () => {
+            setUser(null);
+            await storage.delete('stockbud_cached_user');
+        };
+
+        window.addEventListener('online', handleOnline);
+        globalThis.addEventListener('auth:logout', handleAuthLogout);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            globalThis.removeEventListener('auth:logout', handleAuthLogout);
+        };
     }, []);
 
     const loginLocal = async (email, password) => {
-        const response = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ email, password })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            setUser(data.user);
+        try {
+            const response = await authAPI.login(email, password);
+            setUser(response.data.user);
+            await storage.set('stockbud_cached_user', response.data.user);
             return { success: true };
-        } else {
+        } catch (error) {
             return { success: false, error: 'Invalid credentials' };
         }
     };
 
     const logout = async () => {
         try {
-            await fetch(`${API_URL}/auth/logout`, {
-                method: 'POST',
-                credentials: 'include'
-            });
+            await authAPI.logout();
         } catch (err) {
             console.error("Logout failed", err);
         }
         setUser(null);
+        await storage.delete('stockbud_cached_user');
     };
 
     const register = async (name, email, password) => {
-        const response = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, password })
-        });
-
-        if (response.ok) {
-            
+        try {
+            await authAPI.register(name, email, password);
+            // Auto login after complete
             return loginLocal(email, password);
-        } else {
-            const data = await response.json();
-            return { success: false, error: data.message || 'Registration failed' };
+        } catch (error) {
+            return { success: false, error: error.response?.data?.message || 'Registration failed' };
         }
     };
 
     const updateProfile = async (data) => {
-        const response = await authenticatedFetch(`${API_URL}/users/me`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (response.ok) {
-            const updatedUser = await response.json();
-            setUser(updatedUser);
+        try {
+            const response = await userAPI.updateProfile(data);
+            setUser(response.data);
+            await storage.set('stockbud_cached_user', response.data);
             return { success: true };
+        } catch (error) {
+            return { success: false };
         }
-        return { success: false };
     };
 
     const completeOnboarding = async () => {
-        const response = await authenticatedFetch(`${API_URL}/users/onboarding/complete`, {
-            method: 'POST'
-        });
-        if (response.ok) {
-            const updatedUser = await response.json();
-            setUser(updatedUser);
+        try {
+            const response = await userAPI.completeOnboarding();
+            setUser(response.data);
+            await storage.set('stockbud_cached_user', response.data);
             return { success: true };
+        } catch (error) {
+            return { success: false };
         }
-        return { success: false };
     };
 
     const value = {
@@ -149,7 +127,6 @@ export const AuthProvider = ({ children }) => {
         completeOnboarding,
         isAuthenticated: !!user,
         loading,
-        authenticatedFetch,
         refreshUser: checkAuth
     };
 

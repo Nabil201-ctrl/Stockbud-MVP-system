@@ -1,8 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
-import * as fs from 'fs';
-import * as path from 'path';
+import helmet from 'helmet';
+import { ValidationPipe } from '@nestjs/common';
 import fetch, { Headers, Request, Response } from 'node-fetch';
 
 if (!global.fetch) {
@@ -17,6 +17,9 @@ import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
+    // Security Headers
+    app.use(helmet());
+
     // Connect to Image Microservice via RabbitMQ
     app.connectMicroservice<MicroserviceOptions>({
         transport: Transport.RMQ,
@@ -30,36 +33,34 @@ async function bootstrap() {
     });
 
     await app.startAllMicroservices();
+
     app.enableCors({
         origin: (origin, callback) => {
+            // Allow if local development or specified secure tunnels
+            const allowedPatterns = [
+                /^http:\/\/localhost:\d+$/,
+                /\.trycloudflare\.com$/,
+                /\.ngrok-free\.app$/
+            ];
 
-            if (!origin) return callback(null, true);
-
-            if (origin.includes('localhost')) return callback(null, true);
-
-            if (origin.includes('trycloudflare.com')) return callback(null, true);
-
-            if (origin.includes('ngrok-free.app')) return callback(null, true);
-
-
-            if (origin === 'http://localhost:5173' || origin === 'http://localhost:5174') return callback(null, true);
-
-            callback(null, true);
+            if (!origin || allowedPatterns.some(pattern => pattern.test(origin))) {
+                callback(null, true);
+            } else {
+                console.warn(`CORS blocked for origin: ${origin}`);
+                callback(new Error('Not allowed by CORS'), false);
+            }
         },
         credentials: true,
     });
 
     app.use(cookieParser());
 
-
-    app.use((req, res, next) => {
-        const logLine = `\n[${new Date().toISOString()}] ${req.method} ${req.url}
-Headers: ${JSON.stringify(req.headers)}
-Cookies: ${JSON.stringify(req.cookies)}
-------------------------------------------------`;
-        fs.appendFileSync(path.join(__dirname, '..', 'debug_auth.log'), logLine);
-        next();
-    });
+    // Global validation for input DTOs
+    app.useGlobalPipes(new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+    }));
 
     await app.listen(3000);
     console.log('Backend is running on http://localhost:3000');

@@ -1,19 +1,21 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-    private resetTokens = new Map<string, string>(); 
+    private resetTokens = new Map<string, string>();
 
     constructor(
         private usersService: UsersService,
         private jwtService: JwtService,
+        private notificationsService: NotificationsService,
     ) { }
 
     async validateUser(details: any) {
-        
+
         const user = await this.usersService.createOrFind(details);
         return user;
     }
@@ -21,7 +23,7 @@ export class AuthService {
     async validateUserLocal(email: string, pass: string): Promise<any> {
         const user = await this.usersService.findByEmail(email);
         if (user && user.password && await bcrypt.compare(pass, user.password)) {
-            const { password, ...result } = user;
+            const { password, refreshToken, ...result } = user;
             return result;
         }
         return null;
@@ -31,13 +33,7 @@ export class AuthService {
         const adminEmail = process.env.ADMIN_EMAIL;
         const adminPass = process.env.ADMIN_PASSWORD;
 
-        console.log('--- Admin Login Debug ---');
-        console.log(`Received: [${email}] / [${pass}]`);
-        console.log(`Expected: [${adminEmail}] / [${adminPass}]`);
-        console.log(`Match Email: ${email === adminEmail}`);
-        console.log(`Match Pass: ${pass === adminPass}`);
-
-        if (email === adminEmail && pass === adminPass) {
+        if (adminEmail && adminPass && email === adminEmail && pass === adminPass) {
             const user = {
                 id: 'admin',
                 email: adminEmail,
@@ -46,11 +42,11 @@ export class AuthService {
             };
             const payload = {
                 email: adminEmail,
-                sub: 'admin', 
+                sub: 'admin',
                 role: 'admin',
                 name: 'Administrator'
             };
-            const accessToken = this.jwtService.sign(payload, { expiresIn: '24h' });
+            const accessToken = this.jwtService.sign(payload, { expiresIn: '12h' });
             return {
                 access_token: accessToken,
                 user
@@ -60,18 +56,19 @@ export class AuthService {
     }
 
     async register(email: string, pass: string, name: string, ip?: string) {
-        const hashedPassword = await bcrypt.hash(pass, 10);
+        const hashedPassword = await bcrypt.hash(pass, 12);
         const user = await this.usersService.createUser(email, name, hashedPassword);
         if (ip && user) {
             await this.usersService.fetchAndSetLocation(user.id, ip);
         }
-        return user;
+        const { password, refreshToken, ...result } = user;
+        return result;
     }
 
     async login(user: any, ip?: string) {
         const payload = { email: user.email, sub: user.id };
-        const accessToken = this.jwtService.sign(payload, { expiresIn: '24h' });
-        const refreshToken = this.jwtService.sign(payload, { expiresIn: '30d' });
+        const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+        const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
         await this.usersService.setRefreshToken(user.id, refreshToken);
 
@@ -87,10 +84,11 @@ export class AuthService {
             await this.usersService.fetchAndSetLocation(user.id, ip);
         }
 
+        const { password, refreshToken: storedRefreshToken, ...safeUser } = user;
         return {
             access_token: accessToken,
             refresh_token: refreshToken,
-            user,
+            user: safeUser,
         };
     }
 
@@ -104,18 +102,19 @@ export class AuthService {
             }
 
             const newPayload = { email: user.email, sub: user.id };
-            const accessToken = this.jwtService.sign(newPayload, { expiresIn: '24h' });
-            const newRefreshToken = this.jwtService.sign(newPayload, { expiresIn: '30d' });
+            const accessToken = this.jwtService.sign(newPayload, { expiresIn: '1h' });
+            const newRefreshToken = this.jwtService.sign(newPayload, { expiresIn: '7d' });
 
             await this.usersService.setRefreshToken(user.id, newRefreshToken);
 
+            const { password, refreshToken: storedToken, ...safeUser } = user;
             return {
                 access_token: accessToken,
                 refresh_token: newRefreshToken,
-                user,
+                user: safeUser,
             };
         } catch (e) {
-            throw new UnauthorizedException('Invalid refresh token');
+            throw new UnauthorizedException('Invalid refresh token session');
         }
     }
 
@@ -132,29 +131,58 @@ export class AuthService {
 
     async forgotPassword(email: string) {
         const user = await this.usersService.findByEmail(email);
-        if (!user) return { message: 'If email exists, reset info sent.' }; 
+        if (!user) return { message: 'If email exists, reset info sent.' };
 
-        
         const token = Math.random().toString(36).substr(2, 12);
         this.resetTokens.set(token, email);
 
-        
-        console.log(`[DEV ONLY] Reset Token for ${email}: ${token}`);
+        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/reset-password?token=${token}`;
 
-        return { message: 'Reset info sent (check console)' };
+        await this.notificationsService.sendEmail(
+            email,
+            'Password Reset Request - StockBud',
+            `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                <h2 style="color: #2563eb;">Password Reset Request</h2>
+                <p>Hello ${user.name || 'User'},</p>
+                <p>We received a request to reset your StockBud password. Click the button below to choose a new password:</p>
+                <div style="margin: 30px 0;">
+                    <a href="${resetLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+                </div>
+                <p>If you didn't request a password reset, you can safely ignore this email. The link will expire shortly.</p>
+                <p>Thanks,<br>The StockBud Team</p>
+            </div>
+            `
+        );
+
+        console.log(`[DEV ONLY] Reset Email Sent. URL for ${email}: ${resetLink}`);
+
+        return { message: 'Reset info sent.' };
     }
 
     async resetPassword(token: string, newPass: string) {
-        const email = this.resetTokens.get(token);
-        if (!email) throw new UnauthorizedException('Invalid or expired token');
+        const tokenDataStr = this.resetTokens.get(token);
+        if (!tokenDataStr) throw new UnauthorizedException('Invalid or expired token');
 
-        const user = await this.usersService.findByEmail(email);
-        if (!user) throw new UnauthorizedException('User not found');
+        try {
+            const { email, expiresAt } = JSON.parse(tokenDataStr);
 
-        const hashedPassword = await bcrypt.hash(newPass, 10);
-        await this.usersService.updateProfile(user.id, { password: hashedPassword });
+            if (Date.now() > expiresAt) {
+                this.resetTokens.delete(token);
+                throw new UnauthorizedException('Token has expired');
+            }
 
-        this.resetTokens.delete(token);
-        return { message: 'Password reset successful' };
+            const user = await this.usersService.findByEmail(email);
+            if (!user) throw new UnauthorizedException('User no longer exists');
+
+            const hashedPassword = await bcrypt.hash(newPass, 12);
+            await this.usersService.updateProfile(user.id, { password: hashedPassword });
+
+            this.resetTokens.delete(token);
+            return { message: 'Password reset successful' };
+        } catch (e) {
+            if (e instanceof UnauthorizedException) throw e;
+            throw new UnauthorizedException('Invalid token data');
+        }
     }
 }

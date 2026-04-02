@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { RefreshCw, TrendingUp } from 'lucide-react';
+import { dashboardAPI } from '../services/api';
 
 const RevenueChart = lazy(() => import('../components/charts/RevenueChart'));
 const SourcePieChart = lazy(() => import('../components/charts/SourcePieChart'));
@@ -34,7 +35,7 @@ const Dashboard = () => {
   const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'highest', 'lowest'
   const [filterBy, setFilterBy] = useState('all'); // 'all', 'web', 'pos', 'instagram'
   const [dateRange, setDateRange] = useState('month'); // '7days', 'month', 'year'
-  const { authenticatedFetch, user } = useAuth();
+  const { user } = useAuth();
 
 
   const userCurrency = user?.currency || 'USD';
@@ -65,22 +66,14 @@ const Dashboard = () => {
         setLoading(false); // Show content immediately if we have cache
       }
 
-      // 2. Fetch fresh data using authenticated cookie
-      // The backend knows the active shop from the user session/state
-      const response = await authenticatedFetch(`/api/dashboard/stats?range=${dateRange}`);
-
-      if (!response.ok) {
-        if (response.status === 401) throw new Error('Unauthorized');
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
+      // 2. Fetch fresh data using centralized API
+      const response = await dashboardAPI.getStats(dateRange);
+      const data = response.data;
 
       if (data && data.targetDetails) {
         setTargetType(data.targetDetails.type);
         setTargetValue(data.targetDetails.value);
       }
-
 
       setStats(data);
       await storage.set(cacheKey, data);
@@ -97,7 +90,7 @@ const Dashboard = () => {
     if (user) {
       fetchStats();
     }
-  }, [authenticatedFetch, user?.activeShopId, dateRange]);
+  }, [user?.activeShopId, dateRange]);
 
   useEffect(() => {
     if (!stats) return;
@@ -129,30 +122,17 @@ const Dashboard = () => {
 
   const saveTarget = async () => {
     try {
-      const response = await authenticatedFetch('/api/dashboard/target', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ type: targetType, value: targetValue }),
-      });
+      await dashboardAPI.setTarget(targetType, targetValue);
 
-      if (response.ok) {
-        setIsTargetModalOpen(false);
+      setIsTargetModalOpen(false);
 
-
-        if (user?.activeShopId) {
-          setLoading(true);
-          const fresh = await authenticatedFetch('/api/dashboard/stats');
-          if (fresh.ok) {
-            const freshData = await fresh.json();
-            setStats(freshData);
-            await storage.set(`dashboard_stats_${user.activeShopId}`, freshData);
-          }
-          setLoading(false);
-        }
-      } else {
-        console.error('Failed to save target.');
+      if (user?.activeShopId) {
+        setLoading(true);
+        const fresh = await dashboardAPI.getStats();
+        const freshData = fresh.data;
+        setStats(freshData);
+        await storage.set(`dashboard_stats_${user.activeShopId}`, freshData);
+        setLoading(false);
       }
     } catch (error) {
       console.error('Network error saving target', error);

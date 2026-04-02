@@ -3,6 +3,7 @@ import { Users, UserPlus, UserCheck, UserX, TrendingUp, Calendar, Filter, Search
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { userAPI } from '../services/api';
 
 const UsersPage = () => {
   const { isDarkMode } = useTheme();
@@ -26,8 +27,8 @@ const UsersPage = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('/api/users');
-        const data = await response.json();
+        const response = await userAPI.getUsers();
+        const data = response.data;
 
         const usersList = Array.isArray(data) ? data : (data.users || []);
         setUserData(usersList);
@@ -42,7 +43,7 @@ const UsersPage = () => {
 
         setUserStats({
           total,
-          active: Math.max(0, total - 2), 
+          active: Math.max(0, total - 2),
           new: newToday,
           inactive: Math.min(2, total),
           growth: 12.4,
@@ -96,7 +97,7 @@ const UsersPage = () => {
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {}
+        { }
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8" id="users-header">
           <div>
             <h1 className="text-3xl font-bold mb-2">{t('users.title')}</h1>
@@ -135,7 +136,7 @@ const UsersPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {}
+          { }
           <div className={`lg:col-span-2 rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} id="users-table">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold">{t('users.listTitle')}</h2>
@@ -223,7 +224,7 @@ const UsersPage = () => {
               </table>
             </div>
 
-            {}
+            { }
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Showing 6 of {userStats.total.toLocaleString()} users
@@ -248,9 +249,9 @@ const UsersPage = () => {
             </div>
           </div>
 
-          {}
+          { }
           <div className="space-y-6">
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('users.planDistribution')}</h3>
               <div className="space-y-4">
@@ -297,7 +298,7 @@ const UsersPage = () => {
               </div>
             </div>
 
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('users.quickActions')}</h3>
               <div className="space-y-3">
@@ -318,7 +319,7 @@ const UsersPage = () => {
               </div>
             </div>
 
-            {}
+            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('users.userSegments')}</h3>
               <div className="space-y-3">

@@ -26,14 +26,14 @@ export class SocialStoresController {
 
     @Patch(':id')
     @UseGuards(AuthGuard('jwt'))
-    async update(@Param('id') id: string, @Body() data: Partial<SocialStore>) {
-        return this.socialStoresService.update(id, data);
+    async update(@Req() req, @Param('id') id: string, @Body() data: Partial<SocialStore>) {
+        return this.socialStoresService.update(req.user.id, id, data);
     }
 
     @Delete(':id')
     @UseGuards(AuthGuard('jwt'))
-    async delete(@Param('id') id: string) {
-        return this.socialStoresService.delete(id);
+    async delete(@Req() req, @Param('id') id: string) {
+        return this.socialStoresService.delete(req.user.id, id);
     }
 
     @Post(':id/record-visit')
@@ -48,8 +48,8 @@ export class SocialStoresController {
 
     @Get(':id/stats')
     @UseGuards(AuthGuard('jwt'))
-    async getStats(@Param('id') id: string) {
-        return this.socialStoresService.getStats(id);
+    async getStats(@Req() req, @Param('id') id: string) {
+        return this.socialStoresService.getStats(req.user.id, id);
     }
 
     @Get(':id/products')
@@ -59,19 +59,19 @@ export class SocialStoresController {
 
     @Post(':id/products')
     @UseGuards(AuthGuard('jwt'))
-    async addProduct(@Param('id') id: string, @Body() product: any) {
-        return this.socialStoresService.addProduct(id, product);
+    async addProduct(@Req() req, @Param('id') id: string, @Body() product: any) {
+        return this.socialStoresService.addProduct(req.user.id, id, product);
     }
 
     @Patch(':id/products/:productId')
     @UseGuards(AuthGuard('jwt'))
-    async editProduct(@Param('id') id: string, @Param('productId') productId: string, @Body() data: any) {
-        return this.socialStoresService.editProduct(id, productId, data);
+    async editProduct(@Req() req, @Param('id') id: string, @Param('productId') productId: string, @Body() data: any) {
+        return this.socialStoresService.editProduct(req.user.id, id, productId, data);
     }
 
     @Delete(':id/products/:productId')
     @UseGuards(AuthGuard('jwt'))
-    async deleteProduct(@Param('id') id: string, @Param('productId') productId: string) {
-        return this.socialStoresService.deleteProduct(id, productId);
+    async deleteProduct(@Req() req, @Param('id') id: string, @Param('productId') productId: string) {
+        return this.socialStoresService.deleteProduct(req.user.id, id, productId);
     }
 }

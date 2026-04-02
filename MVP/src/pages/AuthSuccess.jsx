@@ -10,25 +10,22 @@ const AuthSuccess = () => {
 
     useEffect(() => {
         const loginSuccess = searchParams.get('login_success');
-        const accessToken = searchParams.get('access_token');
 
-        
-        if (window.opener && accessToken) {
+        // Close popup if this is an OAuth flow
+        if (window.opener && loginSuccess) {
             window.opener.postMessage({
                 type: 'STOCKBUD_AUTH_SUCCESS',
-                token: accessToken
-            }, '*'); 
+                status: 'success'
+            }, '*');
             window.close();
             return;
         }
 
-        
-        
-        if (!loading && user) {
-            navigate('/onboarding/notifications');
-        } else if (!loading && !user) {
-            
-            if (!loginSuccess) {
+        // Wait for checkAuth in AuthProvider to finish loading user from HttpOnly cookies
+        if (!loading) {
+            if (user) {
+                navigate('/dashboard'); // or /onboarding/notifications
+            } else if (!loginSuccess) {
                 navigate('/');
             }
         }

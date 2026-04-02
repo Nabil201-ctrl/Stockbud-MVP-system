@@ -8,10 +8,12 @@ import { UsersModule } from '../users/users.module';
 import { GoogleStrategy } from './google.strategy';
 import { JwtStrategy } from './jwt.strategy';
 import { LocalStrategy } from './local.strategy';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [
         UsersModule,
+        NotificationsModule,
         PassportModule,
         JwtModule.registerAsync({
             imports: [ConfigModule],
