@@ -171,16 +171,25 @@ export class UsersService implements OnModuleInit {
         const user = this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
 
-        const store = user.shopifyStores.find(s => s.id === storeId);
+        const shopifyStore = user.shopifyStores.find(s => s.id === storeId);
+        const socialStore = user.socialStores.find(s => s.id === storeId);
 
-        if (store) {
+        if (shopifyStore) {
             return this.db.updateUser(userId, {
                 activeShopId: storeId,
-                shopifyShop: store.shop,
-                shopifyToken: store.token
+                shopifyShop: shopifyStore.shop,
+                shopifyToken: shopifyStore.token
+            });
+        } else if (socialStore) {
+            // Keep the previous Shopify credentials if selecting Social, 
+            // or use first available if none. This allows products to still load.
+            const primaryShop = user.shopifyStores[0];
+            return this.db.updateUser(userId, {
+                activeShopId: storeId,
+                shopifyShop: user.shopifyShop || primaryShop?.shop || null,
+                shopifyToken: user.shopifyToken || primaryShop?.token || null
             });
         } else {
-            // Assume it's a social store ID or other
             return this.db.updateUser(userId, {
                 activeShopId: storeId,
                 shopifyShop: null,

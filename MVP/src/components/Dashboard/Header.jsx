@@ -21,7 +21,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await authenticatedFetch('http://localhost:3000/notifications');
+      const response = await authenticatedFetch('/api/notifications');
       if (response.ok) {
         const data = await response.json();
         setNotifications(data);
@@ -72,7 +72,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
 
   const markAllAsRead = async () => {
     try {
-      const response = await authenticatedFetch('http://localhost:3000/notifications/read-all', {
+      const response = await authenticatedFetch('/api/notifications/read-all', {
         method: 'PATCH'
       });
       if (response.ok) {
@@ -86,7 +86,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   const markAsRead = async (id, e) => {
     e.stopPropagation();
     try {
-      const response = await authenticatedFetch(`http://localhost:3000/notifications/${id}/read`, {
+      const response = await authenticatedFetch(`/api/notifications/${id}/read`, {
         method: 'PATCH'
       });
       if (response.ok) {
@@ -102,7 +102,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   const handleShopSwitch = async (storeId) => {
     if (storeId === user.activeShopId) return;
     try {
-      const response = await authenticatedFetch('http://localhost:3000/users/shopify-stores/active', {
+      const response = await authenticatedFetch('/api/users/shopify-stores/active', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeId })
@@ -119,7 +119,8 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   };
 
   const allStores = [
-    ...(user?.shopifyStores?.map(s => ({ ...s, isShopify: true })) || [])
+    ...(user?.shopifyStores?.map(s => ({ ...s, isShopify: true })) || []),
+    ...(user?.socialStores?.map(s => ({ ...s, isSocial: true })) || [])
   ];
 
   const activeStore = allStores.find(s => s.id === user?.activeShopId);

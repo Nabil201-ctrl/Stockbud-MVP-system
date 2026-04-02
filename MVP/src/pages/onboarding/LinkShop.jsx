@@ -27,7 +27,7 @@ const LinkShop = () => {
         setCodeLoading(true);
         setCodeError(null);
         try {
-            const response = await authenticatedFetch('http://localhost:3000/shopify/pairing-code', {
+            const response = await authenticatedFetch('/api/shopify/pairing-code', {
                 method: 'POST',
             });
             if (!response.ok) {

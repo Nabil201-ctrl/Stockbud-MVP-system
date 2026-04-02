@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical, Store, AlertCircle, Bell, X } from 'lucide-react';
+import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical, Store, AlertCircle, Bell, X, Upload, Image as ImageIcon } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,7 @@ import { useLanguage } from '../context/LanguageContext';
 
 const ITEMS_PER_PAGE = 6;
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const IMAGE_API_URL = import.meta.env.VITE_IMAGE_API_URL || 'http://localhost:3002';
 
 const ProductsPage = () => {
   const { isDarkMode } = useTheme();
@@ -48,6 +49,42 @@ const ProductsPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [triggerAddProduct, setTriggerAddProduct] = useState(false);
+  const [productToEdit, setProductToEdit] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async () => {
+    if (!imageFile) return null;
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('images', imageFile);
+      const res = await fetch(`${IMAGE_API_URL}/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      setUploadingImage(false);
+      return data.urls?.[0];
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setUploadingImage(false);
+      return null;
+    }
+  };
 
   const activeCurrency = useMemo(() => {
     if (products.length > 0 && products[0].currency) {
@@ -132,12 +169,24 @@ const ProductsPage = () => {
     setThresholdInput('');
   };
 
+  const closeModals = () => {
+    setTriggerAddProduct(false);
+    setProductToEdit(null);
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const fetchProducts = async (cursor = null, direction = 'next') => {
     if (!user?.activeShopId) {
       setLoading(false);
       setShopifyNotConnected(true);
       setProducts([]);
       return;
+    }
+
+    const isSocialStore = user.socialStores?.some(s => s.id === user.activeShopId);
+    if (isSocialStore) {
+      setShopifyNotConnected(false);
     }
 
     try {
@@ -148,7 +197,7 @@ const ProductsPage = () => {
         const cachedProducts = await storage.get(cacheKey);
         if (cachedProducts) {
           setProducts(cachedProducts.products);
-          setProductStats(cachedProducts.stats);
+          setProductStats(prev => ({ ...prev, ...(cachedProducts.stats || {}) }));
           setPageInfo(cachedProducts.pageInfo);
           setTotalCount(cachedProducts.totalCount);
           setLoading(false);
@@ -245,11 +294,11 @@ const ProductsPage = () => {
         await storage.set(cacheKey, {
           products: transformedProducts,
           stats: {
+            ...productStats,
             total: serverTotalCount || transformedProducts.length,
             active,
             outOfStock,
             lowStock,
-            totalRevenue: productStats.totalRevenue // Persist current revenue
           },
           pageInfo: pageInfoData,
           totalCount: serverTotalCount
@@ -362,20 +411,45 @@ const ProductsPage = () => {
         { }
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">{t('products.title')}</h1>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-3xl font-bold">{t('products.title')}</h1>
+              {user?.activeShopId && (
+                <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${user.socialStores?.some(s => s.id === user.activeShopId)
+                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800'
+                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800'
+                  }`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${user.socialStores?.some(s => s.id === user.activeShopId) ? 'bg-purple-500' : 'bg-green-500'} animate-pulse`} />
+                  {user.shopifyStores?.find(s => s.id === user.activeShopId)?.name ||
+                    user.socialStores?.find(s => s.id === user.activeShopId)?.name || 'Store'}
+                </div>
+              )}
+            </div>
             <p className="text-gray-500 dark:text-gray-400">
               {t('products.subtitle')}
             </p>
           </div>
+          {user?.activeShopId && user.socialStores?.some(s => s.id === user.activeShopId) && (
+            <button
+              onClick={() => {
+                setImageFile(null);
+                setImagePreview(null);
+                setTriggerAddProduct(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+            >
+              <Package size={18} />
+              Add Social Product
+            </button>
+          )}
         </div>
 
         { }
         <div id="products-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
-            { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total, change: '+12%', color: 'bg-blue-500' },
-            { icon: <DollarSign size={24} />, label: t('products.revenue'), value: `${activeCurrency} ${productStats.totalRevenue.toLocaleString()}`, change: '+8.5%', color: 'bg-green-500' },
-            { icon: <ShoppingCart size={24} />, label: t('products.activeProducts'), value: productStats.active, change: '+3.2%', color: 'bg-purple-500' },
-            { icon: <Star size={24} />, label: t('products.avgRating'), value: productStats.avgRating, change: '+0.2', color: 'bg-orange-500' }
+            { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total || 0, change: '+12%', color: 'bg-blue-500' },
+            { icon: <DollarSign size={24} />, label: t('products.revenue'), value: `${activeCurrency} ${(productStats.totalRevenue || 0).toLocaleString()}`, change: '+8.5%', color: 'bg-green-500' },
+            { icon: <ShoppingCart size={24} />, label: t('products.activeProducts'), value: productStats.active || 0, change: '+3.2%', color: 'bg-purple-500' },
+            { icon: <Star size={24} />, label: t('products.avgRating'), value: productStats.avgRating || 0, change: '+0.2', color: 'bg-orange-500' }
           ].map((stat, idx) => (
             <div key={idx} className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center justify-between mb-4">
@@ -501,6 +575,35 @@ const ProductsPage = () => {
                           </div>
                         </td>
                         <td className="py-4 px-4 flex gap-2">
+                          {user?.socialStores?.some(s => s.id === user.activeShopId) && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setImageFile(null);
+                                  setImagePreview(product.image);
+                                  setProductToEdit(product);
+                                }}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-blue-500"
+                                title="Edit Product"
+                              >
+                                <Package size={18} />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm('Are you sure you want to delete this product?')) {
+                                    try {
+                                      const res = await authenticatedFetch(`${API_URL}/social-stores/${user.activeShopId}/products/${product.id}`, { method: 'DELETE' });
+                                      if (res.ok) await fetchProducts();
+                                    } catch (err) { alert('Failed to delete product') }
+                                  }
+                                }}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-red-500"
+                                title="Delete Product"
+                              >
+                                <X size={18} />
+                              </button>
+                            </>
+                          )}
                           <button
                             onClick={() => {
                               setShowThresholdModal(product);
@@ -580,9 +683,9 @@ const ProductsPage = () => {
               <h3 className="text-lg font-semibold mb-4">{t('products.stockStatus')}</h3>
               <div className="space-y-4">
                 {[
-                  { status: t('products.inStock'), count: productStats.active, color: 'bg-green-500' },
-                  { status: t('products.lowStock'), count: productStats.lowStock, color: 'bg-yellow-500' },
-                  { status: t('products.outOfStock'), count: productStats.outOfStock, color: 'bg-red-500' }
+                  { status: t('products.inStock'), count: productStats.active || 0, color: 'bg-green-500' },
+                  { status: t('products.lowStock'), count: productStats.lowStock || 0, color: 'bg-yellow-500' },
+                  { status: t('products.outOfStock'), count: productStats.outOfStock || 0, color: 'bg-red-500' }
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -593,7 +696,7 @@ const ProductsPage = () => {
                       <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div
                           className={`${item.color} h-2 rounded-full`}
-                          style={{ width: `${(item.count / productStats.total) * 100}%` }}
+                          style={{ width: `${productStats.total > 0 ? (item.count / productStats.total) * 100 : 0}%` }}
                         ></div>
                       </div>
                       <span className="font-medium w-10 text-right">{item.count}</span>
@@ -607,7 +710,7 @@ const ProductsPage = () => {
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.topPerforming')}</h3>
               <div className="space-y-4">
-                {productStats.topProducts.slice(0, 5).map((product, idx) => (
+                {(productStats.topProducts || []).slice(0, 5).map((product, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
                     <div className="flex items-center gap-3 min-w-0 pr-2">
                       <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -626,7 +729,7 @@ const ProductsPage = () => {
                     </div>
                   </div>
                 ))}
-                {productStats.topProducts.length === 0 && (
+                {(!productStats.topProducts || productStats.topProducts.length === 0) && (
                   <div className="text-center py-4 text-sm text-gray-500">No data found</div>
                 )}
               </div>
@@ -713,6 +816,176 @@ const ProductsPage = () => {
           </div>
         )}
       </div>
+
+      {triggerAddProduct && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <h3 className="font-bold text-xl flex items-center gap-2">
+                <Package className="text-blue-500" />
+                Add Social Product
+              </h3>
+              <button onClick={closeModals} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+
+                const uploadedUrl = await uploadImage();
+                if (uploadedUrl) {
+                  data.image = uploadedUrl;
+                }
+
+                try {
+                  const res = await authenticatedFetch(`${API_URL}/social-stores/${user.activeShopId}/products`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                  });
+                  if (res.ok) {
+                    await fetchProducts();
+                    closeModals();
+                  }
+                } catch (err) {
+                  alert("Failed to add product");
+                }
+              }}
+              className="p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-bold mb-1">Product Title</label>
+                <input name="title" required placeholder="e.g. Vintage Sunglasses" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold mb-1">Price</label>
+                  <input name="price" type="number" step="0.01" required placeholder="0.00" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Stock Level</label>
+                  <input name="stock" type="number" required placeholder="10" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Category</label>
+                <input name="category" placeholder="e.g. Eyewear" className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+              </div>
+              <div className="pt-2">
+                <label className="block text-sm font-bold mb-2">Product Image</label>
+                <div className="flex items-center gap-4">
+                  <div className={`w-24 h-24 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden ${isDarkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon size={32} className="text-gray-400" />
+                    )}
+                  </div>
+                  <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                    <Upload size={18} />
+                    <span className="text-sm font-medium">Upload Image</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                  </label>
+                </div>
+              </div>
+              <div className={`p-4 border-t mt-6 flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                <button type="button" onClick={closeModals} className="px-6 py-2.5 rounded-xl font-bold">Cancel</button>
+                <button type="submit" disabled={uploadingImage} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50">
+                  {uploadingImage ? 'Uploading...' : 'Create Product'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {productToEdit && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <h3 className="font-bold text-xl flex items-center gap-2">
+                <Package className="text-blue-500" />
+                Edit Product
+              </h3>
+              <button onClick={closeModals} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+
+                const uploadedUrl = await uploadImage();
+                if (uploadedUrl) {
+                  data.image = uploadedUrl;
+                }
+
+                try {
+                  const res = await authenticatedFetch(`${API_URL}/social-stores/${user.activeShopId}/products/${productToEdit.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                  });
+                  if (res.ok) {
+                    await fetchProducts();
+                    closeModals();
+                  }
+                } catch (err) {
+                  alert("Failed to update product");
+                }
+              }}
+              className="p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-bold mb-1">Product Title</label>
+                <input name="title" defaultValue={productToEdit.name} required className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold mb-1">Price</label>
+                  <input name="price" type="number" step="0.01" defaultValue={productToEdit.price} required className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Stock Level</label>
+                  <input name="stock" type="number" defaultValue={productToEdit.stock} required className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Category</label>
+                <input name="category" defaultValue={productToEdit.category} className={`w-full p-3 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`} />
+              </div>
+              <div className="pt-2">
+                <label className="block text-sm font-bold mb-2">Product Image</label>
+                <div className="flex items-center gap-4">
+                  <div className={`w-24 h-24 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden ${isDarkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon size={32} className="text-gray-400" />
+                    )}
+                  </div>
+                  <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>
+                    <Upload size={18} />
+                    <span className="text-sm font-medium">Change Image</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                  </label>
+                </div>
+              </div>
+              <div className={`p-4 border-t mt-6 flex justify-end gap-3 ${isDarkMode ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+                <button type="button" onClick={closeModals} className="px-6 py-2.5 rounded-xl font-bold">Cancel</button>
+                <button type="submit" disabled={uploadingImage} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50">
+                  {uploadingImage ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

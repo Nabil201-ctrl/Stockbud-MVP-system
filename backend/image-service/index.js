@@ -72,6 +72,18 @@ async function initRabbit() {
             setTimeout(initRabbit, 5000);
         });
 
+        // 2. Consume processing requests from main server
+        const inboundQueue = 'image_processing_requests';
+        await rabbitChannel.assertQueue(inboundQueue, { durable: false });
+        rabbitChannel.consume(inboundQueue, (msg) => {
+            if (msg !== null) {
+                const content = JSON.parse(msg.content.toString());
+                console.log('🖼️ [Image Service] Received async processing request:', content.pattern, 'for payload:', content.data);
+                // In a real scenario, this would trigger resizing, blurring, watermark, etc.
+                rabbitChannel.ack(msg);
+            }
+        });
+
     } catch (err) {
         console.error('[Image Service] Failed to connect to RabbitMQ:', err.message);
         setTimeout(initRabbit, 5000);

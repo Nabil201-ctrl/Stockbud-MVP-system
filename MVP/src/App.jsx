@@ -30,7 +30,6 @@ import { AuthProvider } from './context/AuthContext';
 import AuthSuccess from './pages/AuthSuccess';
 
 import LandingPage from './pages/LandingPage';
-import StorefrontPage from './pages/StorefrontPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
@@ -64,7 +63,6 @@ function App() {
           <Routes>
             { }
             <Route path="/" element={<LandingPage />} />
-            <Route path="/store/:id" element={<StorefrontPage />} />
 
             { }
             <Route path="/auth/login" element={<Login />} />

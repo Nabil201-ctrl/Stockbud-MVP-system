@@ -8,7 +8,7 @@ import { useLanguage } from '../context/LanguageContext';
 import Timeline from '../components/Shopify/Timeline';
 import SocialStoresPanel from '../components/Dashboard/SocialStoresPanel';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const SettingsPage = () => {
     const isOnline = useOnlineStatus();

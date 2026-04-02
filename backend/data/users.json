@@ -42,12 +42,12 @@
     "picture": null,
     "shopifyShop": null,
     "shopifyToken": null,
-    "activeShopId": "7d7ad302-0d07-4356-b64a-329ebb780ad6",
+    "activeShopId": "d4e4852093047454",
     "storeLimit": 2,
     "retentionMonths": 3,
     "createdAt": "2026-03-26T11:10:11.501Z",
     "isOnboardingComplete": true,
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzQ5OTM1NTQsImV4cCI6MTc3NzU4NTU1NH0.RJbRYPw2_aSMova6-AE4XQuo6GngCYz0kFqHZ_Tf2XI",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFidWJha2FyLm5hYmlsLjIwQGdtYWlsLmNvbSIsInN1YiI6ImY4N2I2ZGE2ZmY5ZDk3NmQiLCJpYXQiOjE3NzUxMTg2MzUsImV4cCI6MTc3NzcxMDYzNX0.UhTEHXNly57NAdns1l-UWTCmQrXgT7RKRN9NM0AeEUE",
     "aiTokens": 500,
     "reportTokens": 250,
     "botSettings": null,
@@ -55,11 +55,11 @@
     "hasFreeReports": false,
     "language": "en",
     "pushSubscription": null,
-    "ipAddress": "::1",
+    "ipAddress": "::ffff:127.0.0.1",
     "location": null,
     "currency": null,
-    "signInCount": 15,
-    "lastLoginDate": "2026-03-31T21:45:54.453Z",
+    "signInCount": 20,
+    "lastLoginDate": "2026-04-02T08:30:35.104Z",
     "loginDates": [
       "2026-03-26",
       "2026-03-27",
@@ -75,7 +75,12 @@
       "2026-03-31",
       "2026-03-31",
       "2026-03-31",
-      "2026-03-31"
+      "2026-03-31",
+      "2026-03-31",
+      "2026-04-02",
+      "2026-04-02",
+      "2026-04-02",
+      "2026-04-02"
     ],
     "shopifyStores": [],
     "socialStores": [
@@ -95,7 +100,57 @@
             "inquiries": 0
           }
         ],
-        "createdAt": "2026-03-31T21:47:34.891Z"
+        "createdAt": "2026-03-31T21:47:34.891Z",
+        "products": [
+          {
+            "id": "local_1775110200031",
+            "title": "VIntage sunglasses",
+            "product_type": "2023",
+            "images": [
+              {
+                "src": "https://res.cloudinary.com/djanz538u/image/upload/v1775118657/stockbud_products/vrddkcpiztbz9aoqvak9.jpg"
+              }
+            ],
+            "variants": [
+              {
+                "price": "10000",
+                "inventory_quantity": 100
+              }
+            ],
+            "status": "active"
+          }
+        ]
+      },
+      {
+        "id": "030336d2449ced0d",
+        "userId": "f87b6da6ff9d976d",
+        "name": "Shopp",
+        "type": "instagram",
+        "contact": "@abubakar.nabil.210",
+        "description": null,
+        "visits": 0,
+        "inquiries": 0,
+        "dailyStats": [],
+        "createdAt": "2026-03-31T21:58:40.121Z",
+        "products": [
+          {
+            "id": "local_1775110200031",
+            "title": "VIntage sunglasses",
+            "product_type": "2023",
+            "images": [
+              {
+                "src": "https://res.cloudinary.com/djanz538u/image/upload/v1775118657/stockbud_products/vrddkcpiztbz9aoqvak9.jpg"
+              }
+            ],
+            "variants": [
+              {
+                "price": "10000",
+                "inventory_quantity": 100
+              }
+            ],
+            "status": "active"
+          }
+        ]
       }
     ]
   }

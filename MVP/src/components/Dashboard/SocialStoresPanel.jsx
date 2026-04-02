@@ -2,20 +2,20 @@ import React, { useState, useEffect } from 'react';
 import {
     Instagram,
     Trash2,
-    ExternalLink,
-    TrendingUp,
-    Plus,
     Loader2,
     Globe,
-    Copy,
     CheckCircle2,
     AlertCircle,
     MessageCircle,
-    Smartphone
+    Package,
+    ShoppingCart,
+    ExternalLink,
+    Search,
+    Filter,
+    Cloud
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
     const [stores, setStores] = useState([]);
@@ -23,8 +23,12 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [newStore, setNewStore] = useState({ name: '', contact: '', type: 'instagram' });
     const [addLoading, setAddLoading] = useState(false);
-    const [stats, setStats] = useState({}); // { storeId: { totalVisits, chartData } }
-    const [copiedId, setCopiedId] = useState(null);
+
+    // Inventory management state
+    const [activeStoreId, setActiveStoreId] = useState(null);
+    const [products, setProducts] = useState([]);
+    const [productsLoading, setProductsLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const fetchStores = async () => {
         try {
@@ -32,9 +36,9 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
             if (response.ok) {
                 const data = await response.json();
                 setStores(data);
-
-                // Fetch stats for each store
-                data.forEach(store => fetchStoreStats(store.id));
+                if (data.length > 0 && !activeStoreId) {
+                    setActiveStoreId(data[0].id);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch social stores", error);
@@ -43,21 +47,31 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
         }
     };
 
-    const fetchStoreStats = async (storeId) => {
+    const fetchSocialProducts = async (storeId) => {
+        if (!storeId) return;
+        setProductsLoading(true);
         try {
-            const response = await authenticatedFetch(`${API_URL}/social-stores/${storeId}/stats`);
+            const response = await authenticatedFetch(`${API_URL}/social-stores/${storeId}/products`);
             if (response.ok) {
                 const data = await response.json();
-                setStats(prev => ({ ...prev, [storeId]: data }));
+                setProducts(data.products || []);
             }
         } catch (error) {
-            console.error(`Failed to fetch stats for ${storeId}`, error);
+            console.error("Failed to fetch products for social store", error);
+        } finally {
+            setProductsLoading(false);
         }
     };
 
     useEffect(() => {
         fetchStores();
     }, []);
+
+    useEffect(() => {
+        if (activeStoreId) {
+            fetchSocialProducts(activeStoreId);
+        }
+    }, [activeStoreId]);
 
     const handleAddStore = async (e) => {
         e.preventDefault();
@@ -81,47 +95,46 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
     };
 
     const handleDeleteStore = async (id) => {
-        if (!window.confirm("Are you sure you want to remove this social store integration?")) return;
+        if (!window.confirm("Are you sure you want to remove this social sync?")) return;
         try {
             const response = await authenticatedFetch(`${API_URL}/social-stores/${id}`, {
                 method: 'DELETE'
             });
             if (response.ok) {
-                setStores(stores.filter(s => s.id !== id));
+                const remaining = stores.filter(s => s.id !== id);
+                setStores(remaining);
+                if (activeStoreId === id) {
+                    setActiveStoreId(remaining.length > 0 ? remaining[0].id : null);
+                }
             }
         } catch (error) {
             alert("Failed to delete store");
         }
     };
 
-    const copyLink = (id) => {
-        const link = `${window.location.origin}/store/${id}`;
-        navigator.clipboard.writeText(link);
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), 2000);
-    };
-
     if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-blue-500" /></div>;
+
+    const activeStore = stores.find(s => s.id === activeStoreId);
+    const filteredProducts = products.filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h3 className="text-lg font-bold dark:text-white flex items-center gap-2">
-                        <Globe className="text-blue-500" />
-                        Social Stores
+                    <h3 className="text-xl font-bold dark:text-white flex items-center gap-2">
+                        <ShoppingCart className="text-blue-500" />
+                        Social Inventory Sync
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Create storefronts for Instagram or WhatsApp that link to your Shopify products.
+                        Manage products and inventory across Instagram and WhatsApp channels.
                     </p>
                 </div>
                 {!isAdding && (
                     <button
                         onClick={() => setIsAdding(true)}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20"
                     >
-                        <Plus size={16} />
-                        Add Social Store
+                        Connect Social Channel
                     </button>
                 )}
             </div>
@@ -131,14 +144,14 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
                     <form onSubmit={handleAddStore} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Store Name</label>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Channel Name</label>
                                 <input
                                     type="text"
                                     required
                                     value={newStore.name}
                                     onChange={e => setNewStore({ ...newStore, name: e.target.value })}
-                                    placeholder="e.g. My Boutique"
-                                    className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
+                                    placeholder="e.g. Instagram Shop"
+                                    className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none dark:text-white"
                                 />
                             </div>
                             <div>
@@ -146,153 +159,137 @@ const SocialStoresPanel = ({ isDarkMode, authenticatedFetch, user }) => {
                                 <select
                                     value={newStore.type}
                                     onChange={e => setNewStore({ ...newStore, type: e.target.value })}
-                                    className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
+                                    className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none dark:text-white"
                                 >
                                     <option value="instagram">Instagram</option>
                                     <option value="whatsapp">WhatsApp</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
-                                    {newStore.type === 'instagram' ? 'Instagram Handle' : 'WhatsApp Number'}
-                                </label>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Account Handle</label>
                                 <input
                                     type="text"
                                     required
                                     value={newStore.contact}
                                     onChange={e => setNewStore({ ...newStore, contact: e.target.value })}
-                                    placeholder={newStore.type === 'instagram' ? '@handle' : 'e.g. +234...'}
-                                    className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:text-white"
+                                    placeholder={newStore.type === 'instagram' ? '@username' : 'Phone number'}
+                                    className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none dark:text-white"
                                 />
                             </div>
                         </div>
                         <div className="flex justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setIsAdding(false)}
-                                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={addLoading}
-                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center disabled:opacity-70"
-                            >
+                            <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
+                            <button type="submit" disabled={addLoading} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm flex items-center gap-2">
                                 {addLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                                Create Store
+                                Add Integration
                             </button>
                         </div>
                     </form>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 gap-6">
-                {stores.length === 0 ? (
-                    <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
-                        <Globe className="mx-auto text-gray-300 dark:text-gray-600 mb-2" size={48} />
-                        <p className="text-gray-500">No social stores connected yet.</p>
-                    </div>
-                ) : (
-                    stores.map(store => (
-                        <div key={store.id} className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-sm group hover:shadow-md transition-all`}>
-                            <div className="flex flex-col lg:flex-row gap-6">
-                                <div className="flex-1 space-y-4">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg ${store.type === 'instagram'
-                                                    ? 'bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500'
-                                                    : 'bg-green-500'
-                                                }`}>
-                                                {store.type === 'instagram' ? <Instagram size={24} /> : <MessageCircle size={24} />}
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-lg dark:text-white">{store.name}</h4>
-                                                <p className={`text-sm font-medium ${store.type === 'instagram' ? 'text-pink-500' : 'text-green-500'}`}>
-                                                    {store.contact}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => copyLink(store.id)}
-                                                className={`p-2 rounded-lg transition-colors ${copiedId === store.id ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400'}`}
-                                                title="Copy Catalog Link"
-                                            >
-                                                {copiedId === store.id ? <CheckCircle2 size={18} /> : <Copy size={18} />}
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteStore(store.id)}
-                                                className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors"
-                                                title="Delete Store"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
+            {stores.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Channel Selector */}
+                    <div className="space-y-2">
+                        {stores.map(store => (
+                            <button
+                                key={store.id}
+                                onClick={() => setActiveStoreId(store.id)}
+                                className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${activeStoreId === store.id
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-2 ring-blue-500'
+                                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${store.type === 'instagram' ? 'bg-pink-500' : 'bg-green-500'} text-white`}>
+                                        {store.type === 'instagram' ? <Instagram size={16} /> : <MessageCircle size={16} />}
                                     </div>
-
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                        <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-gray-900/50' : 'bg-gray-50'}`}>
-                                            <div className="text-xs text-gray-500 uppercase font-semibold mb-1">Visits</div>
-                                            <div className="text-xl font-bold dark:text-white">{stats[store.id]?.totalVisits || 0}</div>
-                                        </div>
-                                        <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-gray-900/50' : 'bg-gray-50'}`}>
-                                            <div className="text-xs text-gray-500 uppercase font-semibold mb-1">Inquiries</div>
-                                            <div className="text-xl font-bold dark:text-white">{stats[store.id]?.totalInquiries || 0}</div>
-                                        </div>
-                                        <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-gray-900/50' : 'bg-gray-50'} hidden sm:block`}>
-                                            <div className="text-xs text-gray-500 uppercase font-semibold mb-1">Sync</div>
-                                            <div className="text-sm font-bold text-green-600 flex items-center gap-1">
-                                                <CheckCircle2 size={14} /> Active
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 pt-2">
-                                        <a
-                                            href={`${window.location.origin}/store/${store.id}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex-1 flex items-center justify-center gap-2 bg-gray-900 dark:bg-gray-700 text-white py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-all"
-                                        >
-                                            <Globe size={14} />
-                                            View Storefront
-                                        </a>
+                                    <div className="text-left">
+                                        <p className="text-sm font-bold dark:text-white truncate max-w-[100px]">{store.name}</p>
+                                        <p className="text-[10px] text-gray-500">{store.contact}</p>
                                     </div>
                                 </div>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeleteStore(store.id); }} className="text-gray-400 hover:text-red-500">
+                                    <Trash2 size={14} />
+                                </button>
+                            </button>
+                        ))}
+                    </div>
 
-                                <div className="lg:w-64 h-48 lg:h-auto border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-gray-700 pt-6 lg:pt-0 lg:pl-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className="text-xs font-bold uppercase text-gray-500">7-Day Monitoring</span>
-                                        <TrendingUp size={14} className="text-green-500" />
+                    {/* Inventory Display */}
+                    <div className="lg:col-span-3 space-y-4">
+                        <div className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-sm`}>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                                <div>
+                                    <h4 className="text-lg font-bold dark:text-white flex items-center gap-2">
+                                        <Package className="text-blue-500" />
+                                        Synced Products
+                                    </h4>
+                                    <p className="text-xs text-gray-500">Inventory from your active Shopify store for {activeStore?.name}</p>
+                                </div>
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg w-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+                                        <Search size={14} className="text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search products..."
+                                            value={searchTerm}
+                                            onChange={e => setSearchTerm(e.target.value)}
+                                            className="bg-transparent border-none focus:outline-none text-xs dark:text-white w-full"
+                                        />
                                     </div>
-                                    {stats[store.id]?.chartData ? (
-                                        <div className="h-32 w-full">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={stats[store.id].chartData}>
-                                                    <defs>
-                                                        <linearGradient id={`grad-${store.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor={store.type === 'instagram' ? '#ec4899' : '#10b981'} stopOpacity={0.3} />
-                                                            <stop offset="95%" stopColor={store.type === 'instagram' ? '#ec4899' : '#10b981'} stopOpacity={0} />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <Area type="monotone" dataKey="visits" stroke={store.type === 'instagram' ? '#ec4899' : '#10b981'} fillOpacity={1} fill={`url(#grad-${store.id})`} strokeWidth={2} name="Visits" />
-                                                    <Area type="monotone" dataKey="inquiries" stroke="#3b82f6" fillOpacity={0} strokeWidth={2} name="Inquiries" strokeDasharray="3 3" />
-                                                    <Tooltip
-                                                        contentStyle={{ backgroundColor: isDarkMode ? '#1f2937' : '#fff', border: 'none', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                    />
-                                                </AreaChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    ) : (
-                                        <div className="h-32 flex items-center justify-center text-xs text-gray-400 italic">No data yet</div>
-                                    )}
+                                    <a
+                                        href={activeStore?.type === 'instagram' ? `https://instagram.com/${activeStore?.contact?.replace('@', '')}` : `https://wa.me/${activeStore?.contact}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-blue-500"
+                                    >
+                                        <ExternalLink size={16} />
+                                    </a>
                                 </div>
                             </div>
+
+                            {productsLoading ? (
+                                <div className="flex flex-col items-center justify-center p-12 gap-4">
+                                    <Loader2 className="animate-spin text-blue-500" size={32} />
+                                    <p className="text-sm text-gray-500">Pulling Shopify Inventory...</p>
+                                </div>
+                            ) : filteredProducts.length === 0 ? (
+                                <div className="text-center py-12 italic text-gray-400 text-sm">No products found in Shopify catalog.</div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {filteredProducts.map(product => (
+                                        <div key={product.id} className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-900/50 border-gray-700' : 'bg-gray-50 border-gray-100'} flex items-center gap-4`}>
+                                            <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-800 overflow-hidden flex-shrink-0">
+                                                {product.images?.[0] && <img src={product.images[0].src} className="w-full h-full object-cover" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold dark:text-white truncate">{product.title}</p>
+                                                <div className="flex items-center justify-between mt-1">
+                                                    <span className="text-xs text-blue-600 font-bold">${product.variants?.[0]?.price}</span>
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${product.variants?.[0]?.inventory_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                        }`}>
+                                                        {product.variants?.[0]?.inventory_quantity || 0} in stock
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    ))
-                )}
-            </div>
+                    </div>
+                </div>
+            )}
+
+            {stores.length === 0 && !isAdding && (
+                <div className="text-center py-20 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-3xl">
+                    <Cloud className="mx-auto text-gray-300 dark:text-gray-600 mb-4" size={64} />
+                    <h4 className="text-lg font-bold dark:text-white">Multi-Channel Management</h4>
+                    <p className="text-sm text-gray-500 max-w-xs mx-auto mt-2">Connect your social accounts to keep your Shopify inventory and products synced across every channel.</p>
+                </div>
+            )}
         </div>
     );
 };

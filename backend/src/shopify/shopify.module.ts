@@ -6,10 +6,11 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
 import { ReportsModule } from '../reports/reports.module';
+import { SocialStoresModule } from '../social-stores/social-stores.module';
 
 @Global()
 @Module({
-    imports: [HttpModule, ConfigModule, UsersModule, forwardRef(() => ReportsModule)],
+    imports: [HttpModule, ConfigModule, UsersModule, forwardRef(() => ReportsModule), forwardRef(() => SocialStoresModule)],
     controllers: [ShopifyController],
     providers: [ShopifyService, ShopifyGateway],
     exports: [ShopifyService],

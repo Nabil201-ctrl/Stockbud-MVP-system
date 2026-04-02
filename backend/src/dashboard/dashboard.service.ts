@@ -8,7 +8,7 @@ export class DashboardService {
 
     constructor(private readonly shopifyService: ShopifyService) { }
 
-    async getStats(shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month') {
+    async getStats(shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string) {
         let totalRevenue = 0;
         let revenueChange = 0;
         let revenueData = [];
@@ -38,6 +38,10 @@ export class DashboardService {
                 else if (range === 'year') filterDate.setFullYear(now.getFullYear() - 1);
 
                 orders = orders.filter(o => new Date(o.created_at) >= filterDate);
+
+                if (sourceFilter) {
+                    orders = orders.filter(o => o.source_name?.toLowerCase() === sourceFilter.toLowerCase());
+                }
 
                 let exchangeRate = 1;
                 if (orders.length > 0) {

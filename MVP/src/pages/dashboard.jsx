@@ -67,7 +67,7 @@ const Dashboard = () => {
 
       // 2. Fetch fresh data using authenticated cookie
       // The backend knows the active shop from the user session/state
-      const response = await authenticatedFetch(`http://localhost:3000/dashboard/stats?range=${dateRange}`);
+      const response = await authenticatedFetch(`/api/dashboard/stats?range=${dateRange}`);
 
       if (!response.ok) {
         if (response.status === 401) throw new Error('Unauthorized');
@@ -129,7 +129,7 @@ const Dashboard = () => {
 
   const saveTarget = async () => {
     try {
-      const response = await authenticatedFetch('http://localhost:3000/dashboard/target', {
+      const response = await authenticatedFetch('/api/dashboard/target', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ const Dashboard = () => {
 
         if (user?.activeShopId) {
           setLoading(true);
-          const fresh = await authenticatedFetch('http://localhost:3000/dashboard/stats');
+          const fresh = await authenticatedFetch('/api/dashboard/stats');
           if (fresh.ok) {
             const freshData = await fresh.json();
             setStats(freshData);

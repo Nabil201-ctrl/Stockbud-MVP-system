@@ -20,6 +20,7 @@ export interface SocialStore {
     visits: number;
     inquiries: number;
     dailyStats: { date: string; visits: number; inquiries: number }[];
+    products?: any[];
     createdAt: string;
 }
 

@@ -56,4 +56,22 @@ export class SocialStoresController {
     async getStoreProducts(@Param('id') id: string) {
         return this.socialStoresService.getProducts(id);
     }
+
+    @Post(':id/products')
+    @UseGuards(AuthGuard('jwt'))
+    async addProduct(@Param('id') id: string, @Body() product: any) {
+        return this.socialStoresService.addProduct(id, product);
+    }
+
+    @Patch(':id/products/:productId')
+    @UseGuards(AuthGuard('jwt'))
+    async editProduct(@Param('id') id: string, @Param('productId') productId: string, @Body() data: any) {
+        return this.socialStoresService.editProduct(id, productId, data);
+    }
+
+    @Delete(':id/products/:productId')
+    @UseGuards(AuthGuard('jwt'))
+    async deleteProduct(@Param('id') id: string, @Param('productId') productId: string) {
+        return this.socialStoresService.deleteProduct(id, productId);
+    }
 }

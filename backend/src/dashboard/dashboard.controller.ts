@@ -19,14 +19,26 @@ export class DashboardController {
         const userCurrency = fullUser?.currency || 'USD';
 
         const shopStore = await this.usersService.getActiveShop(user.id);
-        const shop = shopStore?.shop;
+        const shop = shopStore?.shop || fullUser?.shopifyShop;
         const targetType = shopStore?.targetType || 'monthly';
         const targetValue = shopStore?.targetValue || 0;
-        const token = shopStore?.token ? await this.usersService.getDecryptedShopifyToken(user.id) : undefined;
+        const token = await this.usersService.getDecryptedShopifyToken(user.id);
 
-        if (!shop) return this.dashboardService.getStats(null, undefined, targetType as 'weekly' | 'monthly', targetValue, userCurrency, range);
+        let sourceFilter: string | undefined = undefined;
+        const socialStore = fullUser?.socialStores?.find(s => s.id === fullUser.activeShopId);
+        if (socialStore) {
+            sourceFilter = socialStore.type;
+        }
 
-        return this.dashboardService.getStats(shop, token, targetType as 'weekly' | 'monthly', targetValue, userCurrency, range);
+        return this.dashboardService.getStats(
+            shop,
+            token,
+            targetType as 'weekly' | 'monthly',
+            targetValue,
+            userCurrency,
+            range,
+            sourceFilter
+        );
     }
 
     @Post('target')

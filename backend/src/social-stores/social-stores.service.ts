@@ -112,13 +112,102 @@ export class SocialStoresService {
         const user = this.jsonDatabaseService.findUserById(store.userId);
         if (!user) throw new Error('User not found');
 
-        // Use the active Shopify store or the first one available
+        // Check if there's a linked Shopify shop
         const shopifyStore = user.shopifyStores.find(s => s.id === user.activeShopId) || user.shopifyStores[0];
 
-        if (!shopifyStore) {
-            return { products: [], totalCount: 0 };
+        if (shopifyStore) {
+            return this.shopifyService.getProducts(shopifyStore.shop, shopifyStore.token, { first: 20 });
         }
 
-        return this.shopifyService.getProducts(shopifyStore.shop, shopifyStore.token, { first: 20 });
+        // Return unified local products for ALL social stores of this user
+        let allProducts = [];
+        for (const s of user.socialStores) {
+            if (s.products) {
+                for (const p of s.products) {
+                    if (!allProducts.find(existing => existing.id === p.id)) {
+                        allProducts.push(p);
+                    }
+                }
+            }
+        }
+
+        return {
+            products: allProducts,
+            totalCount: allProducts.length
+        };
+    }
+
+    async addProduct(id: string, productData: any): Promise<any> {
+        const store = this.jsonDatabaseService.findSocialStoreById(id);
+        if (!store) throw new Error('Store not found');
+        const user = this.jsonDatabaseService.findUserById(store.userId);
+
+        const newProductId = `local_${Date.now()}`;
+        const newProduct = {
+            id: newProductId,
+            title: productData.title || productData.name,
+            product_type: productData.category || 'Uncategorized',
+            images: productData.image ? [{ src: productData.image }] : [],
+            variants: [{
+                price: productData.price || '0.00',
+                inventory_quantity: parseFloat(productData.stock) || 0
+            }],
+            status: 'active'
+        };
+
+        // Add to all social stores of the user so they share inventory
+        if (user && user.socialStores) {
+            for (const s of user.socialStores) {
+                const products = s.products || [];
+                products.push(newProduct);
+                this.jsonDatabaseService.updateSocialStore(s.id, { products });
+            }
+        }
+        return newProduct;
+    }
+
+    async editProduct(storeId: string, productId: string, data: any): Promise<any> {
+        const store = this.jsonDatabaseService.findSocialStoreById(storeId);
+        if (!store) throw new Error('Store not found');
+        const user = this.jsonDatabaseService.findUserById(store.userId);
+
+        if (user && user.socialStores) {
+            for (const s of user.socialStores) {
+                const products = s.products || [];
+                const idx = products.findIndex(p => p.id === productId);
+                if (idx !== -1) {
+                    products[idx] = {
+                        ...products[idx],
+                        title: data.title || data.name || products[idx].title,
+                        product_type: data.category || products[idx].product_type,
+                        variants: [{
+                            ...products[idx].variants[0],
+                            price: data.price !== undefined ? data.price : products[idx].variants[0].price,
+                            inventory_quantity: data.stock !== undefined ? parseFloat(data.stock) : products[idx].variants[0].inventory_quantity
+                        }]
+                    };
+                    if (data.image) {
+                        products[idx].images = [{ src: data.image }];
+                    }
+                    this.jsonDatabaseService.updateSocialStore(s.id, { products });
+                }
+            }
+        }
+        return { success: true };
+    }
+
+    async deleteProduct(storeId: string, productId: string): Promise<any> {
+        const store = this.jsonDatabaseService.findSocialStoreById(storeId);
+        if (!store) throw new Error('Store not found');
+        const user = this.jsonDatabaseService.findUserById(store.userId);
+
+        if (user && user.socialStores) {
+            for (const s of user.socialStores) {
+                const products = s.products || [];
+                const newProducts = products.filter(p => p.id !== productId);
+                this.jsonDatabaseService.updateSocialStore(s.id, { products: newProducts });
+            }
+        }
+        return { success: true };
     }
 }

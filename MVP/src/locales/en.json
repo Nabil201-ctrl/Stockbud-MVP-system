@@ -92,22 +92,19 @@
         "totalPrice": "Total Price"
     },
     "social": {
-        "title": "Social Stores",
-        "subtitle": "Create WhatsApp or Instagram storefronts to sell directly to your customers.",
-        "addStore": "Add Store",
-        "createStore": "Create Store",
-        "noStores": "No social stores connected yet.",
-        "deleteConfirm": "Are you sure you want to delete this store and all its products?",
-        "storefrontLink": "Storefront Link",
-        "copyLink": "Copy Link",
-        "linkCopied": "Link Copied!",
-        "manageProducts": "Manage Products",
+        "title": "Social Inventory Sync",
+        "subtitle": "Manage products and inventory across your Instagram and WhatsApp channels.",
+        "addStore": "Connect Channel",
+        "createStore": "Add Integration",
+        "noStores": "No social channels connected yet.",
+        "deleteConfirm": "Are you sure you want to remove this social inventory sync?",
+        "manageProducts": "Manage Inventory",
         "whatsapp": "WhatsApp",
         "instagram": "Instagram",
-        "storeName": "Store Name",
-        "contact": "Contact (Phone or Handle)",
-        "description": "Description",
-        "creating": "Creating..."
+        "storeName": "Channel Name",
+        "contact": "Account (Phone or Handle)",
+        "description": "Integration Details",
+        "creating": "Connecting..."
     },
     "products": {
         "title": "Product Management",

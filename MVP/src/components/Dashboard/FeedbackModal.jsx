@@ -15,7 +15,7 @@ const FeedbackModal = ({ isOpen, onClose, onSubmit, isDarkMode }) => {
         setIsSubmitting(true);
 
         try {
-            await fetch('http://localhost:3000/feed', {
+            await fetch('/api/feed', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

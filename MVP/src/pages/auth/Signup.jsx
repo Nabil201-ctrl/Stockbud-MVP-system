@@ -13,7 +13,7 @@ const Signup = () => {
     const [error, setError] = useState('');
 
     const handleGoogleLogin = () => {
-        window.location.href = 'http://localhost:3000/auth/google';
+        window.location.href = '/api/auth/google';
     };
 
     const handleSubmit = async (e) => {

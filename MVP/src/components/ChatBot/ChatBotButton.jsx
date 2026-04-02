@@ -66,7 +66,7 @@ const ChatBotButton = () => {
         content: m.text
       }));
 
-      const response = await authenticatedFetch('http://localhost:3000/chats/quick', {
+      const response = await authenticatedFetch('/api/chats/quick', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: userMessageText, history, language }) 

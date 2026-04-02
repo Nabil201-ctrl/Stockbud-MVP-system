@@ -26,7 +26,7 @@ const UsersPage = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('http://localhost:3000/users');
+        const response = await fetch('/api/users');
         const data = await response.json();
 
         const usersList = Array.isArray(data) ? data : (data.users || []);
