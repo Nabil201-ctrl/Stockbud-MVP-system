@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ShopifyService } from '../shopify/shopify.service';
-import { JsonDatabaseService } from '../database/json-database.service';
+import { PrismaService } from '../database/prisma.service';
 import axios from 'axios';
 
 @Injectable()
@@ -9,7 +9,7 @@ export class DashboardService {
 
     constructor(
         private readonly shopifyService: ShopifyService,
-        private readonly jsonDatabaseService: JsonDatabaseService
+        private readonly prisma: PrismaService
     ) { }
 
     async getStats(userId: string, shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string) {
@@ -52,8 +52,8 @@ export class DashboardService {
         }
 
         // 2. Fetch Local Social Store Orders
-        const localOrders = this.jsonDatabaseService.getOrdersByUserId(userId);
-        localOrders.forEach(o => {
+        const localOrders = await this.prisma.order.findMany({ where: { userId } });
+        localOrders.forEach((o: any) => {
             mergedOrders.push({
                 ...o,
                 source: o.source || 'Social Store',

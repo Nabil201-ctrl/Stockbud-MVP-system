@@ -25,7 +25,7 @@ export class DashboardController {
         const token = await this.usersService.getDecryptedShopifyToken(user.id);
 
         let sourceFilter: string | undefined = undefined;
-        const socialStore = fullUser?.socialStores?.find(s => s.id === fullUser.activeShopId);
+        const socialStore = (fullUser as any)?.socialStores?.find((s: any) => s.id === fullUser.activeShopId);
         if (socialStore) {
             sourceFilter = socialStore.type;
         }

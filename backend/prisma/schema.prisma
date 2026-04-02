@@ -1,0 +1,92 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                    String         @id @default(uuid())
+  email                 String         @unique
+  name                  String
+  password              String?
+  picture               String?
+  shopifyShop           String?
+  shopifyToken          String?
+  activeShopId          String?
+  storeLimit            Int            @default(1)
+  retentionMonths       Int            @default(3)
+  createdAt             DateTime       @default(now())
+  isOnboardingComplete  Boolean        @default(false)
+  refreshToken          String?
+  aiTokens              Int            @default(500)
+  reportTokens          Int            @default(250)
+  botSettings           Json?
+  lastTokenReset        Int?
+  hasFreeReports        Boolean        @default(false)
+  language              String         @default("en")
+  pushSubscription      Json?
+  ipAddress             String?
+  location              String?
+  currency              String?
+  signInCount           Int            @default(0)
+  lastLoginDate         DateTime?
+  loginDates            String[]       @default([])
+  telegramChatId        String?
+  // Plan system
+  plan                  String         @default("free")
+  aiActionsUsed         Int            @default(0)
+  aiActionsResetDate    DateTime?
+
+  shopifyStores         ShopifyStore[]
+  socialStores          SocialStore[]
+  orders                Order[]
+}
+
+model ShopifyStore {
+  id           String      @id @default(uuid())
+  shop         String
+  token        String
+  name         String?
+  addedAt      DateTime    @default(now())
+  botSettings  Json?
+  targetType   String?
+  targetValue  Float?
+  
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SocialStore {
+  id           String      @id @default(uuid())
+  name         String
+  type         String      @default("whatsapp")
+  contact      String
+  description  String?
+  visits       Int         @default(0)
+  inquiries    Int         @default(0)
+  dailyStats   Json        @default("[]")
+  products     Json        @default("[]")
+  createdAt    DateTime    @default(now())
+
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  storeId         String
+  items           Json
+  totalAmount     Float
+  currency        String
+  customerName    String
+  customerPhone   String
+  customerAddress String
+  status          String
+  createdAt       DateTime    @default(now())
+
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

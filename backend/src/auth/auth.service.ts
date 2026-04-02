@@ -76,7 +76,7 @@ export class AuthService {
         const prevLoginDates = user.loginDates || [];
         await this.usersService.updateProfile(user.id, {
             signInCount: (user.signInCount || 0) + 1,
-            lastLoginDate: new Date().toISOString(),
+            lastLoginDate: new Date(),
             loginDates: [...prevLoginDates, todayStr],
         });
 

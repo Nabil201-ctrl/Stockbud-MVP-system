@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, Req } from '@nestjs/common';
 import { SocialStoresService } from './social-stores.service';
-import { SocialStore } from '../database/interfaces';
+import { SocialStore } from '@prisma/client';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('social-stores')

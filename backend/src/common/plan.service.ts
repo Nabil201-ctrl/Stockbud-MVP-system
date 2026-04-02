@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { JsonDatabaseService } from '../database/json-database.service';
-import { User } from '../database/interfaces';
+import { PrismaService } from '../database/prisma.service';
+import { User } from '@prisma/client';
 
 export interface PlanLimits {
     name: string;
@@ -79,7 +79,7 @@ const PLAN_CONFIG: Record<string, PlanLimits> = {
 
 @Injectable()
 export class PlanService {
-    constructor(private readonly db: JsonDatabaseService) { }
+    constructor(private readonly db: PrismaService) { }
 
     getPlanConfig(planName: string): PlanLimits {
         return PLAN_CONFIG[planName] || PLAN_CONFIG.free;
@@ -92,7 +92,7 @@ export class PlanService {
     /**
      * Get the user's current plan limits
      */
-    getUserPlanLimits(user: User): PlanLimits {
+    getUserPlanLimits(user: any): PlanLimits {
         const plan = user.plan || 'free';
         return this.getPlanConfig(plan);
     }
@@ -100,7 +100,7 @@ export class PlanService {
     /**
      * Check if the user can add another Shopify store
      */
-    canAddStore(user: User): { allowed: boolean; reason?: string } {
+    canAddStore(user: any): { allowed: boolean; reason?: string } {
         const limits = this.getUserPlanLimits(user);
         if (limits.maxShopifyStores === -1) return { allowed: true };
 
@@ -117,7 +117,7 @@ export class PlanService {
     /**
      * Check if user can add more products (for social stores)
      */
-    canAddProduct(user: User, currentProductCount: number): { allowed: boolean; reason?: string } {
+    canAddProduct(user: any, currentProductCount: number): { allowed: boolean; reason?: string } {
         const limits = this.getUserPlanLimits(user);
         if (limits.maxProducts === -1) return { allowed: true };
 
@@ -134,7 +134,7 @@ export class PlanService {
      * Check and consume an AI action. Returns whether the action is allowed.
      * Handles automatic monthly reset.
      */
-    canUseAiAction(user: User): { allowed: boolean; remaining: number; limit: number; reason?: string } {
+    canUseAiAction(user: any): { allowed: boolean; remaining: number; limit: number; reason?: string } {
         const limits = this.getUserPlanLimits(user);
         const now = new Date();
 
@@ -145,9 +145,12 @@ export class PlanService {
         if (!resetDate || now.getMonth() !== resetDate.getMonth() || now.getFullYear() !== resetDate.getFullYear()) {
             // New month — reset counter
             actionsUsed = 0;
-            this.db.updateUser(user.id, {
-                aiActionsUsed: 0,
-                aiActionsResetDate: now.toISOString(),
+            this.db.user.update({
+                where: { id: user.id },
+                data: {
+                    aiActionsUsed: 0,
+                    aiActionsResetDate: now,
+                }
             });
         }
 
@@ -168,8 +171,8 @@ export class PlanService {
     /**
      * Record that an AI action was consumed
      */
-    consumeAiAction(userId: string): void {
-        const user = this.db.findUserById(userId);
+    async consumeAiAction(userId: string): Promise<void> {
+        const user = await this.db.user.findUnique({ where: { id: userId } });
         if (!user) return;
 
         const now = new Date();
@@ -181,16 +184,19 @@ export class PlanService {
             actionsUsed = 0;
         }
 
-        this.db.updateUser(userId, {
-            aiActionsUsed: actionsUsed + 1,
-            aiActionsResetDate: now.toISOString(),
+        await this.db.user.update({
+            where: { id: userId },
+            data: {
+                aiActionsUsed: actionsUsed + 1,
+                aiActionsResetDate: now,
+            }
         });
     }
 
     /**
      * Check if a report type is allowed for the user's plan
      */
-    canGenerateReport(user: User, reportType: string): { allowed: boolean; reason?: string } {
+    canGenerateReport(user: any, reportType: string): { allowed: boolean; reason?: string } {
         const limits = this.getUserPlanLimits(user);
 
         if (!limits.reportTypes.includes(reportType)) {
@@ -205,7 +211,7 @@ export class PlanService {
     /**
      * Upgrade a user's plan
      */
-    upgradePlan(userId: string, newPlan: 'free' | 'beginner' | 'pro'): User {
+    async upgradePlan(userId: string, newPlan: 'free' | 'beginner' | 'pro'): Promise<User> {
         const limits = this.getPlanConfig(newPlan);
 
         const updateData: Partial<User> = {
@@ -215,15 +221,18 @@ export class PlanService {
 
         // Reset AI actions on plan change
         updateData.aiActionsUsed = 0;
-        updateData.aiActionsResetDate = new Date().toISOString();
+        updateData.aiActionsResetDate = new Date() as any;
 
-        return this.db.updateUser(userId, updateData);
+        return this.db.user.update({
+            where: { id: userId },
+            data: updateData
+        });
     }
 
     /**
      * Get plan usage summary for the user
      */
-    getUsageSummary(user: User): any {
+    getUsageSummary(user: any): any {
         const limits = this.getUserPlanLimits(user);
         const now = new Date();
 

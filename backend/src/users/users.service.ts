@@ -3,8 +3,8 @@ import * as crypto from 'crypto';
 import { EncryptionService } from '../common/encryption.service';
 import { PlanService } from '../common/plan.service';
 import axios from 'axios';
-import { JsonDatabaseService } from '../database/json-database.service';
-import { User, ShopifyStore } from '../database/interfaces';
+import { PrismaService } from '../database/prisma.service';
+import { User, ShopifyStore } from '@prisma/client';
 
 export interface BotSettings {
     name: string;
@@ -23,14 +23,14 @@ export class UsersService implements OnModuleInit {
     constructor(
         private readonly encryptionService: EncryptionService,
         private readonly planService: PlanService,
-        private db: JsonDatabaseService
+        private db: PrismaService
     ) { }
 
     async onModuleInit() {
     }
 
     async findByEmail(email: string): Promise<User | null> {
-        return this.db.findUserByEmail(email);
+        return await this.db.findUserByEmail(email);
     }
 
     async createOrFind(profile: any): Promise<User> {
@@ -38,7 +38,7 @@ export class UsersService implements OnModuleInit {
         let user = await this.findByEmail(email);
 
         if (!user) {
-            user = this.db.createUser({
+            user = await this.db.createUser({
                 email,
                 name: profile.displayName,
                 picture: profile.photos?.[0]?.value,
@@ -58,7 +58,7 @@ export class UsersService implements OnModuleInit {
         const existing = await this.findByEmail(email);
         if (existing) throw new Error('User already exists');
 
-        const user = this.db.createUser({
+        const user = await this.db.createUser({
             email,
             name,
             password: passwordHash,
@@ -82,7 +82,7 @@ export class UsersService implements OnModuleInit {
             console.error(`[UsersService] Failed to fetch IP location for ${ip}:`, error.message);
         }
 
-        return this.db.updateUser(userId, {
+        return await this.db.updateUser(userId, {
             ipAddress: ip,
             ...(location && { location }),
             ...(currency && { currency })
@@ -90,7 +90,7 @@ export class UsersService implements OnModuleInit {
     }
 
     async findById(id: string): Promise<User | null> {
-        return this.db.findUserById(id);
+        return await this.db.findUserById(id);
     }
 
     async updateShopifyCredentials(userId: string, shop: string, token: string): Promise<User> {
@@ -98,14 +98,14 @@ export class UsersService implements OnModuleInit {
     }
 
     async addShopifyStore(userId: string, shop: string, token: string, name?: string): Promise<User> {
-        const user = this.db.findUserById(userId);
+        const user = await this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
 
         const existingStore = user.shopifyStores.find(s => s.shop === shop);
         const encryptedToken = this.encryptionService.encrypt(token);
 
         if (existingStore) {
-            this.db.updateStore(existingStore.id, { token: encryptedToken });
+            await this.db.updateStore(existingStore.id, { token: encryptedToken });
         } else {
             // Plan-based store limit check
             const check = this.planService.canAddStore(user);
@@ -113,36 +113,36 @@ export class UsersService implements OnModuleInit {
                 throw new Error(check.reason || 'Store limit reached. Please upgrade to add more stores.');
             }
 
-            const store = this.db.createStore(userId, {
+            const store = await this.db.createStore(userId, {
                 shop,
                 token: encryptedToken,
                 name: name || shop.replace('.myshopify.com', ''),
                 addedAt: new Date().toISOString(),
             });
 
-            this.db.updateUser(userId, {
+            await this.db.updateUser(userId, {
                 activeShopId: user.activeShopId || store.id,
                 shopifyShop: shop,
                 shopifyToken: encryptedToken
             });
         }
 
-        const updatedUser = this.db.findUserById(userId)!;
+        const updatedUser = await this.db.findUserById(userId)!;
         return this.recalculateTokens(updatedUser);
     }
 
     async removeShopifyStore(userId: string, storeId: string): Promise<User> {
-        const user = this.db.findUserById(userId);
+        const user = await this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
 
-        this.db.deleteStore(storeId);
+        await this.db.deleteStore(storeId);
 
-        let userToRet = this.db.findUserById(userId);
+        let userToRet = await this.db.findUserById(userId);
         if (!userToRet) throw new Error('User not found');
 
         if (userToRet.activeShopId === storeId) {
             const firstStore = userToRet.shopifyStores?.[0];
-            userToRet = this.db.updateUser(userId, {
+            userToRet = await this.db.updateUser(userId, {
                 activeShopId: firstStore?.id || null,
                 shopifyShop: firstStore?.shop || null,
                 shopifyToken: firstStore?.token || null
@@ -153,33 +153,33 @@ export class UsersService implements OnModuleInit {
     }
 
     async removeShopifyCredentials(userId: string): Promise<User> {
-        const user = this.db.findUserById(userId);
+        const user = await this.db.findUserById(userId);
         if (user) {
             if (user.activeShopId) {
                 return this.removeShopifyStore(userId, user.activeShopId);
             }
-            this.db.updateUser(userId, {
+            await this.db.updateUser(userId, {
                 shopifyShop: null,
                 shopifyToken: null,
                 activeShopId: null
             });
 
-            this.db.deleteStoresByUserId(userId);
-            const finalUser = this.db.findUserById(userId)!;
+            await this.db.deleteStoresByUserId(userId);
+            const finalUser = await this.db.findUserById(userId)!;
             return this.recalculateTokens(finalUser);
         }
         throw new Error('User not found');
     }
 
     async setActiveShop(userId: string, storeId: string): Promise<User> {
-        const user = this.db.findUserById(userId);
+        const user = await this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
 
         const shopifyStore = user.shopifyStores.find(s => s.id === storeId);
         const socialStore = user.socialStores.find(s => s.id === storeId);
 
         if (shopifyStore) {
-            return this.db.updateUser(userId, {
+            return await this.db.updateUser(userId, {
                 activeShopId: storeId,
                 shopifyShop: shopifyStore.shop,
                 shopifyToken: shopifyStore.token
@@ -188,13 +188,13 @@ export class UsersService implements OnModuleInit {
             // Keep the previous Shopify credentials if selecting Social, 
             // or use first available if none. This allows products to still load.
             const primaryShop = user.shopifyStores[0];
-            return this.db.updateUser(userId, {
+            return await this.db.updateUser(userId, {
                 activeShopId: storeId,
                 shopifyShop: user.shopifyShop || primaryShop?.shop || null,
                 shopifyToken: user.shopifyToken || primaryShop?.token || null
             });
         } else {
-            return this.db.updateUser(userId, {
+            return await this.db.updateUser(userId, {
                 activeShopId: storeId,
                 shopifyShop: null,
                 shopifyToken: null
@@ -203,12 +203,12 @@ export class UsersService implements OnModuleInit {
     }
 
     async getActiveShop(userId: string): Promise<ShopifyStore | null> {
-        const user = this.db.findUserById(userId);
+        const user = await this.db.findUserById(userId);
         if (!user) return null;
         return this.getActiveStoreSync(user) || null;
     }
 
-    private getActiveStoreSync(user: User): ShopifyStore | undefined {
+    private getActiveStoreSync(user: any): any {
         if (!user.shopifyStores || user.shopifyStores.length === 0) return undefined;
         if (user.activeShopId) {
             return user.shopifyStores.find(s => s.id === user.activeShopId);
@@ -216,7 +216,7 @@ export class UsersService implements OnModuleInit {
         return user.shopifyStores[0];
     }
 
-    private recalculateTokens(user: User): User {
+    private async recalculateTokens(user: any): Promise<any> {
         const shopCount = user.shopifyStores?.length || 0;
         let aiTokens = 500;
         let reportTokens = 250;
@@ -225,11 +225,11 @@ export class UsersService implements OnModuleInit {
             reportTokens = 500;
         }
 
-        return this.db.updateUser(user.id, { aiTokens, reportTokens });
+        return await this.db.updateUser(user.id, { aiTokens, reportTokens });
     }
 
     async getDecryptedShopifyToken(userId: string): Promise<string | null> {
-        const user = this.db.findUserById(userId);
+        const user = await this.db.findUserById(userId);
         if (user && user.shopifyToken) {
             return this.encryptionService.decrypt(user.shopifyToken);
         }
@@ -255,7 +255,7 @@ export class UsersService implements OnModuleInit {
         if (data.aiActionsUsed !== undefined) payload.aiActionsUsed = data.aiActionsUsed;
         if (data.aiActionsResetDate !== undefined) payload.aiActionsResetDate = data.aiActionsResetDate;
 
-        return this.db.updateUser(userId, payload);
+        return await this.db.updateUser(userId, payload);
     }
 
     async setRefreshToken(userId: string, refreshToken: string) {
@@ -267,7 +267,7 @@ export class UsersService implements OnModuleInit {
     }
 
     async getAllUsers() {
-        return this.db.getAllUsers();
+        return await this.db.getAllUsers();
     }
 
     findAll() {
@@ -286,7 +286,7 @@ export class UsersService implements OnModuleInit {
     }
 
     async checkAndReplenishTokens() {
-        const users = this.db.getAllUsers();
+        const users = await this.db.getAllUsers();
         const now = Date.now();
         const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
         let updatedCount = 0;
@@ -298,7 +298,7 @@ export class UsersService implements OnModuleInit {
                 const aiTokens = shopCount >= 2 ? 1000 : 500;
                 const reportTokens = shopCount >= 2 ? 500 : 250;
 
-                this.db.updateUser(user.id, { aiTokens, reportTokens, lastTokenReset: now });
+                await this.db.updateUser(user.id, { aiTokens, reportTokens, lastTokenReset: now });
                 updatedCount++;
             }
         }
@@ -308,17 +308,17 @@ export class UsersService implements OnModuleInit {
     }
 
     async topUpTokens(userId: string, amount: number) {
-        const user = this.db.findUserById(userId);
+        const user = await this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
 
-        const updated = this.db.updateUser(userId, {
+        const updated = await this.db.updateUser(userId, {
             aiTokens: user.aiTokens + amount
         });
         return { success: true, newBalance: updated.aiTokens };
     }
 
     async updateShopSettings(userId: string, storeId: string, settings: Partial<BotSettings>): Promise<ShopifyStore> {
-        const store = this.db.findStoreById(storeId);
+        const store = await this.db.findStoreById(storeId);
         if (!store || store.userId !== userId) throw new Error('Store not found');
 
         const currentSettings = (store.botSettings as any) || {
@@ -335,13 +335,13 @@ export class UsersService implements OnModuleInit {
 
         const newSettings = { ...currentSettings, ...settings };
 
-        return this.db.updateStore(storeId, { botSettings: newSettings });
+        return await this.db.updateStore(storeId, { botSettings: newSettings });
     }
 
     async setStoreTarget(userId: string, storeId: string, type: 'weekly' | 'monthly', value: number): Promise<ShopifyStore> {
-        const store = this.db.findStoreById(storeId);
+        const store = await this.db.findStoreById(storeId);
         if (!store || store.userId !== userId) throw new Error('Store not found');
-        return this.db.updateStore(storeId, { targetType: type, targetValue: value });
+        return await this.db.updateStore(storeId, { targetType: type, targetValue: value });
     }
 
     async getAiTokens(userId: string): Promise<number> {
@@ -350,27 +350,27 @@ export class UsersService implements OnModuleInit {
     }
 
     async increaseStoreLimit(userId: string): Promise<User> {
-        const user = this.db.findUserById(userId);
+        const user = await this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
-        return this.db.updateUser(userId, {
+        return await this.db.updateUser(userId, {
             storeLimit: user.storeLimit + 1
         });
     }
 
     async extendRetention(userId: string, months: number): Promise<User> {
-        const user = this.db.findUserById(userId);
+        const user = await this.db.findUserById(userId);
         if (!user) throw new Error('User not found');
-        return this.db.updateUser(userId, {
+        return await this.db.updateUser(userId, {
             retentionMonths: user.retentionMonths + months
         });
     }
 
     async setFreeReports(userId: string, enable: boolean): Promise<User> {
-        return this.db.updateUser(userId, { hasFreeReports: enable });
+        return await this.db.updateUser(userId, { hasFreeReports: enable });
     }
 
     async setAllFreeReports(enable: boolean): Promise<number> {
-        return this.db.updateManyUsers({ hasFreeReports: enable });
+        return await this.db.updateManyUsers({ hasFreeReports: enable });
     }
 
     async deductReportToken(userId: string, amount: number = 1): Promise<User> {
@@ -379,7 +379,7 @@ export class UsersService implements OnModuleInit {
         if (user.hasFreeReports) return user;
         if (user.reportTokens < amount) throw new Error('Insufficient report tokens');
 
-        return this.db.updateUser(userId, {
+        return await this.db.updateUser(userId, {
             reportTokens: user.reportTokens - amount
         });
     }
