@@ -33,7 +33,9 @@ async function bootstrap() {
     });
 
     await app.startAllMicroservices();
+    console.log('PostgreSQL Database connected successfully via Prisma');
     console.log('RabbitMQ Microservice transport started successfully');
+
 
     app.enableCors({
         origin: (origin, callback) => {
