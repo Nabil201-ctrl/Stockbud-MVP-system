@@ -54,7 +54,8 @@ const RevenueChart = ({ data, currencySymbol = '$' }) => {
             fontSize={12}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(value) => `${currencySymbol}${value / 1000}k`}
+            tickFormatter={(value) => value >= 1000 ? `${currencySymbol}${value / 1000}k` : `${currencySymbol}${value}`}
+
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend

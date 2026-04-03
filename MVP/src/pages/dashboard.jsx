@@ -56,18 +56,18 @@ const Dashboard = () => {
     }
 
     setLoading(true);
-    const cacheKey = `dashboard_stats_${user.activeShopId}`;
+    const cacheKey = `dashboard_stats_${user.activeShopId}_${dateRange}_${filterBy}_${sortBy}`;
 
     try {
       // 1. Try to load from cache first for instant load
       const cachedStats = await storage.get(cacheKey);
       if (cachedStats) {
         setStats(cachedStats);
-        setLoading(false); // Show content immediately if we have cache
+        setLoading(false);
       }
 
       // 2. Fetch fresh data using centralized API
-      const response = await dashboardAPI.getStats(dateRange);
+      const response = await dashboardAPI.getStats(dateRange, filterBy, sortBy);
       const data = response.data;
 
       if (data && data.targetDetails) {
@@ -80,7 +80,6 @@ const Dashboard = () => {
 
     } catch (error) {
       console.error('Failed to fetch dashboard stats', error);
-
     } finally {
       setLoading(false);
     }
@@ -90,7 +89,8 @@ const Dashboard = () => {
     if (user) {
       fetchStats();
     }
-  }, [user?.activeShopId, dateRange]);
+  }, [user?.activeShopId, dateRange, sortBy, filterBy]);
+
 
   useEffect(() => {
     if (!stats) return;

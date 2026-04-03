@@ -53,7 +53,8 @@ const DashboardStats = ({ isDarkMode, onSort, onFilter, onDateRange, currentSort
   };
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 relative z-50">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 relative z-10">
+
       <div>
         <h1 className="text-2xl font-bold">{t('dashboard.analyticsOverview')}</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">{dateRangeString}</p>

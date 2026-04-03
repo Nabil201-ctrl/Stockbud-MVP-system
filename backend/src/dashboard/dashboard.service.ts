@@ -12,7 +12,7 @@ export class DashboardService {
         private readonly prisma: PrismaService
     ) { }
 
-    async getStats(userId: string, shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string) {
+    async getStats(userId: string, shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string, sortBy: string = 'newest') {
         let totalRevenue = 0;
         let revenueChange = 0;
         let revenueData = [];
@@ -33,43 +33,70 @@ export class DashboardService {
         // 1. Fetch Shopify Orders
         if (shop && token) {
             try {
-                const limit = range === 'year' ? 150 : (range === 'month' ? 100 : 50);
+                const limit = range === 'year' ? 250 : (range === 'month' ? 100 : 50);
                 const ordersData = await this.shopifyService.getOrders(shop, token, { first: limit });
                 let shopifyOrders = Array.isArray(ordersData) ? ordersData : (ordersData as any).orders || [];
 
-                // Normalise Shopify orders to common format
                 shopifyOrders.forEach(o => {
                     mergedOrders.push({
                         ...o,
                         source: o.source_name || 'Shopify',
                         normalized_total: Number(o.total_price),
-                        type: 'shopify'
+                        type: 'shopify',
+                        created_at: o.created_at || o.createdAt
                     });
                 });
             } catch (error) {
-                console.error("Failed to fetch shopify orders for stats:", error.message);
+                console.error("Dashboard stats Shopify fetch error:", error.message);
             }
         }
 
-        // 2. Fetch Local Social Store Orders
-        const localOrders = await this.prisma.order.findMany({ where: { userId } });
-        localOrders.forEach((o: any) => {
+        // 2. Fetch Local Orders
+        const [orders, stores] = await Promise.all([
+            this.prisma.order.findMany({ where: { userId } }),
+            this.prisma.socialStore.findMany({ where: { userId } })
+        ]);
+
+        orders.forEach(o => {
+            const store = stores.find(s => s.id === o.storeId);
             mergedOrders.push({
                 ...o,
-                source: o.source || 'Social Store',
-                created_at: o.createdAt || o.date,
-                normalized_total: Number(o.totalAmount || o.total || 0),
+                source: store?.name || store?.type || 'Social Store',
+                created_at: o.createdAt,
+                normalized_total: o.totalAmount || 0,
                 type: 'local'
             });
         });
 
+
         // 3. Filter by date and source
         let filteredOrders = mergedOrders.filter(o => new Date(o.created_at) >= filterDate);
-        if (sourceFilter) {
-            filteredOrders = filteredOrders.filter(o => o.source?.toLowerCase().includes(sourceFilter.toLowerCase()));
+        if (sourceFilter && sourceFilter !== 'all') {
+            const normalizedFilter = sourceFilter.toLowerCase();
+            filteredOrders = filteredOrders.filter(o => {
+                const source = (o.source || '').toLowerCase();
+                // If filter is 'web', match 'shopify' or 'web'
+                if (normalizedFilter === 'web' || normalizedFilter === 'shopify') {
+                    return source.includes('shopify') || source.includes('web');
+                }
+                // If filter is 'instagram' or 'pos', match exactly
+                return source.includes(normalizedFilter);
+            });
         }
 
-        // 4. Calculate Revenue
+        // 4. Sorting
+        if (sortBy === 'highest') {
+            filteredOrders.sort((a, b) => b.normalized_total - a.normalized_total);
+        } else if (sortBy === 'lowest') {
+            filteredOrders.sort((a, b) => a.normalized_total - b.normalized_total);
+        } else if (sortBy === 'oldest') {
+            filteredOrders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        } else {
+            // Default to newest
+            filteredOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        }
+
+        // 5. Calculate Revenue
         filteredOrders.forEach(o => {
             if (o.cancelled_at) {
                 lostRevenue += o.normalized_total;
@@ -78,7 +105,7 @@ export class DashboardService {
             }
         });
 
-        // 5. Weekly Revenue Change
+        // 6. Weekly Revenue Change
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
@@ -102,7 +129,7 @@ export class DashboardService {
             revenueChange = 100;
         }
 
-        // 6. Chart Data
+        // 7. Chart Data (Last 7 Days)
         const last7Days = [...Array(7)].map((_, i) => {
             const d = new Date();
             d.setDate(d.getDate() - (6 - i));
@@ -111,7 +138,10 @@ export class DashboardService {
 
         revenueData = last7Days.map(date => {
             const dayRevenue = filteredOrders
-                .filter(o => o.created_at.startsWith(date) && !o.cancelled_at)
+                .filter(o => {
+                    const oDate = new Date(o.created_at).toISOString().split('T')[0];
+                    return oDate === date && !o.cancelled_at;
+                })
                 .reduce((sum, o) => sum + o.normalized_total, 0);
 
             const dailyTarget = targetType === 'monthly' ? targetValue / 30 : targetValue / 7;
@@ -123,7 +153,7 @@ export class DashboardService {
             };
         });
 
-        // 7. Sources breakdown
+        // 8. Sources breakdown
         const sources = {};
         filteredOrders.forEach(o => {
             const source = o.source || 'Direct';
@@ -137,18 +167,41 @@ export class DashboardService {
             color: this.getColorForSource(name)
         }));
 
-        // 8. Sales History
+        // 9. Sales History (Already sorted)
         salesHistoryData = filteredOrders
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, 5)
+            .slice(0, 10)
             .map(o => ({
+                id: o.id,
                 name: o.customerName || (o.customer ? `${o.customer.first_name} ${o.customer.last_name || ''}` : 'Customer'),
                 amount: Math.round(o.normalized_total),
-                avatar: (o.customerName?.[0] || 'C').toUpperCase(),
-                color: this.getRandomColor()
+                avatar: (o.customerName?.[0] || (o.customer?.first_name?.[0]) || 'C').toUpperCase(),
+                color: this.getRandomColor(),
+                date: o.created_at
             }));
 
-        // 9. Top Products
+        // 10. Heatmap Data (Last 35 Days)
+        const last35Days = [...Array(35)].map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (34 - i));
+            return d.toISOString().split('T')[0];
+        });
+
+        heatmapData = last35Days.map(date => {
+            const dayOrders = filteredOrders.filter(o => {
+                const oDate = new Date(o.created_at).toISOString().split('T')[0];
+                return oDate === date && !o.cancelled_at;
+            });
+            const revenue = dayOrders.reduce((sum, o) => sum + o.normalized_total, 0);
+
+            let level = 0;
+            if (revenue > 2000) level = 3;
+            else if (revenue > 1000) level = 2;
+            else if (revenue > 0) level = 1;
+
+            return { date, level };
+        });
+
+        // 11. Top Products
         const productCounts = {};
         filteredOrders.forEach(o => {
             if (!o.cancelled_at) {
@@ -178,9 +231,12 @@ export class DashboardService {
             },
             source: sourceData,
             salesHistory: salesHistoryData,
-            topProducts: topProducts
+            topProducts: topProducts,
+            heatmap: heatmapData
         };
     }
+
+
 
     private getColorForSource(source: string): string {
         switch (source.toLowerCase()) {

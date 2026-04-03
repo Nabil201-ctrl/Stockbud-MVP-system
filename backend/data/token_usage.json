@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "userId": "819481c5-b6b0-49dd-9b97-983e1d2e8b9e",
+    "model": "gemini-flash-latest",
+    "inputTokens": 308,
+    "outputTokens": 62,
+    "totalTokens": 578,
+    "source": "chat",
+    "timestamp": "2026-04-03T22:48:56.670Z"
+  }
+]

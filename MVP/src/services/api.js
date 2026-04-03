@@ -92,7 +92,9 @@ export const storesAPI = {
 };
 
 export const dashboardAPI = {
-    getStats: (range = 'week') => api.get(`/dashboard/stats?range=${range}`),
+    getStats: (range = 'month', filter = 'all', sortBy = 'newest') =>
+        api.get(`/dashboard/stats?range=${range}&filter=${filter}&sortBy=${sortBy}`),
+
     getTarget: () => api.get('/dashboard/target'),
     setTarget: (type, value) => api.post('/dashboard/target', { type, value }),
 };

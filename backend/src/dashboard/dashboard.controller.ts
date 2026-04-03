@@ -15,6 +15,9 @@ export class DashboardController {
     async getStats(@Req() req) {
         const user = req.user;
         const range = req.query.range as '7days' | 'month' | 'year' || 'month';
+        const filter = req.query.filter as string || 'all';
+        const sortBy = req.query.sortBy as string || 'newest';
+
         const fullUser = await this.usersService.findById(user.id);
         const userCurrency = fullUser?.currency || 'USD';
 
@@ -24,9 +27,11 @@ export class DashboardController {
         const targetValue = shopStore?.targetValue || 0;
         const token = await this.usersService.getDecryptedShopifyToken(user.id);
 
-        let sourceFilter: string | undefined = undefined;
+        let sourceFilter: string | undefined = filter !== 'all' ? filter : undefined;
+
+        // If it's a social store and no filter specified, default to that social store's type
         const socialStore = (fullUser as any)?.socialStores?.find((s: any) => s.id === fullUser.activeShopId);
-        if (socialStore) {
+        if (socialStore && !sourceFilter) {
             sourceFilter = socialStore.type;
         }
 
@@ -38,9 +43,11 @@ export class DashboardController {
             targetValue,
             userCurrency,
             range,
-            sourceFilter
+            sourceFilter,
+            sortBy
         );
     }
+
 
     @Post('target')
     @UseGuards(AuthGuard('jwt'))

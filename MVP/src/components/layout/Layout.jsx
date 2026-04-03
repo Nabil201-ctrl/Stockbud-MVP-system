@@ -20,15 +20,15 @@ const Layout = ({ children }) => {
   const toggleMobileSidebar = () => setIsMobileSidebarOpen(!isMobileSidebarOpen);
   const closeMobileSidebar = () => setIsMobileSidebarOpen(false);
 
-  
+
   useEffect(() => {
     const checkFeedback = () => {
       const lastFeedback = localStorage.getItem('lastFeedbackDate');
       const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
       if (!lastFeedback) {
-        
-        
+
+
         setTimeout(() => setShowFeedback(true), 5000);
       } else {
         const timeSince = Date.now() - parseInt(lastFeedback, 10);
@@ -49,38 +49,38 @@ const Layout = ({ children }) => {
       animate: true,
       popoverClass: 'driverjs-theme',
       steps: [
-        
+
         { element: '#app-sidebar', popover: { title: 'Navigation', description: 'Use the sidebar to navigate between different sections of the app.' } },
         { element: '#app-header', popover: { title: 'Header', description: 'Access your profile, notifications, and settings here.' } },
 
-        
+
         ...(location.pathname === '/dashboard' ? [
           { element: '#dashboard-stats', popover: { title: 'Overview Stats', description: 'Quick view of your key metrics.' } },
           { element: '#revenue-chart', popover: { title: 'Revenue Chart', description: 'Track your revenue trends over time.' } },
           { element: '#source-chart', popover: { title: 'Traffic Sources', description: 'See where your customers are coming from.' } },
         ] : []),
 
-        
+
         ...(location.pathname === '/products' ? [
           { element: '#products-stats', popover: { title: 'Product Stats', description: 'Summary of your product inventory.' } },
           { element: '#products-search', popover: { title: 'Search & Filter', description: 'Find specific products or filter by category.' } },
           { element: '#products-table', popover: { title: 'Product List', description: 'Manage your products here.' } },
         ] : []),
 
-        
+
         ...(location.pathname === '/reports' ? [
           { element: '#reports-header', popover: { title: 'Reports Overview', description: 'View and manage your generated reports here.' } },
           { element: '#reports-stats-grid', popover: { title: 'Key Metrics', description: 'Quick summary of your business performance.' } },
           { element: '#reports-list', popover: { title: 'Generated Reports', description: 'Access your history of generated reports. You can preview, download, or delete them.' } },
         ] : []),
 
-        
+
         ...(location.pathname === '/settings' ? [
           { element: '#settings-header', popover: { title: 'Settings', description: 'Manage your account, profile, and security preferences.' } },
           { element: '#settings-tabs', popover: { title: 'Configuration Categories', description: 'Switch between different settings categories like Profile, Security, and Integrations.' } },
         ] : []),
 
-        
+
         ...(location.pathname === '/realtime' ? [
           { element: '#realtime-header', popover: { title: 'Realtime Analytics', description: 'Monitor live user activity on your store.' } },
           { element: '#realtime-stats', popover: { title: 'Live Stats', description: 'Real-time counters for active users, views, and clicks.' } },
@@ -88,21 +88,21 @@ const Layout = ({ children }) => {
           { element: '#realtime-analytics', popover: { title: 'Detailed Breakdown', description: 'See geographic and device distribution of your current traffic.' } },
         ] : []),
 
-        
+
         ...(location.pathname === '/bot-customization' ? [
           { element: '#bot-header', popover: { title: 'AI Bot Customization', description: 'Tailor your AI assistant to match your brand.' } },
           { element: '#bot-preview-card', popover: { title: 'Live Preview', description: 'See how your bot looks and behaves in real-time.' } },
           { element: '#bot-settings-card', popover: { title: 'Bot Settings', description: 'Configure personality, speed, language, and other behaviors.' } },
         ] : []),
 
-        
+
         ...(location.pathname === '/users' ? [
           { element: '#users-header', popover: { title: 'User Management', description: 'View and manage your registered users.' } },
           { element: '#users-stats', popover: { title: 'User Growth', description: 'Track user acquisition and retention metrics.' } },
           { element: '#users-table', popover: { title: 'User Directory', description: 'Filter, search, and manage individual user accounts.' } },
         ] : []),
 
-        
+
         ...(location.pathname === '/chat' ? [
           { element: '#chat-sidebar', popover: { title: 'Chat History', description: 'Access your previous conversations here.' } },
           { element: '#chat-input', popover: { title: 'Ask AI', description: 'Type your questions about your store data here.' } },
@@ -124,7 +124,7 @@ const Layout = ({ children }) => {
   }, []);
 
   const handleFeedbackSubmit = (feedback) => {
-    
+
     console.log('Feedback submitted:', feedback);
     localStorage.setItem('lastFeedbackDate', Date.now().toString());
     setShowFeedback(false);
@@ -147,13 +147,15 @@ const Layout = ({ children }) => {
         onClose={closeMobileSidebar}
       />
 
-      {}
+      { }
       {isMobileSidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-[90] bg-black/50 lg:hidden"
+
           onClick={closeMobileSidebar}
         />
       )}
+
 
       <div className="flex-1 flex flex-col min-h-0">
         <Header

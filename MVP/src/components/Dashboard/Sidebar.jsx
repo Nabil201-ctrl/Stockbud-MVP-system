@@ -18,12 +18,12 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
   const [showFeedbackWidget, setShowFeedbackWidget] = useState(false);
   const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
 
-  
+
   React.useEffect(() => {
     if (!user) return;
 
-    
-    
+
+
     const accountCreatedDate = user.createdAt ? new Date(user.createdAt).getTime() : 0;
     const daysSinceCreation = accountCreatedDate ? (Date.now() - accountCreatedDate) / (1000 * 60 * 60 * 24) : 14;
 
@@ -37,7 +37,7 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
       setShowFeedbackWidget(true);
     } else {
       const daysSinceSubmit = (Date.now() - parseInt(lastSubmitted)) / (1000 * 60 * 60 * 24);
-      
+
       if (daysSinceSubmit >= 14) {
         setShowFeedbackWidget(true);
       } else {
@@ -63,7 +63,9 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
   return (
     <>
       <div id="app-sidebar" className={`
-        fixed inset-y-0 left-0 z-30 transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-auto
+        fixed inset-y-0 left-0 z-[100] transition-transform duration-300 transform lg:translate-x-0 lg:static lg:inset-auto
+
+
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         w-64 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-slate-50 border-gray-200'} border-r flex flex-col flex-shrink-0
       `}>
@@ -107,7 +109,7 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
             </button>
           </div>
 
-          {}
+          { }
           {showFeedbackWidget && (
             <div className="bg-blue-600 rounded-lg p-3 text-white">
               <h4 className="text-xs font-medium mb-2 opacity-90">Help us improve</h4>

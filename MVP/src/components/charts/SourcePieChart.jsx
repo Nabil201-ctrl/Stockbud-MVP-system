@@ -48,6 +48,11 @@ const SourcePieChart = ({ data }) => {
     );
   };
 
+  const totalValue = sourceData.reduce((sum, entry) => sum + (entry.value || 0), 0);
+  const mainSource = sourceData.length > 0 && sourceData[0].name !== 'No Data'
+    ? sourceData.sort((a, b) => b.value - a.value)[0]
+    : { name: 'Direct', value: 100 };
+
   return (
     <div className="relative h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -83,14 +88,15 @@ const SourcePieChart = ({ data }) => {
       </ResponsiveContainer>
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
         <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-          100%
+          {mainSource.value}%
         </div>
-        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          +8% Goal
+        <div className={`text-[10px] uppercase tracking-tighter sm:text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          {mainSource.name}
         </div>
       </div>
     </div>
   );
+
 };
 
 export default SourcePieChart;
