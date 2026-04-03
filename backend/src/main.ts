@@ -12,7 +12,13 @@ if (!global.fetch) {
     (global.Response as any) = Response;
 }
 
+// Global BigInt serialization patch
+(BigInt.prototype as any).toJSON = function () {
+    return Number(this);
+};
+
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
+
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);

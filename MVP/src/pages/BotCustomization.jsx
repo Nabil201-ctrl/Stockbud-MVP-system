@@ -59,7 +59,7 @@ const BotCustomization = () => {
     try {
       // Use new endpoint for shop-specific settings
       if (user?.activeShopId) {
-        const response = await fetch(`/api/users/shopify-stores/${user.activeShopId}/settings`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/users/shopify-stores/${user.activeShopId}/settings`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

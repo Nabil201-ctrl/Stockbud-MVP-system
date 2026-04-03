@@ -15,11 +15,13 @@ const FeedbackModal = ({ isOpen, onClose, onSubmit, isDarkMode }) => {
         setIsSubmitting(true);
 
         try {
-            await fetch('/api/feed', {
+            await fetch(`${import.meta.env.VITE_API_URL}/feed`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
+
                 body: JSON.stringify({
                     rating: rating === 'good' ? 5 : 1,
                     category: 'general',

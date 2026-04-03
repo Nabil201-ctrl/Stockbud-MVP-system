@@ -13,7 +13,7 @@ const Signup = () => {
     const [error, setError] = useState('');
 
     const handleGoogleLogin = () => {
-        window.location.href = '/api/auth/google';
+        window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
     };
 
     const handleSubmit = async (e) => {
@@ -23,7 +23,7 @@ const Signup = () => {
 
         const result = await register(name, email, password);
         if (result.success) {
-            navigate('/onboarding/notifications'); 
+            navigate('/onboarding/notifications');
         } else {
             setError(result.error || 'Registration failed');
         }

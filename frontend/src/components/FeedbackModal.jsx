@@ -22,7 +22,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
         setSubmitStatus(null);
 
         try {
-            await axios.post('http://localhost:3000/feed/feedback', {
+            await axios.post(`${import.meta.env.VITE_API_BASE_URL}/feed/feedback`, {
                 rating,
                 category,
                 message
@@ -47,7 +47,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
 
-                {}
+                { }
                 <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                     <div className="flex items-center gap-2">
                         <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -63,7 +63,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                {}
+                { }
                 {submitStatus === 'success' ? (
                     <div className="p-8 text-center">
                         <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -73,9 +73,9 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                         <p className="text-gray-600 dark:text-gray-300">Your feedback helps us improve Stockbud.</p>
                     </div>
                 ) : (
-                                        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                    <form onSubmit={handleSubmit} className="p-6 space-y-6">
 
-                        {}
+                        { }
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">How would you rate your experience?</label>
                             <div className="flex gap-2 justify-center py-2">
@@ -94,7 +94,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                             </div>
                         </div>
 
-                        {}
+                        { }
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
                             <div className="grid grid-cols-2 gap-2">
@@ -115,7 +115,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                             </div>
                         </div>
 
-                        {}
+                        { }
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Details</label>
                             <textarea

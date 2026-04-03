@@ -44,7 +44,7 @@ export class UsersService implements OnModuleInit {
                 picture: profile.photos?.[0]?.value,
                 createdAt: new Date().toISOString(),
                 ipAddress: profile.ipAddress,
-                lastTokenReset: Date.now()
+                lastTokenReset: BigInt(Date.now())
             });
 
             if (profile.ipAddress) {
@@ -63,7 +63,7 @@ export class UsersService implements OnModuleInit {
             name,
             password: passwordHash,
             createdAt: new Date().toISOString(),
-            lastTokenReset: Date.now()
+            lastTokenReset: BigInt(Date.now())
         });
         return user;
     }
@@ -292,16 +292,21 @@ export class UsersService implements OnModuleInit {
         let updatedCount = 0;
 
         for (const user of users) {
-            const lastReset = user.lastTokenReset || 0;
+            const lastReset = Number(user.lastTokenReset || 0);
             if (now - lastReset >= THIRTY_DAYS_MS) {
                 const shopCount = user.shopifyStores?.length || 0;
                 const aiTokens = shopCount >= 2 ? 1000 : 500;
                 const reportTokens = shopCount >= 2 ? 500 : 250;
 
-                await this.db.updateUser(user.id, { aiTokens, reportTokens, lastTokenReset: now });
+                await this.db.updateUser(user.id, {
+                    aiTokens,
+                    reportTokens,
+                    lastTokenReset: BigInt(now)
+                });
                 updatedCount++;
             }
         }
+
         if (updatedCount > 0) {
             console.log(`[Tokens] Replenished tokens for ${updatedCount} users.`);
         }

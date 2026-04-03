@@ -15,7 +15,7 @@ const Settings = () => {
     useEffect(() => {
         if (!shopUrl || !isConnecting) return;
 
-        const socket = io('http:
+        const socket = io(import.meta.env.VITE_API_BASE_URL);
 
         socket.on('connect', () => {
             console.log('Connected to Shopify Gateway');
@@ -40,10 +40,10 @@ const Settings = () => {
         }
 
         try {
-            await axios.delete('http://localhost:3000/users/shopify-credentials', {
+            await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/users/shopify-credentials`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            
+
             setShopUrl('');
             setToken('');
             setIsConnected(false);
@@ -131,12 +131,12 @@ const Settings = () => {
                     </div>
                 </div>
 
-                {}
+                { }
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden">
                     {!isConnecting && !isConnected ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-[2px] z-10 p- text-center">
                             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                                {}
+                                { }
                                 <ShoppingBag className="w-8 h-8 text-gray-400" />
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Waiting to Connect</h3>
