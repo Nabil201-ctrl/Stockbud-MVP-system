@@ -286,7 +286,7 @@ export default function Index() {
               {currentStep === 5 && (
                 <Box padding="400" background="bg-surface-secondary">
                   <BlockStack gap="400" align="center">
-                    <div style={{ fontSize: '48px', textAlign: 'center' }}>✅</div>
+                    <div style={{ fontSize: '48px', textAlign: 'center' }}>✓</div>
                     <Text variant="headingMd" as="h3" alignment="center">Setup Complete!</Text>
                     <Button variant="primary" size="large" onClick={openApp}>
                       Launch Stockbud Dashboard

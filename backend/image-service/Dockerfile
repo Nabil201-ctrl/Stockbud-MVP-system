@@ -15,3 +15,9 @@ EXPOSE 3002
 
 # Start the Node.js application
 CMD ["node", "index.js"]
+
+
+
+
+
+
