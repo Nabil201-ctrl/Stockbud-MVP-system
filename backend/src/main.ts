@@ -33,6 +33,7 @@ async function bootstrap() {
     });
 
     await app.startAllMicroservices();
+    console.log('RabbitMQ Microservice transport started successfully');
 
     app.enableCors({
         origin: (origin, callback) => {

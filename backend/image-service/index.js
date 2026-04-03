@@ -115,7 +115,7 @@ async function initRabbit() {
         rabbitChannel.consume(inboundQueue, (msg) => {
             if (msg !== null) {
                 const content = JSON.parse(msg.content.toString());
-                console.log('🖼️ [Image Service] Received async processing request:', content.pattern, 'for payload:', content.data);
+                console.log('[Image Service] Received async processing request:', content.pattern, 'for payload:', content.data);
                 // In a real scenario, this would trigger resizing, blurring, watermark, etc.
                 rabbitChannel.ack(msg);
             }

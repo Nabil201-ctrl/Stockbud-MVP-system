@@ -9,7 +9,7 @@ export class ImageMicroserviceController {
 
     @EventPattern('IMAGE_UPLOAD_DONE')
     async handleImageUpload(@Payload() data: any) {
-        console.log('🖼️ [Main Server] Reacting to Cloudinary upload via RabbitMQ:', data.urls.length, 'images.');
+        console.log('[Main Server] Reacting to Cloudinary upload via RabbitMQ:', data.urls.length, 'images.');
 
         // Demonstrate bidirectional communication:
         // Main server sends a "POST-PROCESS" request back to the microservice
