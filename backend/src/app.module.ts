@@ -19,8 +19,11 @@ import { ImageMicroserviceModule } from './image-microservice/image-microservice
 import { AdminModule } from './admin/admin.module';
 import { SocialStoresModule } from './social-stores/social-stores.module';
 
+import { HealthModule } from './health/health.module';
+
 @Module({
     imports: [
+        HealthModule,
         ConfigModule.forRoot({
             isGlobal: true,
         }),

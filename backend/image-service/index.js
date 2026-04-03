@@ -8,12 +8,44 @@ const CircuitBreaker = require('opossum');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') }); // Fallback to parent for shared keys if any
 
+const client = require('prom-client');
+
 const app = express();
 const port = process.env.IMAGE_SERVICE_PORT || 3002;
 const RABBIT_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
 
+// Prometheus Registry and Default Metrics
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
+
+// Custom Metrics
+const imageUploadsCounter = new client.Counter({
+    name: 'image_uploads_total',
+    help: 'Total number of image uploads',
+    labelNames: ['status'],
+});
+const cloudinaryErrorCounter = new client.Counter({
+    name: 'cloudinary_errors_total',
+    help: 'Total number of Cloudinary upload errors',
+});
+const uploadDurationHistogram = new client.Histogram({
+    name: 'image_upload_duration_seconds',
+    help: 'Duration of image uploads in seconds',
+    buckets: [0.1, 0.5, 1, 2, 5, 10],
+});
+
+register.registerMetric(imageUploadsCounter);
+register.registerMetric(cloudinaryErrorCounter);
+register.registerMetric(uploadDurationHistogram);
+
 app.use(cors());
 app.use(express.json());
+
+// Metrics Endpoint
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+});
 
 // Cloudinary Configuration
 cloudinary.config({
@@ -28,6 +60,7 @@ const QUEUE_NAME = 'image_upload_events';
 
 // Circuit Breaker for Cloudinary
 const uploadToCloudinary = (file) => {
+    const start = Date.now();
     return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
             {
@@ -35,8 +68,12 @@ const uploadToCloudinary = (file) => {
                 resource_type: 'auto'
             },
             (error, result) => {
+                const duration = (Date.now() - start) / 1000;
+                uploadDurationHistogram.observe(duration);
+
                 if (error) {
                     console.error('[Cloudinary] Upload Error:', error);
+                    cloudinaryErrorCounter.inc();
                     reject(error);
                 } else {
                     resolve(result.secure_url);
@@ -140,9 +177,11 @@ app.post('/upload', upload.array('images', 10), async (req, res) => {
         });
 
         console.log(`[Image Service] Upload successful. urls count: ${urls.length}`);
+        imageUploadsCounter.inc({ status: 'success' });
         res.json({ success: true, urls });
     } catch (error) {
         console.error('[Image Service] Error:', error.message);
+        imageUploadsCounter.inc({ status: 'error' });
         res.status(500).json({ success: false, error: error.message });
     }
 });

@@ -4,15 +4,37 @@ const fs = require('fs-extra');
 const path = require('path');
 require('dotenv').config();
 
+const client = require('prom-client');
+
 const app = express();
 const port = process.env.ORDER_PROCESSOR_PORT || 3001;
 
-// Paths to JSON data (using the parent data directory)
-const DATA_DIR = path.resolve(__dirname, '..', 'data');
-const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
-const STORES_FILE = path.join(DATA_DIR, 'social_stores.json');
+// Prometheus Registry and Default Metrics
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
+
+// Custom Metrics
+const ordersProcessedCounter = new client.Counter({
+    name: 'orders_processed_total',
+    help: 'Total number of orders processed successfully or with failure',
+    labelNames: ['status'],
+});
+const orderProcessingHistogram = new client.Histogram({
+    name: 'order_processing_duration_seconds',
+    help: 'Time spent processing an order in seconds',
+    buckets: [0.1, 0.5, 1, 2, 5],
+});
+
+register.registerMetric(ordersProcessedCounter);
+register.registerMetric(orderProcessingHistogram);
 
 app.use(express.json());
+
+// Metrics Endpoint
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', register.contentType);
+    res.send(await register.metrics());
+});
 
 // Basic health check and simple dashboard endpoint
 app.get('/', (req, res) => {
@@ -130,7 +152,18 @@ async function processOrderInternal(order) {
     }
 }
 
-const orderBreaker = new CircuitBreaker(processOrderInternal, {
+const orderBreaker = new CircuitBreaker(async (order) => {
+    const start = Date.now();
+    try {
+        await processOrderInternal(order);
+        const duration = (Date.now() - start) / 1000;
+        orderProcessingHistogram.observe(duration);
+        ordersProcessedCounter.inc({ status: 'success' });
+    } catch (err) {
+        ordersProcessedCounter.inc({ status: 'error' });
+        throw err;
+    }
+}, {
     timeout: 10000,
     errorThresholdPercentage: 50,
     resetTimeout: 20000,
