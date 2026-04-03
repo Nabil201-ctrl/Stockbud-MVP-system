@@ -1,51 +1,27 @@
-# --- Build Stage ---
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-# Copy package configurations
-COPY package*.json ./
-
-# Install all dependencies (including devDependencies for building)
-RUN npm ci
-
-# Copy the rest of the application
-COPY . .
-
-# Build the NestJS application
-RUN npm run build
-
-
-# --- Production Stage ---
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package configurations
+# 1. Install ALL dependencies first (including devDeps for the build)
 COPY package*.json ./
+RUN npm ci
 
-# Install only production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+# 2. Copy source
+COPY . .
 
-# Copy the built application from the builder stage
-COPY --from=builder /app/dist ./dist
+# 3. Generate Prisma Client (CRITICAL for TypeScript compilation)
+RUN npx prisma generate
 
-# Copy local data JSON files if they exist so the backend has initial state
-# (Assuming the backend reads/writes these in the root/data directory)
-COPY --from=builder /app/*.json ./
-COPY --from=builder /app/data ./data
+# 4. Build the application
+RUN npm run build
 
-# Change ownership to the non-root 'node' user for security
+# 5. Security & Permissions
 RUN chown -R node:node /app
-
-# Switch to the non-root user
 USER node
 
-# Expose the backend port
 EXPOSE 3000
-
-# Set environment variable to indicate production environment
 ENV NODE_ENV=production
 
-# Start the application
-CMD ["npm", "run", "start:prod"]
+# 6. Start the app
+# Use node directly. Path to main.js is usually dist/main.js for Nest
+CMD ["node", "dist/main.js"]

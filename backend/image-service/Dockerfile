@@ -1,23 +1,20 @@
 FROM node:20-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Copy package.json and install dependencies
+# Copy package configurations
 COPY package*.json ./
-RUN npm install --production
+RUN npm ci --omit=dev
 
-# Copy the rest of the application code
+# Copy the rest of the application
 COPY . .
 
-# Expose port (default is 3002 as per index.js)
+# Set permissions
+RUN chown -R node:node /app
+USER node
+
+# Expose port (IMAGE_SERVICE_PORT typically 3002)
 EXPOSE 3002
 
-# Start the Node.js application
+# Start the application
 CMD ["node", "index.js"]
-
-
-
-
-
-
