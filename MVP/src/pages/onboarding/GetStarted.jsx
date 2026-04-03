@@ -6,9 +6,8 @@ import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
 const GetStarted = () => {
     const navigate = useNavigate();
 
-    const handleGoogleLogin = () => {
-
-        window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+    const handleContinue = () => {
+        navigate('/onboarding/notifications');
     };
 
     return (
@@ -30,16 +29,16 @@ const GetStarted = () => {
                 </p>
 
                 <button
-                    onClick={handleGoogleLogin}
-                    className="group relative w-full py-4 px-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white font-semibold text-lg hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 block flex items-center justify-center gap-3"
+                    onClick={handleContinue}
+                    className="group relative w-full py-4 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-lg hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 block flex items-center justify-center gap-3"
                 >
-                    <Chrome className="w-6 h-6 text-blue-500" />
-                    <span>Sign in with Google</span>
-                    <ArrowRight className="w-5 h-5 ml-auto text-gray-400 group-hover:text-blue-500 transition-colors" />
+                    <span>Let's Get Started</span>
+                    <ArrowRight className="w-5 h-5 ml-auto text-blue-200 group-hover:translate-x-1 transition-transform" />
                 </button>
             </div>
         </OnboardingLayout>
     );
+
 };
 
 export default GetStarted;

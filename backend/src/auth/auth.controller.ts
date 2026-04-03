@@ -118,11 +118,31 @@ export class AuthController {
     }
 
     @Post('register')
-    async register(@Req() req, @Body() body: any) {
+    async register(@Req() req, @Body() body: any, @Res({ passthrough: true }) res: Response) {
         let ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip;
         if (Array.isArray(ip)) ip = ip[0];
-        return this.authService.register(body.email, body.password, body.name, ip);
+
+        const user = await this.authService.register(body.email, body.password, body.name, ip);
+
+        const { access_token, refresh_token, user: loggedInUser } = await this.authService.login(user, ip);
+
+        res.cookie('access_token', access_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.cookie('refresh_token', refresh_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return { user: loggedInUser, access_token, refresh_token };
     }
+
 
     @Post('change-password')
     @UseGuards(AuthGuard('jwt'))

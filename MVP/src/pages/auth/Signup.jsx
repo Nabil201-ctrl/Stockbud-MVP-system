@@ -23,7 +23,7 @@ const Signup = () => {
 
         const result = await register(name, email, password);
         if (result.success) {
-            navigate('/onboarding/notifications');
+            navigate('/get-started');
         } else {
             setError(result.error || 'Registration failed');
         }

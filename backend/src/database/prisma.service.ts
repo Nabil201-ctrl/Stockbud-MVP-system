@@ -126,4 +126,52 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     async createOrder(order: any) {
         return this.order.create({ data: order });
     }
+
+    // --- Chat Methods ---
+    async getChatsByUserId(userId: string) {
+        return this.chat.findMany({ where: { userId }, orderBy: { updatedAt: 'desc' } });
+    }
+
+    async getChatById(id: string) {
+        return this.chat.findUnique({ where: { id } });
+    }
+
+    async createChat(userId: string, data: any) {
+        return this.chat.create({ data: { ...data, userId } });
+    }
+
+    async updateChat(id: string, data: any) {
+        return this.chat.update({ where: { id }, data });
+    }
+
+    async deleteChat(id: string) {
+        return this.chat.delete({ where: { id } });
+    }
+
+    // --- Notification Methods ---
+    async getNotificationsByUserId(userId: string) {
+        return this.notification.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
+    }
+
+    async createNotification(userId: string, data: any) {
+        return this.notification.create({ data: { ...data, userId } });
+    }
+
+    async updateNotification(id: string, data: any) {
+        return this.notification.update({ where: { id }, data });
+    }
+
+    async updateManyNotifications(userId: string, data: any) {
+        return this.notification.updateMany({ where: { userId }, data });
+    }
+
+    // --- Feedback Methods ---
+    async createFeedback(data: any) {
+        return this.feedback.create({ data });
+    }
+
+    async getAllFeedback() {
+        return this.feedback.findMany({ orderBy: { createdAt: 'desc' } });
+    }
 }
+

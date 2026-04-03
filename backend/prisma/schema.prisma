@@ -43,6 +43,8 @@ model User {
   shopifyStores         ShopifyStore[]
   socialStores          SocialStore[]
   orders                Order[]
+  notifications         Notification[]
+  chats                 Chat[]
 }
 
 model ShopifyStore {
@@ -90,3 +92,36 @@ model Order {
   userId          String?
   user            User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Chat {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String    @default("New Chat")
+  messages  Json      @default("[]")
+  updatedAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id        String    @id @default(uuid())
+  email     String?
+  rating    Int
+  category  String    @default("general")
+  message   String
+  status    String    @default("new")
+  createdAt DateTime  @default(now())
+}
+

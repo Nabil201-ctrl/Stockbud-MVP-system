@@ -1,4 +1,5 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, ConflictException } from '@nestjs/common';
+
 import * as crypto from 'crypto';
 import { EncryptionService } from '../common/encryption.service';
 import { PlanService } from '../common/plan.service';
@@ -56,7 +57,8 @@ export class UsersService implements OnModuleInit {
 
     async createUser(email: string, name: string, passwordHash: string): Promise<User> {
         const existing = await this.findByEmail(email);
-        if (existing) throw new Error('User already exists');
+        if (existing) throw new ConflictException('User already exists');
+
 
         const user = await this.db.createUser({
             email,

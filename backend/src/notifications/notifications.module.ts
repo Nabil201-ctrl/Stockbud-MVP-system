@@ -6,8 +6,10 @@ import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
 
 
+import { DatabaseModule } from '../database/database.module';
+
 @Module({
-    imports: [ConfigModule, UsersModule],
+    imports: [ConfigModule, UsersModule, DatabaseModule],
     controllers: [NotificationsController],
     providers: [NotificationsService, NotificationsGateway],
     exports: [NotificationsService, NotificationsGateway],

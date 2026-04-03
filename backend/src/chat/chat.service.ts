@@ -7,7 +7,7 @@ import { GeminiService } from '../common/gemini.service';
 import { UsageService } from '../common/usage.service';
 import { PlanService } from '../common/plan.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import * as fs from 'fs';
+import { PrismaService } from '../database/prisma.service';
 import * as path from 'path';
 
 export interface Message {
@@ -26,8 +26,6 @@ export interface Chat {
 
 @Injectable()
 export class ChatService implements OnModuleInit {
-    private chats: Map<string, Chat> = new Map();
-    private readonly filePath = path.join(process.cwd(), 'chats.json');
 
     constructor(
         private readonly usersService: UsersService,
@@ -37,104 +35,100 @@ export class ChatService implements OnModuleInit {
         private readonly geminiService: GeminiService,
         private readonly usageService: UsageService,
         private readonly planService: PlanService,
+        private readonly db: PrismaService
     ) { }
 
-    async onModuleInit() {
-        this.loadChats();
-    }
-
-    private loadChats() {
-        if (fs.existsSync(this.filePath)) {
-            try {
-                const data = fs.readFileSync(this.filePath, 'utf8');
-                const chatsArray = JSON.parse(data);
-                this.chats = new Map(chatsArray.map((chat: Chat) => [chat.id, chat]));
-                console.log(`Loaded ${this.chats.size} chats from ${this.filePath}`);
-            } catch (error) {
-                console.error('Error loading chats from file:', error);
-            }
-        }
-    }
-
-    private saveChats() {
-        try {
-            const chatsArray = Array.from(this.chats.values());
-            fs.writeFileSync(this.filePath, JSON.stringify(chatsArray, null, 2), 'utf8');
-        } catch (error) {
-            console.error('Error saving chats to file:', error);
-        }
-    }
+    async onModuleInit() { }
 
     async getUserChats(userId: string) {
-        return Array.from(this.chats.values())
-            .filter(chat => chat.userId === userId)
-            .sort((a, b) => b.updatedAt - a.updatedAt);
+        const chats = await this.db.getChatsByUserId(userId);
+        return chats.map(chat => ({
+            ...chat,
+            messages: chat.messages as any,
+            updatedAt: chat.updatedAt.getTime()
+        }));
     }
 
     async getChat(userId: string, chatId: string) {
-        const chat = this.chats.get(chatId);
+        const chat = await this.db.getChatById(chatId);
         if (!chat || chat.userId !== userId) {
             throw new NotFoundException('Chat not found');
         }
-        return chat;
+        return {
+            ...chat,
+            messages: chat.messages as any,
+            updatedAt: chat.updatedAt.getTime()
+        };
     }
 
     async createChat(userId: string, title: string = 'New Chat', firstMessage?: string, language?: string) {
-        const id = Math.random().toString(36).substr(2, 9);
-        const chat: Chat = {
-            id,
-            userId,
+        const chat = await this.db.createChat(userId, {
             title,
             messages: [],
-            updatedAt: Date.now()
-        };
-
-        this.chats.set(id, chat);
-        this.saveChats();
+            updatedAt: new Date()
+        });
 
         if (firstMessage) {
-            await this.addMessage(userId, id, firstMessage, language);
+            await this.addMessage(userId, chat.id, firstMessage, language);
         }
 
-        return chat;
+        const updatedChat = await this.db.getChatById(chat.id);
+        return {
+            ...updatedChat!,
+            messages: updatedChat!.messages as any,
+            updatedAt: updatedChat!.updatedAt.getTime()
+        };
     }
 
     async deleteChat(userId: string, chatId: string) {
-        const chat = this.chats.get(chatId);
+        const chat = await this.db.getChatById(chatId);
         if (chat && chat.userId === userId) {
-            this.chats.delete(chatId);
-            this.saveChats();
+            await this.db.deleteChat(chatId);
             return { success: true };
         }
         throw new NotFoundException('Chat not found');
     }
 
     async addMessage(userId: string, chatId: string, content: string, language?: string) {
-        const chat = this.chats.get(chatId);
+        const chat = await this.db.getChatById(chatId);
         if (!chat || chat.userId !== userId) {
             throw new NotFoundException('Chat not found');
         }
 
+        const messages = chat.messages as any as Message[];
         const userMessage: Message = {
             role: 'user',
             content,
             timestamp: Date.now()
         };
 
-        chat.messages.push(userMessage);
+        messages.push(userMessage);
 
-        if (chat.messages.length === 1 && chat.title === 'New Chat') {
-            chat.title = content.length > 30 ? content.substring(0, 30) + '...' : content;
+        let title = chat.title;
+        if (messages.length === 1 && title === 'New Chat') {
+            title = content.length > 30 ? content.substring(0, 30) + '...' : content;
         }
 
-        chat.updatedAt = Date.now();
-        this.saveChats();
+        await this.db.updateChat(chatId, {
+            messages: messages as any,
+            title,
+            updatedAt: new Date()
+        });
 
-        const botResponse = await this.generateBotResponse(userId, content, chat.messages, language);
-        chat.messages.push(botResponse);
-        this.saveChats();
+        const botResponse = await this.generateBotResponse(userId, content, messages, language);
+        messages.push(botResponse);
 
-        return chat;
+        await this.db.updateChat(chatId, {
+            messages: messages as any,
+            updatedAt: new Date()
+        });
+
+        return {
+            ...chat,
+            title,
+            messages,
+            updatedAt: Date.now()
+        };
     }
 
     async quickChat(userId: string, content: string, history: { role: 'user' | 'assistant', content: string }[], language?: string) {
@@ -322,17 +316,30 @@ export class ChatService implements OnModuleInit {
             let chat = chats.find(c => c.title === 'StockBud Official' || c.title.includes('StockBud'));
 
             if (!chat) {
-                chat = await this.createChat(userId, 'StockBud Updates');
+                const newChat = await this.db.createChat(userId, {
+                    title: 'StockBud Updates',
+                    messages: [],
+                    updatedAt: new Date()
+                });
+                chat = {
+                    ...newChat,
+                    messages: newChat.messages as any,
+                    updatedAt: newChat.updatedAt.getTime()
+                };
             }
 
+            const messages = chat.messages as Message[];
             const botMsg: Message = {
                 role: 'assistant',
                 content: `**Weekly Report Ready:**\n\n${content}\n\n[View Full Report in Reports Tab]`,
                 timestamp: Date.now()
             };
-            chat.messages.push(botMsg);
-            chat.updatedAt = Date.now();
-            this.saveChats();
+            messages.push(botMsg);
+
+            await this.db.updateChat(chat.id, {
+                messages: messages as any,
+                updatedAt: new Date()
+            });
         } catch (error) {
             console.error(`Failed to generate report for user ${userId}`, error);
         }
@@ -341,28 +348,23 @@ export class ChatService implements OnModuleInit {
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async cleanupOldChats() {
         console.log('Running daily chat cleanup...');
-        this.loadChats();
         const users = await this.usersService.getAllUsers();
-        const userRetention = new Map(users.map(u => [u.id, u.retentionMonths || 3]));
 
-        const now = Date.now();
+        const now = new Date();
         const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-        let deletedCount = 0;
 
-        for (const [id, chat] of this.chats.entries()) {
-            const retentionMonths = userRetention.get(chat.userId) || 3;
+        for (const user of users) {
+            const retentionMonths = user.retentionMonths || 3;
             const retentionMs = retentionMonths * THIRTY_DAYS_MS;
-            const chatAge = now - chat.updatedAt;
+            const chats = await this.db.getChatsByUserId(user.id);
 
-            if (chatAge > retentionMs) {
-                this.chats.delete(id);
-                deletedCount++;
+            for (const chat of chats) {
+                const chatAge = now.getTime() - chat.updatedAt.getTime();
+                if (chatAge > retentionMs) {
+                    await this.db.deleteChat(chat.id);
+                }
             }
-        }
-
-        if (deletedCount > 0) {
-            this.saveChats();
-            console.log(`[Cleanup] Deleted ${deletedCount} expired chats.`);
         }
     }
 }
+

@@ -88,13 +88,15 @@ export const AuthProvider = ({ children }) => {
 
     const register = async (name, email, password) => {
         try {
-            await authAPI.register(name, email, password);
-            // Auto login after complete
-            return loginLocal(email, password);
+            const response = await authAPI.register(name, email, password);
+            setUser(response.data.user);
+            await storage.set('stockbud_cached_user', response.data.user);
+            return { success: true };
         } catch (error) {
             return { success: false, error: error.response?.data?.message || 'Registration failed' };
         }
     };
+
 
     const updateProfile = async (data) => {
         try {
