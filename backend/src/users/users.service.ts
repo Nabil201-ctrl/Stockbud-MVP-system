@@ -45,7 +45,7 @@ export class UsersService implements OnModuleInit {
                 picture: profile.photos?.[0]?.value,
                 createdAt: new Date().toISOString(),
                 ipAddress: profile.ipAddress,
-                lastTokenReset: BigInt(Date.now())
+                lastTokenReset: String(Date.now())
             });
 
             if (profile.ipAddress) {
@@ -65,7 +65,7 @@ export class UsersService implements OnModuleInit {
             name,
             password: passwordHash,
             createdAt: new Date().toISOString(),
-            lastTokenReset: BigInt(Date.now())
+            lastTokenReset: String(Date.now())
         });
         return user;
     }
@@ -303,7 +303,7 @@ export class UsersService implements OnModuleInit {
                 await this.db.updateUser(user.id, {
                     aiTokens,
                     reportTokens,
-                    lastTokenReset: BigInt(now)
+                    lastTokenReset: String(now)
                 });
                 updatedCount++;
             }

@@ -1,15 +1,18 @@
 FROM node:20-alpine
 
+# Install OpenSSL (Alpine version)
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
-# 1. Install ALL dependencies first (including devDeps for the build)
+# 1. Install ALL dependencies first (including dev)
 COPY package*.json ./
 RUN npm ci
 
 # 2. Copy source
 COPY . .
 
-# 3. Generate Prisma Client (CRITICAL for TypeScript compilation)
+# 3. Generate Prisma Client
 RUN npx prisma generate
 
 # 4. Build the application
@@ -23,5 +26,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 
 # 6. Start the app
-# Use node directly. Path to main.js is usually dist/main.js for Nest
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
+
