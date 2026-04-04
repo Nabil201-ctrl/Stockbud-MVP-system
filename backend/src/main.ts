@@ -52,7 +52,9 @@ async function bootstrap() {
                 /\.ngrok-free\.app$/,
                 /^https:\/\/www\.stockbud\.xyz$/,
                 /^https:\/\/stockbud\.xyz$/,
-                /^http:\/\/62\.171\.155\.58(:\d+)?$/
+                /^http:\/\/62\.171\.155\.58(:\d+)?$/,
+                /\.vercel\.app$/
+
 
 
             ];
