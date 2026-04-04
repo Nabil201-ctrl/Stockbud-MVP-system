@@ -10,13 +10,13 @@ async function bootstrap() {
         console.log("Attempting to verify Paystack configuration...");
 
         try {
-            
-            
+
+
             await paymentsService.initializeTransaction(
                 { email: 'test@example.com', id: 'verification_user' },
                 1,
                 10,
-                'http://localhost:3000/callback'
+                'https://api.stockbud.xyz/callback'
             );
             console.log(" Paystack API call successful (Configuration verified)");
         } catch (error) {
@@ -24,8 +24,8 @@ async function bootstrap() {
                 console.error(" Paystack Secret Key is NOT loaded!");
                 process.exit(1);
             } else {
-                
-                
+
+
                 console.log(" Paystack Key loaded. API response:", error.message || error.response?.data);
             }
         }

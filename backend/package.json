@@ -33,6 +33,8 @@
         "@nestjs/terminus": "^11.1.1",
         "@nestjs/websockets": "^10.4.22",
         "@prisma/client": "~5.10.0",
+        "@sentry/nestjs": "^10.47.0",
+        "@sentry/profiling-node": "^10.47.0",
         "@types/cookie-parser": "^1.4.10",
         "@types/cron": "^2.0.1",
         "@types/multer": "^2.1.0",

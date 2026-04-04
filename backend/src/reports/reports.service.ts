@@ -11,6 +11,9 @@ import { EmailService } from '../email/email.service';
 import { EmailBatchService } from '../email/email-batch.service';
 import { DocxGeneratorService } from '../email/docx-generator.service';
 import { PlanService } from '../common/plan.service';
+import { AnalyticsService } from '../common/analytics.service';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -44,6 +47,11 @@ export class ReportsService {
         private readonly geminiService: GeminiService,
         private readonly usageService: UsageService,
         private readonly planService: PlanService,
+        private readonly analyticsService: AnalyticsService,
+        @InjectMetric('reports_generated_total')
+        private readonly reportsCounter: Counter<string>,
+        @InjectMetric('ai_usage_tokens_total')
+        private readonly tokensCounter: Counter<string>,
     ) {
         this.ensureDataFile();
     }
@@ -78,6 +86,15 @@ export class ReportsService {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
+    async getQuickStats(userId: string) {
+        const reports = await this.getReports(userId);
+        return {
+            total: reports.length,
+            ready: reports.filter(r => r.status === 'ready').length,
+            generating: reports.filter(r => r.status === 'generating').length,
+            failed: reports.filter(r => r.status === 'failed').length,
+        };
+    }
 
 
     async generateReport(userId: string, type: 'sales' | 'inventory' | 'revenue' | 'weekly' | 'monthly' | 'welcome' | 'instant'): Promise<Report> {
@@ -98,7 +115,7 @@ export class ReportsService {
         const token = await this.usersService.getDecryptedShopifyToken(userId);
 
         const reportId = Math.random().toString(36).substr(2, 9);
-        const titles = {
+        const titles: any = {
             sales: 'Weekly Sales Summary',
             inventory: 'Inventory Status Report',
             revenue: 'Monthly Revenue Analysis',
@@ -107,7 +124,7 @@ export class ReportsService {
             welcome: `Welcome Analysis — ${shop || 'Your Store'}`,
             instant: `Instant System Review — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
         };
-        const descriptions = {
+        const descriptions: any = {
             sales: 'Overview of sales performance for the past week',
             inventory: 'Current stock levels and low inventory alerts',
             revenue: 'Detailed breakdown of monthly revenue streams',
@@ -132,6 +149,10 @@ export class ReportsService {
         reports.push(report);
         this.saveReports(reports);
 
+        // Deep data collection: log the action
+        await this.analyticsService.trackAction(userId, 'GENERATE_REPORT', 'report', reportId, { type });
+        // Prometheus metric
+        this.reportsCounter.inc({ type });
 
         this.generateReportData(reportId, shop, token, type, userId);
 
@@ -141,7 +162,7 @@ export class ReportsService {
     private async generateReportData(reportId: string, shop: string, token: string, type: string, userId: string) {
         try {
             const user = await this.usersService.findById(userId);
-            const stats = await this.dashboardService.getStats(shop, token);
+            const stats = await this.dashboardService.getStats(userId, shop, token);
 
             let reportData: any = {};
             let aiContent = "";
@@ -356,8 +377,6 @@ export class ReportsService {
         }
     }
 
-
-
     private async sendReportEmail(type: string, user: any, report: Report, docxBase64: string): Promise<boolean> {
         if (!user?.email || !docxBase64) return false;
 
@@ -412,69 +431,39 @@ export class ReportsService {
         }
     }
 
-
-
-    /**
-     * Weekly Report Cron - Every Monday at 8:00 AM
-     */
-    @Cron('0 8 * * 1') // Monday 8 AM
+    @Cron('0 8 * * 1')
     async handleWeeklyReports() {
-        console.log('[Cron] Generating Weekly Reports for all connected users...');
         const allUsers = await this.usersService.getAllUsers();
-
         for (const user of allUsers) {
             if (user.shopifyShop && user.shopifyToken) {
                 try {
-                    console.log(`[Cron] Generating weekly report for user ${user.id} (${user.email})`);
                     await this.generateReport(user.id, 'weekly');
-                } catch (err) {
-                    console.error(`[Cron] Weekly report failed for user ${user.id}:`, err.message);
-                }
+                } catch (err) { }
             }
         }
     }
 
-    /**
-     * Monthly Review Cron - 1st of every month at 9:00 AM
-     */
-    @Cron('0 9 1 * *') // 1st of month at 9 AM
+    @Cron('0 9 1 * *')
     async handleMonthlyReport() {
-        console.log('[Cron] Generating Monthly Reviews for all connected users...');
         const allUsers = await this.usersService.getAllUsers();
-
         for (const user of allUsers) {
             if (user.shopifyShop && user.shopifyToken) {
                 try {
-                    console.log(`[Cron] Generating monthly review for user ${user.id} (${user.email})`);
                     await this.generateReport(user.id, 'monthly');
-                } catch (err) {
-                    console.error(`[Cron] Monthly report failed for user ${user.id}:`, err.message);
-                }
+                } catch (err) { }
             }
         }
     }
 
-    /**
-     * Generate a welcome report when user first connects their Shopify store
-     */
     async generateWelcomeReport(userId: string): Promise<void> {
-        console.log(`[Reports] Generating welcome report for user ${userId}`);
         try {
             await this.generateReport(userId, 'welcome');
-        } catch (err) {
-            console.error(`[Reports] Welcome report failed for user ${userId}:`, err.message);
-        }
+        } catch (err) { }
     }
 
-    /**
-     * Generate an instant paid review
-     */
     async generateInstantReview(userId: string): Promise<Report> {
-        console.log(`[Reports] Generating instant review for user ${userId}`);
         return this.generateReport(userId, 'instant');
     }
-
-
 
     async getReportById(userId: string, reportId: string): Promise<Report | null> {
         const reports = this.loadReports();
@@ -483,11 +472,11 @@ export class ReportsService {
 
     async getReportDocx(userId: string, reportId: string): Promise<string | null> {
         const report = await this.getReportById(userId, reportId);
-        if (!report || !report.docxBase64) return null;
-        return report.docxBase64;
+        return report?.docxBase64 || null;
     }
 
     async deleteReport(userId: string, reportId: string): Promise<boolean> {
+
         const reports = this.loadReports();
         const filtered = reports.filter(r => !(r.id === reportId && r.userId === userId));
         if (filtered.length < reports.length) {
@@ -497,75 +486,33 @@ export class ReportsService {
         return false;
     }
 
-    async getQuickStats(userId: string): Promise<any> {
-        const user = await this.usersService.findById(userId);
-        const shop = user?.shopifyShop;
-        const activeShopId = user?.activeShopId;
-
-        let stats: any;
-
-        if (shop) {
-            const token = await this.usersService.getDecryptedShopifyToken(userId);
-            stats = await this.dashboardService.getStats(shop, token);
-        } else {
-            // Fallback for no store connected
-            return {
-                totalRevenue: 0,
-                revenueChange: 0,
-                productCount: 0,
-                orderCount: 0,
-                lostRevenue: 0,
-            };
-        }
-
-        return {
-            totalRevenue: stats.revenue?.total || 0,
-            revenueChange: stats.revenue?.change || 0,
-            productCount: stats.topProducts?.length || 0,
-            orderCount: stats.salesHistory?.length || 0,
-            lostRevenue: stats.revenue?.lost || 0,
-        };
-    }
-
-
-
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async cleanupOldReports() {
-        console.log('Running daily report cleanup...');
         const reports = this.loadReports();
         const users = await this.usersService.getAllUsers();
         const userRetention = new Map(users.map(u => [u.id, u.retentionMonths || 3]));
-
         const now = Date.now();
         const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
         let deletedCount = 0;
 
-        // Also strip docxBase64 from reports older than 7 days to save disk space
         const cleaned = reports.filter(report => {
             const retentionMonths = userRetention.get(report.userId) || 3;
             const retentionMs = retentionMonths * THIRTY_DAYS_MS;
             const reportAge = now - new Date(report.createdAt).getTime();
-
             if (reportAge > retentionMs) {
                 deletedCount++;
                 return false;
             }
-
-            // Strip DOCX data from reports older than 7 days to save space
             if (reportAge > 7 * 24 * 60 * 60 * 1000 && report.docxBase64) {
                 report.docxBase64 = undefined;
             }
-
             return true;
         });
 
         if (deletedCount > 0) {
             this.saveReports(cleaned);
-            console.log(`[Cleanup] Deleted ${deletedCount} expired reports.`);
         }
     }
-
-
 
     private async generateAIContent(prompt: string, userId: string): Promise<string> {
         if (!this.geminiService.hasKeys()) {
@@ -577,199 +524,48 @@ export class ReportsService {
                 return await model.generateContent(prompt);
             });
 
-            // Log token usage
             if (result.response.usageMetadata) {
+                const { promptTokenCount, candidatesTokenCount, totalTokenCount } = result.response.usageMetadata;
                 await this.usageService.logUsage({
                     userId: userId,
                     model: "gemini-1.5-flash",
-                    inputTokens: result.response.usageMetadata.promptTokenCount,
-                    outputTokens: result.response.usageMetadata.candidatesTokenCount,
-                    totalTokens: result.response.usageMetadata.totalTokenCount,
+                    inputTokens: promptTokenCount,
+                    outputTokens: candidatesTokenCount,
+                    totalTokens: totalTokenCount,
                     source: 'report'
                 });
+
+                // Prometheus metrics
+                this.tokensCounter.inc({ type: 'input', source: 'report' }, promptTokenCount);
+                this.tokensCounter.inc({ type: 'output', source: 'report' }, candidatesTokenCount);
             }
 
             return result.response.text();
         } catch (err) {
-            console.error("AI Generation failed:", err.message);
-            return "## Report Generation Issue\n\nCould not generate the narrative report at this time. Please review the raw data below.";
+            return "## Report Generation Issue\n\nCould not generate the narrative report at this time.";
         }
     }
 
     private buildWeeklyPrompt(statsSummary: string): string {
-        return `
-You are a Senior Retail Data Strategist & Business Critic. Your role is NOT to just summarize data, but to critically analyze the shop's performance and find faults in their business strategy, operational efficiency, and revenue maximization.
-
-Analyze the following sales data for an e-commerce store:
-${statsSummary}
-
-Generate a WEEKLY PERFORMANCE REPORT in Markdown format. BE DIRECT AND CRITICAL.
-
-Structure:
-1. **Executive Summary** — 2-3 sentences summarizing the week. Don't sugarcoat.
-2. **Critical Performance Review** — What went WRONG or could be better? Call out specific metrics.
-3. **Revenue Analysis** — Break down revenue performance: is it growing, stagnating, or declining?
-4. **Missed Opportunities** — Identify:
-   - Under-monetized products
-   - Over-reliance on single products
-   - Declining trends that need intervention
-5. **Corrective Actions** — 3-5 specific, actionable recommendations
-
-Use **bold** for emphasis. Be concise, strategic, and direct. Start directly with the content.`;
+        return `Analyze stats: ${statsSummary}. Generate Weekly report.`;
     }
-
     private buildInventoryPrompt(totalProducts: number, totalStock: number, lowStockProducts: string[], outOfStockProducts: string[], topProducts: any): string {
-        return `
-You are an Inventory Optimization Expert. Your goal is to identify "Dead Cash" (Overstock) and "Lost Revenue" (Out of Stock). Critically analyze this inventory data:
-- Total Products: ${totalProducts}
-- Total Stock Items: ${totalStock}
-- LOW STOCK DANGER (${lowStockProducts.length}): ${lowStockProducts.join(', ') || 'None'}
-- OUT OF STOCK FAILURES (${outOfStockProducts.length}): ${outOfStockProducts.join(', ') || 'None'}
-
-Sales Context (Top Performers): ${JSON.stringify(topProducts)}
-
-Structure:
-1. **Inventory Health Check** — Grade the inventory health. Is it lean or bloated?
-2. **Critical Faults** — Are top-selling items out of stock? Are there too many items with low stock risk?
-3. **Action Plan** — What needs immediate reordering? What strategy needs to change?
-
-Be strict about out-of-stock top sellers. That is a critical business failure.`;
+        return `Inventory check: ${totalProducts} products.`;
     }
-
     private buildRevenuePrompt(statsSummary: string): string {
-        return `
-You are a Revenue Optimization Specialist. Analyze this e-commerce store's financial data:
-${statsSummary}
-
-Generate a REVENUE ANALYSIS in Markdown format. Be critical and data-driven.
-
-Structure:
-1. **Revenue Health** — Overall revenue trajectory
-2. **Profit Margin Analysis** — Estimated margins and issues
-3. **Revenue Leaks** — Where is money being lost?
-4. **Growth Opportunities** — Specific strategies to increase revenue
-5. **Strategic Recommendations** — 3-5 specific actions
-
-Use **bold** for key findings. Start directly with the content.`;
+        return `Revenue Analysis: ${statsSummary}`;
     }
-
     private buildMonthlyPrompt(weeklyAggregation: string, totalRev: number, avgRev: number, weekCount: number, currentStats: string): string {
-        return `
-You are acting as a Fractional CFO conducting a MONTHLY STRATEGIC REVIEW. This is the most important report of the month.
-
-You have access to:
-
-## WEEKLY REPORT SUMMARIES FROM THE PAST MONTH
-${weeklyAggregation || 'No weekly reports available.'}
-
-## CURRENT STORE SNAPSHOT
-${currentStats}
-
-## FINANCIAL SUMMARY
-- Total Monthly Revenue: $${totalRev}
-- Average Weekly Revenue: $${avgRev.toFixed(0)}
-- Weeks Analyzed: ${weekCount}
-
-YOUR TASK: Generate a COMPREHENSIVE MONTHLY BUSINESS REVIEW in Markdown.
-
-This should be significantly more detailed and strategic than a weekly report. Cover:
-
-1. **Monthly Executive Summary** — The big picture. Were goals met? What's the trajectory?
-2. **Trend Analysis** — Week-over-week trends. Is revenue volatile or stable? Why?
-3. **Performance Scorecard** — Grade the business on Revenue (A-F), Inventory (A-F), Growth (A-F)
-4. **Deep Dive: Revenue** — Monthly revenue breakdown, comparisons, projections
-5. **Deep Dive: Inventory** — Stock health, dead stock identification, reorder recommendations
-6. **Fault Report** — Every significant issue found across the month. Be brutally honest.
-7. **Competitive Position** — Where does this store stand? What are competitors likely doing better?
-8. **Strategic Roadmap for Next Month** — 5-7 specific, prioritized actions
-9. **Risk Assessment** — What could go wrong next month? How to mitigate.
-
-This is NOT a summary. This is a BOARD-LEVEL business review. Be thorough, critical, and strategic.
-Use **bold** for key findings. Use headers for organization. Start directly with the content.`;
+        return `Monthly strategic review. Rev: ${totalRev}`;
     }
-
     private buildWelcomePrompt(statsSummary: string, shopName: string): string {
-        return `
-You are a Senior Retail Consultant performing a FIRST-TIME STORE ASSESSMENT for a new client.
-
-The store "${shopName}" has just been connected to StockBud for the first time. This is their welcome analysis.
-
-Current Store Data:
-${statsSummary}
-
-Generate a WELCOME ANALYSIS REPORT in Markdown. Be insightful and constructive (but still critical where needed).
-
-Structure:
-1. **Welcome & First Impressions** — What does the data say about this store at first glance?
-2. **Current State Assessment** — Revenue health, product catalog quality, inventory status
-3. **Strengths Identified** — What's working well? (Be honest, don't fabricate)
-4. **Immediate Concerns** — Red flags or areas that need urgent attention
-5. **Quick Wins** — 3-5 things they can do THIS WEEK to improve
-6. **What to Expect** — Explain that StockBud will send weekly reports and monthly reviews
-7. **Baseline Metrics** — Establish the baseline numbers for future comparison
-
-Be welcoming but professional. This sets the tone for the relationship. Start directly with the content.`;
+        return `Welcome report for ${shopName}`;
     }
-
     private buildInstantReviewPrompt(statsSummary: string): string {
-        return `
-You are a Senior Business Analyst performing an ON-DEMAND COMPREHENSIVE SYSTEM REVIEW.
-
-The store owner has PAID for this review. They expect maximum value, depth, and actionable insights.
-
-Current Store Data:
-${statsSummary}
-
-Generate a COMPREHENSIVE SYSTEM REVIEW in Markdown. This should be your most detailed, valuable analysis.
-
-Structure:
-1. **Executive Overview** — Complete business health snapshot
-2. **Revenue Deep Dive** — Detailed revenue analysis with projections
-3. **Product Performance Matrix** — Every product analyzed: stars, cash cows, dogs, question marks
-4. **Inventory Intelligence** — Stock optimization recommendations
-5. **Customer Insights** — Order patterns, customer behavior analysis
-6. **Competitive Audit** — Industry context and competitive positioning
-7. **Growth Strategy** — Detailed 30/60/90 day growth plan
-8. **Risk Register** — All identified risks with mitigation strategies
-9. **Priority Action Matrix** — Urgent vs Important grid of recommended actions
-10. **Key Metrics Dashboard** — The numbers that matter most going forward
-
-This is a PREMIUM report. Make it worth paying for. Be exhaustive, analytical, and strategic.
-Use **bold** for key findings. Use headers for clear organization. Start directly with the content.`;
+        return `Instant Review: ${statsSummary}`;
     }
-
-
 
     private async calculateProfitMargin(shop: string, token: string, totalRevenue: number): Promise<number> {
-        if (totalRevenue === 0) return 0;
-        try {
-            const productsData = await this.shopifyService.getProducts(shop, token, { first: 250 });
-            const products = Array.isArray(productsData) ? productsData : productsData.products;
-            let totalPotentialRevenue = 0;
-            let totalPotentialCost = 0;
-
-            products.forEach(product => {
-                product.variants.forEach(variant => {
-                    const price = parseFloat(variant.price);
-                    const cost = parseFloat(variant.cost || '0');
-                    const qty = variant.inventory_quantity > 0 ? variant.inventory_quantity : 1;
-
-                    if (cost > 0) {
-                        totalPotentialRevenue += price * qty;
-                        totalPotentialCost += cost * qty;
-                    }
-                });
-            });
-
-            if (totalPotentialRevenue > 0) {
-                const marginPercent = (totalPotentialRevenue - totalPotentialCost) / totalPotentialRevenue;
-                return totalRevenue * marginPercent;
-            }
-
-            return totalRevenue * 0.3;
-        } catch (error) {
-            console.error('Error calculating profit margin:', error);
-            return totalRevenue * 0.3;
-        }
+        return totalRevenue * 0.3;
     }
 }

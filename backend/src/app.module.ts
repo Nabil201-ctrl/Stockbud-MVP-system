@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { APP_FILTER } from '@nestjs/core';
+import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ProductsModule } from './products/products.module';
 import { UsersModule } from './users/users.module';
@@ -21,9 +23,12 @@ import { SocialStoresModule } from './social-stores/social-stores.module';
 
 import { HealthModule } from './health/health.module';
 
+
 @Module({
     imports: [
         HealthModule,
+        SentryModule.forRoot(),
+
         ConfigModule.forRoot({
             isGlobal: true,
         }),
@@ -45,6 +50,12 @@ import { HealthModule } from './health/health.module';
         ImageMicroserviceModule,
         AdminModule,
         SocialStoresModule,
+    ],
+    providers: [
+        {
+            provide: APP_FILTER,
+            useClass: SentryGlobalFilter,
+        },
     ],
 })
 export class AppModule { }

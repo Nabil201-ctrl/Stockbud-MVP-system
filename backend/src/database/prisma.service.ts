@@ -170,8 +170,71 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         return this.feedback.create({ data });
     }
 
+    // --- Product Methods ---
+    async upsertProduct(data: any) {
+        if (data.externalId) {
+            return this.product.upsert({
+                where: { externalId: data.externalId },
+                update: data,
+                create: data
+            });
+        }
+        return this.product.create({ data });
+    }
+
+    async getProductsByUserId(userId: string) {
+        return this.product.findMany({ where: { userId } });
+    }
+
+    async getProductsByStoreId(storeId: string) {
+        return this.product.findMany({
+            where: {
+                OR: [
+                    { shopifyStoreId: storeId },
+                    { socialStoreId: storeId }
+                ]
+            }
+        });
+    }
+
+    // --- Sync Methods ---
+    async createSyncHistory(data: any) {
+        return this.syncHistory.create({ data });
+    }
+
+    async updateSyncHistory(id: string, data: any) {
+        return this.syncHistory.update({ where: { id }, data });
+    }
+
+    // --- Trace Methods ---
+    async logTrace(userId: string, action: string, entityType?: string, entityId?: string, metadata?: any) {
+        return this.traceRecord.create({
+            data: {
+                userId,
+                action,
+                entityType,
+                entityId,
+                metadata
+            }
+        });
+    }
+
     async getAllFeedback() {
         return this.feedback.findMany({ orderBy: { createdAt: 'desc' } });
     }
+
+
+    // --- Custom Order Methods ---
+    async upsertShopifyOrder(data: any) {
+        if (data.shopifyOrderId) {
+            return this.order.upsert({
+                where: { shopifyOrderId: data.shopifyOrderId },
+                update: data,
+                create: data
+            });
+        }
+        return this.order.create({ data });
+    }
 }
+
 

@@ -46,6 +46,9 @@ model User {
   orders                Order[]
   notifications         Notification[]
   chats                 Chat[]
+  products              Product[]      // New Relation
+  syncHistory           SyncHistory[]  // New Relation
+  traceRecords          TraceRecord[]  // New Relation (Auditing)
 }
 
 model ShopifyStore {
@@ -60,6 +63,8 @@ model ShopifyStore {
   
   userId       String
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products     Product[]
+  syncHistory  SyncHistory[]
 }
 
 model SocialStore {
@@ -71,27 +76,90 @@ model SocialStore {
   visits       Int         @default(0)
   inquiries    Int         @default(0)
   dailyStats   Json        @default("[]")
-  products     Json        @default("[]")
+  productsJson Json        @default("[]") @map("products") // Keep old field for migration if needed
   createdAt    DateTime    @default(now())
 
   userId       String
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products     Product[]
+}
+
+model Product {
+  id              String         @id @default(uuid())
+  externalId      String?        @unique // Shopify GID
+  title           String
+  handle          String?
+  description     String?
+  vendor          String?
+  productType     String?
+  status          String         @default("active")
+  price           Float          @default(0)
+  compareAtPrice  Float?
+  costPerItem     Float?
+  inventory       Int            @default(0)
+  images          Json           @default("[]")
+  variants        Json           @default("[]")
+  source          String         @default("manual") // "shopify", "instagram", "whatsapp", "manual"
+  
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  shopifyStoreId  String?
+  shopifyStore    ShopifyStore?  @relation(fields: [shopifyStoreId], references: [id], onDelete: Cascade)
+  
+  socialStoreId   String?
+  socialStore     SocialStore?   @relation(fields: [socialStoreId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 model Order {
   id              String      @id @default(uuid())
-  storeId         String
+  storeId         String      // Compatibility field
+  shopifyOrderId  String?     @unique // Shopify GID
+  orderNumber     String?     // Shopify Display Number (e.g. #1001)
   items           Json
   totalAmount     Float
   currency        String
   customerName    String
-  customerPhone   String
-  customerAddress String
-  status          String
+  customerPhone   String?
+  customerAddress String?
+  customerEmail   String?
+  financialStatus String      @default("pending")
+  fulfillmentStatus String    @default("unfulfilled")
+  source          String      @default("manual") // "shopify", "whatsapp", etc
   createdAt       DateTime    @default(now())
-
+  updatedAt       DateTime    @updatedAt
+  
   userId          String?
   user            User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SyncHistory {
+  id            String       @id @default(uuid())
+  userId        String
+  shopId        String?      // Optional ShopifyStore ID
+  entityType    String       // "products", "orders", "all"
+  status        String       // "success", "failed", "in_progress"
+  results       Json?        // { "created": 10, "updated": 5, "errors": [] }
+  startTime     DateTime     @default(now())
+  endTime       DateTime?
+  
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopifyStore  ShopifyStore? @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model TraceRecord {
+  id          String   @id @default(uuid())
+  userId      String
+  action      String   // e.g. "VIEW_DASHBOARD", "EXPORT_REPORT"
+  entityType  String?  // e.g. "order", "product"
+  entityId    String?
+  metadata    Json?
+  timestamp   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
@@ -111,7 +179,7 @@ model Chat {
   userId    String
   title     String    @default("New Chat")
   messages  Json      @default("[]")
-  updatedAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -125,4 +193,6 @@ model Feedback {
   status    String    @default("new")
   createdAt DateTime  @default(now())
 }
+
+
 

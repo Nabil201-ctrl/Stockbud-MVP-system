@@ -1,7 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { OrderMicroserviceMessage } from './orders.interface';
-
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import { Counter } from 'prom-client';
 import * as CircuitBreaker from 'opossum';
 
 @Injectable()
@@ -10,6 +11,8 @@ export class OrdersProducerService {
 
     constructor(
         @Inject('ORDERS_SERVICE') private client: ClientProxy,
+        @InjectMetric('orders_processed_total')
+        private readonly orderCounter: Counter<string>,
     ) {
         this.breaker = new CircuitBreaker(
             (message: OrderMicroserviceMessage) => this.client.emit('order_action', message).toPromise(),
@@ -24,6 +27,13 @@ export class OrdersProducerService {
     }
 
     async sendOrderMessage(message: OrderMicroserviceMessage) {
-        return this.breaker.fire(message);
+        try {
+            const result = await this.breaker.fire(message);
+            this.orderCounter.inc({ source: (message as any).source || 'unknown', status: 'success' });
+            return result;
+        } catch (error) {
+            this.orderCounter.inc({ source: (message as any).source || 'unknown', status: 'failed' });
+            throw error;
+        }
     }
 }

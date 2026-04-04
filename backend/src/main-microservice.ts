@@ -1,3 +1,4 @@
+import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 import { OrdersMicroserviceModule } from './orders-microservice/orders-microservice.module';

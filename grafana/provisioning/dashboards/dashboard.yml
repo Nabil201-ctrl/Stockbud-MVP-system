@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: 'Stockbud Dashboards'
+    orgId: 1
+    folder: 'Stockbud'
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards

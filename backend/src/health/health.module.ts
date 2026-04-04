@@ -7,6 +7,30 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 
 import { MetricsService } from './metrics.service';
 
+const shopifySyncTotalProvider = makeCounterProvider({
+    name: 'shopify_sync_total',
+    help: 'Total number of Shopify sync operations',
+    labelNames: ['shop', 'status'],
+});
+
+const ordersProcessedTotalProvider = makeCounterProvider({
+    name: 'orders_processed_total',
+    help: 'Total number of orders processed',
+    labelNames: ['source', 'status'],
+});
+
+const aiUsageTokensTotalProvider = makeCounterProvider({
+    name: 'ai_usage_tokens_total',
+    help: 'Total number of AI tokens consumed',
+    labelNames: ['type', 'source'],
+});
+
+const reportsGeneratedTotalProvider = makeCounterProvider({
+    name: 'reports_generated_total',
+    help: 'Total number of reports generated',
+    labelNames: ['type'],
+});
+
 @Global()
 @Module({
     imports: [
@@ -40,7 +64,19 @@ import { MetricsService } from './metrics.service';
             help: 'Total number of logs by level',
             labelNames: ['level'],
         }),
+        shopifySyncTotalProvider,
+        ordersProcessedTotalProvider,
+        aiUsageTokensTotalProvider,
+        reportsGeneratedTotalProvider,
     ],
-    exports: [PrometheusModule, MetricsService],
+    exports: [
+        PrometheusModule,
+        MetricsService,
+        shopifySyncTotalProvider,
+        ordersProcessedTotalProvider,
+        aiUsageTokensTotalProvider,
+        reportsGeneratedTotalProvider
+    ],
 })
 export class HealthModule { }
+

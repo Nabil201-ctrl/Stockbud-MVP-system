@@ -1,3 +1,4 @@
+import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
@@ -79,7 +80,6 @@ async function bootstrap() {
     }));
 
     await app.listen(3000, '0.0.0.0');
-    console.log('Backend is running on http://localhost:3000');
+    console.log('Backend is running on https://api.stockbud.xyz');
 }
 bootstrap();
-

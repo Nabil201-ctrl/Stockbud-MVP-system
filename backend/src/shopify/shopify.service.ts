@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Inject, forwardRef } from '@nestjs/common';
 
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
@@ -6,11 +6,13 @@ import { firstValueFrom } from 'rxjs';
 
 import { ConnectShopDto } from './dto/connect-shop.dto';
 import { UsersService } from '../users/users.service';
+import { ShopifySyncService } from './shopify-sync.service';
+
 import { ShopifyGateway } from './shopify.gateway';
 
 @Injectable()
 export class ShopifyService {
-  
+
   private pairingCodes = new Map<string, { userId: string; expiresAt: Date }>();
 
   constructor(
@@ -18,11 +20,15 @@ export class ShopifyService {
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
     private readonly shopifyGateway: ShopifyGateway,
+    @Inject(forwardRef(() => ShopifySyncService))
+    private readonly syncService: ShopifySyncService,
   ) { }
 
-    generatePairingCode(userId: string): string {
-    
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
+
+
+  generatePairingCode(userId: string): string {
+
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const part1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const part2 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const part3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -68,7 +74,7 @@ export class ShopifyService {
       return { success: false, error: 'Invalid or expired pairing code' };
     }
 
-    
+
     const dto = { shop, accessToken };
     return this.connectShop(dto as any, userId);
   }
@@ -78,7 +84,7 @@ export class ShopifyService {
   }
 
   async connectShop(dto: ConnectShopDto, userId?: string) {
-    
+
     const tokenPrefix = dto.accessToken ? dto.accessToken.substring(0, 10) + '...' : 'MISSING';
     console.log(`[Connect] Connecting shop: ${dto.shop}, Token Prefix: ${tokenPrefix}`);
 
@@ -88,7 +94,7 @@ export class ShopifyService {
       user = await this.usersService.findById(userId);
     }
 
-    
+
     if (!user) {
       const users = await this.usersService.getAllUsers();
       user = users.find(u => u.shopifyShop === dto.shop);
@@ -98,29 +104,41 @@ export class ShopifyService {
       }
     }
 
-    
-    
+
+
     this.shopifyGateway.emitStatusUpdate(dto.shop, 1, 'Initiating Handshake');
     await this.delay(1500);
 
-    
+
     this.shopifyGateway.emitStatusUpdate(dto.shop, 2, 'Verifying Credentials');
     await this.delay(2000);
 
-    
+
     this.shopifyGateway.emitStatusUpdate(dto.shop, 3, 'Syncing Product Catalog');
     await this.delay(2500);
 
-    
-    this.shopifyGateway.emitStatusUpdate(dto.shop, 4, 'Analyzing Historical Data');
-    await this.delay(2000);
-    
+
+    this.shopifyGateway.emitStatusUpdate(dto.shop, 4, 'Collecting Store Catalog & Historical Data');
+
+    // Asynchronously start the deep sync
+    try {
+      const dbStore = await this.usersService.getActiveShop(user.id);
+      if (dbStore) {
+        this.syncService.initialSync(user.id, dbStore.id);
+      }
+    } catch (e) {
+      console.error('[ShopifyService] Sync trigger failed:', e.message);
+    }
+
+    await this.delay(1000);
+
+
 
     if (user) {
-      
+
       await this.usersService.updateShopifyCredentials(user.id, dto.shop, dto.accessToken);
 
-      
+
       if (dto.name) {
         await this.usersService.updateProfile(user.id, { name: dto.name });
       }
@@ -128,8 +146,8 @@ export class ShopifyService {
       this.shopifyGateway.emitStatusUpdate(dto.shop, 5, 'Connection Secure & Active');
       return { success: true, action: 'updated', userId: user.id };
     } else {
-      
-      
+
+
       const email = dto.email || `shop+${dto.shop}@stockbud.com`;
       const name = dto.shop.replace('.myshopify.com', '');
       const passwordHash = '$2b$10$NotARealPasswordHashForShopConnect' + Math.random();
@@ -203,7 +221,7 @@ export class ShopifyService {
             'X-Shopify-Access-Token': token,
             'Content-Type': 'application/json',
           },
-          timeout: 60000, 
+          timeout: 60000,
         }),
       );
 
@@ -214,7 +232,7 @@ export class ShopifyService {
 
       console.log("DEBUG: Shopify GraphQL Response:", JSON.stringify(response.data, null, 2));
 
-      
+
       const orders = response.data.data.orders.edges.map(edge => {
         const node = edge.node;
         return {
@@ -267,7 +285,7 @@ export class ShopifyService {
     // Fetch total product count
     let totalCount = 0;
     try {
-      const countQuery = `{ productsCount { count } }`;
+      const countQuery = `{ productsCount(limit: null) { count } }`;
       const countResponse = await firstValueFrom(
         this.httpService.post(apiUrl, { query: countQuery }, { headers, timeout: 30000 }),
       );
@@ -342,7 +360,7 @@ export class ShopifyService {
         return { products: [], pageInfo: {}, totalCount: 0 };
       }
 
-      
+
       const products = response.data.data.products.edges.map(edge => {
         const node = edge.node;
         return {
