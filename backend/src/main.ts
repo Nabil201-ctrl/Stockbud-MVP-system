@@ -49,7 +49,12 @@ async function bootstrap() {
             const allowedPatterns = [
                 /^http:\/\/localhost:\d+$/,
                 /\.trycloudflare\.com$/,
-                /\.ngrok-free\.app$/
+                /\.ngrok-free\.app$/,
+                /^https:\/\/www\.stockbud\.xyz$/,
+                /^https:\/\/stockbud\.xyz$/,
+                /^http:\/\/62\.171\.155\.58(:\d+)?$/
+
+
             ];
 
             if (!origin || allowedPatterns.some(pattern => pattern.test(origin))) {
