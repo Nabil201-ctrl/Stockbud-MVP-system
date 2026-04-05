@@ -2,6 +2,27 @@ const express = require('express');
 const amqp = require('amqplib');
 require('dotenv').config();
 const client = require('prom-client');
+const pino = require('pino');
+
+const logger = pino({
+    level: 'info',
+    transport: {
+        targets: [
+            {
+                target: 'pino-pretty',
+                options: { colorize: true }
+            },
+            {
+                target: 'pino-loki',
+                options: {
+                    host: process.env.LOKI_HOST || 'http://loki:3100',
+                    labels: { app: 'order-processor' }
+                }
+            }
+        ]
+    }
+});
+
 const app = express();
 const port = process.env.PORT || 3003;
 
@@ -23,13 +44,13 @@ let amqpChannel;
 async function connectRabbitMQ() {
     try {
         const rabbitUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
-        console.log(`[Order Receiver] Connecting to RabbitMQ at ${rabbitUrl}...`);
+        logger.info(`[Order Receiver] Connecting to RabbitMQ at ${rabbitUrl}...`);
         const connection = await amqp.connect(rabbitUrl);
         amqpChannel = await connection.createChannel();
         await amqpChannel.assertQueue('order_queue', { durable: false });
-        console.log(`[Order Receiver] Producer ready for "order_queue".`);
+        logger.info(`[Order Receiver] Producer ready for "order_queue".`);
     } catch (error) {
-        console.error('[Order Receiver] RabbitMQ connection failed:', error.message);
+        logger.error('[Order Receiver] RabbitMQ connection failed:', error.message);
         setTimeout(connectRabbitMQ, 5000);
     }
 }
@@ -71,19 +92,19 @@ app.post('/create-order', async (req, res) => {
 
         if (amqpChannel) {
             amqpChannel.sendToQueue('order_queue', Buffer.from(JSON.stringify(payload)));
-            console.log(`[Order Receiver] Queued order for user ${userId}`);
+            logger.info(`[Order Receiver] Queued order for user ${userId}`);
             ordersProcessedCounter.inc({ status: 'success' });
             return res.json({ success: true, message: 'Order queued successfully' });
         } else {
             throw new Error('RabbitMQ channel not available');
         }
     } catch (err) {
-        console.error('[Order Receiver] Error queuing order:', err.message);
+        logger.error('[Order Receiver] Error queuing order:', err.message);
         ordersProcessedCounter.inc({ status: 'error' });
         res.status(500).json({ error: 'Failed to queue order', details: err.message });
     }
 });
 
 app.listen(port, () => {
-    console.log(`Order Receiver (Producer) running on http://localhost:${port}`);
+    logger.info(`Order Receiver (Producer) running on http://localhost:${port}`);
 });

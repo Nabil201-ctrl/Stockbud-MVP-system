@@ -45,6 +45,16 @@ services:
       - "8080:80"
     restart: always
 
+  loki:
+    image: grafana/loki:latest
+    container_name: stockbud-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: always
+
   grafana:
     image: grafana/grafana:latest
     container_name: stockbud-grafana
@@ -61,5 +71,6 @@ volumes:
   rabbitmq_data:
   postgres_data:
   grafana_data:
+  loki_data:
 
 

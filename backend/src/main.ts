@@ -1,5 +1,6 @@
 import './instrument';
 import { NestFactory } from '@nestjs/core';
+import { LokiLogger } from './common/logger';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -22,7 +23,10 @@ import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
+    const logger = new LokiLogger();
+    const app = await NestFactory.create(AppModule, {
+        logger,
+    });
 
     // Security Headers
     app.use(helmet());
@@ -52,8 +56,8 @@ async function bootstrap() {
     });
 
     await app.startAllMicroservices();
-    console.log('PostgreSQL Database connected successfully via Prisma');
-    console.log('RabbitMQ Microservice transport started successfully');
+    logger.log('PostgreSQL Database connected successfully via Prisma');
+    logger.log('RabbitMQ Microservice transport started successfully');
 
 
     app.enableCors({
@@ -75,7 +79,7 @@ async function bootstrap() {
             if (!origin || allowedPatterns.some(pattern => pattern.test(origin))) {
                 callback(null, true);
             } else {
-                console.warn(`CORS blocked for origin: ${origin}`);
+                logger.warn(`CORS blocked for origin: ${origin}`);
                 callback(new Error('Not allowed by CORS'), false);
             }
         },

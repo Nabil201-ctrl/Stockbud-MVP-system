@@ -9,6 +9,26 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') }); // Fallback to parent for shared keys if any
 
 const client = require('prom-client');
+const pino = require('pino');
+
+const logger = pino({
+    level: 'info',
+    transport: {
+        targets: [
+            {
+                target: 'pino-pretty',
+                options: { colorize: true }
+            },
+            {
+                target: 'pino-loki',
+                options: {
+                    host: process.env.LOKI_HOST || 'http://loki:3100',
+                    labels: { app: 'image-service' }
+                }
+            }
+        ]
+    }
+});
 
 const app = express();
 const port = process.env.IMAGE_SERVICE_PORT || 3002;
@@ -72,7 +92,7 @@ const uploadToCloudinary = (file) => {
                 uploadDurationHistogram.observe(duration);
 
                 if (error) {
-                    console.error('[Cloudinary] Upload Error:', error);
+                    logger.error({ error }, '[Cloudinary] Upload Error');
                     cloudinaryErrorCounter.inc();
                     reject(error);
                 } else {
@@ -97,15 +117,15 @@ async function initRabbit() {
         const connection = await amqp.connect(RABBIT_URL);
         rabbitChannel = await connection.createChannel();
         await rabbitChannel.assertQueue(QUEUE_NAME, { durable: true });
-        console.log(` [Image Service] Connected to RabbitMQ at ${RABBIT_URL}`);
+        logger.info(` [Image Service] Connected to RabbitMQ at ${RABBIT_URL}`);
 
         connection.on('error', (err) => {
-            console.error('[RabbitMQ] Connection error:', err);
+            logger.error({ err }, '[RabbitMQ] Connection error');
             setTimeout(initRabbit, 5000);
         });
 
         connection.on('close', () => {
-            console.warn('[RabbitMQ] Connection closed, retrying...');
+            logger.warn('[RabbitMQ] Connection closed, retrying...');
             setTimeout(initRabbit, 5000);
         });
 
@@ -115,14 +135,14 @@ async function initRabbit() {
         rabbitChannel.consume(inboundQueue, (msg) => {
             if (msg !== null) {
                 const content = JSON.parse(msg.content.toString());
-                console.log('[Image Service] Received async processing request:', content.pattern, 'for payload:', content.data);
+                logger.info({ pattern: content.pattern, data: content.data }, '[Image Service] Received async processing request');
                 // In a real scenario, this would trigger resizing, blurring, watermark, etc.
                 rabbitChannel.ack(msg);
             }
         });
 
     } catch (err) {
-        console.error('[Image Service] Failed to connect to RabbitMQ:', err.message);
+        logger.error({ error: err.message }, '[Image Service] Failed to connect to RabbitMQ');
         setTimeout(initRabbit, 5000);
     }
 }
@@ -139,7 +159,7 @@ const rabbitBreaker = new CircuitBreaker(publishToRabbit, {
     errorThresholdPercentage: 50,
     resetTimeout: 10000,
 });
-rabbitBreaker.fallback(() => console.warn('[RabbitMQ] Circuit Open: Message suppressed to prevent blocking.'));
+rabbitBreaker.fallback(() => logger.warn('[RabbitMQ] Circuit Open: Message suppressed to prevent blocking.'));
 
 // Routes
 app.get('/health', (req, res) => {
@@ -162,7 +182,7 @@ app.post('/upload', upload.array('images', 10), async (req, res) => {
     }
 
     try {
-        console.log(`[Image Service] Processing ${req.files.length} images...`);
+        logger.info(`[Image Service] Processing ${req.files.length} images...`);
 
         // 1. Upload to Cloudinary using Opossum breaker
         const uploadPromises = req.files.map(file => cloudinaryBreaker.fire(file));
@@ -176,17 +196,17 @@ app.post('/upload', upload.array('images', 10), async (req, res) => {
             metadata: req.body.metadata ? JSON.parse(req.body.metadata) : {}
         });
 
-        console.log(`[Image Service] Upload successful. urls count: ${urls.length}`);
+        logger.info(`[Image Service] Upload successful. urls count: ${urls.length}`);
         imageUploadsCounter.inc({ status: 'success' });
         res.json({ success: true, urls });
     } catch (error) {
-        console.error('[Image Service] Error:', error.message);
+        logger.error({ error: error.message }, '[Image Service] Error during upload');
         imageUploadsCounter.inc({ status: 'error' });
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
 app.listen(port, () => {
-    console.log(`Image Microservice running on http://localhost:${port}`);
-    console.log(` Managing image uploads independently with RabbitMQ & Circuit Breaker.`);
+    logger.info(`Image Microservice running on http://localhost:${port}`);
+    logger.info(` Managing image uploads independently with RabbitMQ & Circuit Breaker.`);
 });
