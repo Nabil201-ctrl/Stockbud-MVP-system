@@ -3,7 +3,7 @@ const amqp = require('amqplib');
 require('dotenv').config();
 const client = require('prom-client');
 const app = express();
-const port = process.env.ORDER_PROCESSOR_PORT || 3001;
+const port = process.env.PORT || 3003;
 
 // Prometheus Registry
 const register = new client.Registry();
