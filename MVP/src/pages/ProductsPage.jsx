@@ -367,7 +367,7 @@ const ProductsPage = () => {
   }
 
   return (
-    <div className={`p-3 sm:p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className="p-3 sm:p-6 space-y-6 sm:space-y-8 min-h-full">
       <div className="max-w-7xl mx-auto">
         { }
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">

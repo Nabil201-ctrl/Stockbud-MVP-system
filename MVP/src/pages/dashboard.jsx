@@ -140,16 +140,13 @@ const Dashboard = () => {
   };
 
   return (
-    <div className={`flex min-h-screen h-screen overflow-hidden ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
-
+    <div className="flex flex-col min-h-full transition-all duration-300">
       <ChatBotButton />
-
       <div className="flex-1 flex flex-col min-h-0">
-
         {/* Dashboard Header Bar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-10 py-4 sm:py-6 border-b border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight">
               {t('dashboard.title')}
             </h1>
             <button
@@ -163,7 +160,7 @@ const Dashboard = () => {
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={() => setIsTargetModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20 active:scale-95 w-full sm:w-auto justify-center"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-blue-500/30 active:scale-95 w-full sm:w-auto justify-center"
             >
               <TrendingUp size={16} />
               {t('dashboard.setTarget')}
@@ -171,7 +168,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+        <div className="p-3 sm:p-6 lg:p-10 space-y-6 sm:space-y-8">
           <div id="dashboard-stats">
             <DashboardStats
               isDarkMode={isDarkMode}

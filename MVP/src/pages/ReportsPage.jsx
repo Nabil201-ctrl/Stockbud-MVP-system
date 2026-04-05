@@ -330,7 +330,7 @@ const ReportsPage = () => {
     };
 
     return (
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 min-h-full transition-all duration-300">
             { }
             <div className="space-y-3" id="reports-header">
                 <div>

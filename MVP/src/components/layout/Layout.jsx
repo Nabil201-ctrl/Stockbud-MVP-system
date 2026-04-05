@@ -136,7 +136,7 @@ const Layout = ({ children }) => {
   }
 
   return (
-    <div className={`flex h-screen min-h-screen ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-100 text-slate-800'}`}>
+    <div className={`flex min-h-screen w-full ${isDarkMode ? 'dark bg-slate-950 text-white' : 'bg-slate-50 text-slate-800'} transition-colors duration-300`}>
       <OfflineBanner />
       <Sidebar
         selectedDate={selectedDate}
@@ -151,7 +151,6 @@ const Layout = ({ children }) => {
       {isMobileSidebarOpen && (
         <div
           className="fixed inset-0 z-[90] bg-black/50 lg:hidden"
-
           onClick={closeMobileSidebar}
         />
       )}
@@ -164,8 +163,10 @@ const Layout = ({ children }) => {
           toggleSidebar={toggleMobileSidebar}
           startTour={startTour}
         />
-        <main className="flex-1 overflow-y-auto">
-          {children || <Outlet />}
+        <main className={`flex-1 overflow-y-auto ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'} transition-colors duration-300`}>
+          <div className="min-h-full">
+            {children || <Outlet />}
+          </div>
         </main>
       </div>
 

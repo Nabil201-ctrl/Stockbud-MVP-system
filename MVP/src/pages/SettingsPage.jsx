@@ -290,42 +290,27 @@ const SettingsPage = () => {
     };
 
     return (
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-            <h1 className="text-xl sm:text-2xl font-bold dark:text-white">{t('settings.title')}</h1>
-
-            {/* Online Status */}
-            <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2 dark:text-white">
-                    <Globe size={18} />
-                    {t('settings.networkStatus')}
-                </h2>
-                <div className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-opacity-10 ${isOnline ? 'bg-green-500 text-green-700 dark:text-green-400' : 'bg-red-500 text-red-700 dark:text-red-400'}`}>
-                    <div className={`p-2.5 sm:p-3 rounded-full ${isOnline ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                        {isOnline ? <Wifi size={20} /> : <WifiOff size={20} />}
-                    </div>
-                    <div>
-                        <h3 className="font-bold">{isOnline ? t('settings.online') : t('settings.offline')}</h3>
-                        <p className="text-xs">{isOnline ? t('settings.allSystemsOperational') : t('settings.connectionLost')}</p>
-                    </div>
-                </div>
+        <div className="p-3 sm:p-5 lg:p-8 space-y-4 sm:space-y-6 min-h-full">
+            {/* Compact Header */}
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-black dark:text-white tracking-tight">{t('settings.title')}</h1>
             </div>
 
-            {/* Tabs */}
-            <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-                <nav className="-mb-px flex space-x-8">
+            <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 -mx-3 px-3 sm:mx-0 sm:px-0">
+                <nav className="flex space-x-4 sm:space-x-8">
                     {[
-                        { id: 'profile', icon: User, label: t('settings.profile') },
-                        { id: 'security', icon: Lock, label: t('settings.security') },
-                        { id: 'usage', icon: Zap, label: t('settings.usageAndLimits') },
-                        { id: 'integrations', icon: ShoppingBag, label: t('settings.integrations') },
+                        { id: 'profile', icon: User, label: 'Profile' },
+                        { id: 'security', icon: Lock, label: 'Security' },
+                        { id: 'usage', icon: Zap, label: 'Plan' },
+                        { id: 'integrations', icon: ShoppingBag, label: 'Stores' },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400'}`}
+                            className={`pb-3 px-1 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all ${activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                         >
-                            <tab.icon size={16} />
-                            {tab.label}
+                            <tab.icon size={14} />
+                            <span className="hidden xs:inline">{tab.label}</span>
                         </button>
                     ))}
                 </nav>
@@ -333,50 +318,64 @@ const SettingsPage = () => {
 
             {/* Profile Tab */}
             {activeTab === 'profile' && (
-                <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                    <h2 className="text-lg font-bold mb-6 dark:text-white">{t('settings.profile')}</h2>
-                    <form onSubmit={handleProfileUpdate} className="space-y-6 max-w-xl">
-                        <div>
-                            <label className="block text-sm font-medium mb-1.5 dark:text-gray-300">{t('settings.fullName')}</label>
-                            <input type="text" value={profileData.name} onChange={e => setProfileData({ ...profileData, name: e.target.value })} className="w-full px-4 py-2 rounded-lg border dark:bg-gray-900 dark:border-gray-700 dark:text-white" />
+                <div className={`p-4 sm:p-6 rounded-2xl shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-all`}>
+                    <div className="mb-8">
+                        <h2 className="text-xl font-bold dark:text-white">{t('settings.profile')}</h2>
+                        <p className="text-sm text-gray-500 mt-1">Manage your account information and preferences.</p>
+                    </div>
+                    <form onSubmit={handleProfileUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold mb-2 dark:text-gray-300 tracking-tight">{t('settings.fullName')}</label>
+                                <input type="text" value={profileData.name} onChange={e => setProfileData({ ...profileData, name: e.target.value })} className="w-full px-4 py-3 rounded-xl border dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold mb-2 dark:text-gray-300 tracking-tight">{t('settings.email')}</label>
+                                <input type="email" value={profileData.email} onChange={e => setProfileData({ ...profileData, email: e.target.value })} className="w-full px-4 py-3 rounded-xl border dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1.5 dark:text-gray-300">{t('settings.email')}</label>
-                            <input type="email" value={profileData.email} onChange={e => setProfileData({ ...profileData, email: e.target.value })} className="w-full px-4 py-2 rounded-lg border dark:bg-gray-900 dark:border-gray-700 dark:text-white" />
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold mb-2 dark:text-gray-300 tracking-tight">{t('settings.language')}</label>
+                                <select value={language} onChange={e => changeLanguage(e.target.value)} className="w-full px-4 py-3 rounded-xl border dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+                                    {availableLanguages.map(lang => <option key={lang.code} value={lang.code}>{lang.nativeName}</option>)}
+                                </select>
+                            </div>
+                            <div className="pt-7">
+                                <button type="submit" disabled={profileLoading} className="w-full sm:w-auto px-8 py-3 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/25 active:scale-95">
+                                    {profileLoading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                    {t('settings.saveChanges')}
+                                </button>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1.5 dark:text-gray-300">{t('settings.language')}</label>
-                            <select value={language} onChange={e => changeLanguage(e.target.value)} className="w-full px-4 py-2 rounded-lg border dark:bg-gray-900 dark:border-gray-700 dark:text-white">
-                                {availableLanguages.map(lang => <option key={lang.code} value={lang.code}>{lang.nativeName}</option>)}
-                            </select>
-                        </div>
-                        <button type="submit" disabled={profileLoading} className="px-6 py-2 rounded-lg bg-blue-600 text-white flex items-center gap-2">
-                            {profileLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                            {t('settings.saveChanges')}
-                        </button>
                     </form>
                 </div>
             )}
 
             {/* Security Tab */}
             {activeTab === 'security' && (
-                <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                    <h2 className="text-lg font-bold mb-6 dark:text-white">{t('settings.changePassword')}</h2>
-                    <form onSubmit={handlePasswordChange} className="space-y-6 max-w-xl">
+                <div className={`p-6 sm:p-8 rounded-2xl shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-all`}>
+                    <div className="mb-8">
+                        <h2 className="text-xl font-bold dark:text-white">{t('settings.security')}</h2>
+                        <p className="text-sm text-gray-500 mt-1">Keep your account secure by updating your password regularly.</p>
+                    </div>
+                    <form onSubmit={handlePasswordChange} className="space-y-6 max-w-md">
                         <div>
-                            <label className="block text-sm font-medium mb-1.5 dark:text-gray-300">{t('settings.currentPassword')}</label>
-                            <input type="password" value={passwordData.oldPassword} onChange={e => setPasswordData({ ...passwordData, oldPassword: e.target.value })} className="w-full px-4 py-2 rounded-lg border dark:bg-gray-900 dark:border-gray-700 dark:text-white" />
+                            <label className="block text-sm font-bold mb-2 dark:text-gray-300">{t('settings.currentPassword')}</label>
+                            <input type="password" value={passwordData.oldPassword} onChange={e => setPasswordData({ ...passwordData, oldPassword: e.target.value })} className="w-full px-4 py-3 rounded-xl border dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1.5 dark:text-gray-300">{t('settings.newPassword')}</label>
-                            <input type="password" value={passwordData.newPassword} onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="w-full px-4 py-2 rounded-lg border dark:bg-gray-900 dark:border-gray-700 dark:text-white" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-bold mb-2 dark:text-gray-300">{t('settings.newPassword')}</label>
+                                <input type="password" value={passwordData.newPassword} onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="w-full px-4 py-3 rounded-xl border dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold mb-2 dark:text-gray-300">{t('settings.confirmPassword')}</label>
+                                <input type="password" value={passwordData.confirmPassword} onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="w-full px-4 py-3 rounded-xl border dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1.5 dark:text-gray-300">{t('settings.confirmPassword')}</label>
-                            <input type="password" value={passwordData.confirmPassword} onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="w-full px-4 py-2 rounded-lg border dark:bg-gray-900 dark:border-gray-700 dark:text-white" />
-                        </div>
-                        <button type="submit" disabled={passwordLoading} className="px-6 py-2 rounded-lg bg-blue-600 text-white">
-                            {t('settings.updatePassword')}
+                        <button type="submit" disabled={passwordLoading} className="w-full sm:w-auto px-8 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-all active:scale-95">
+                            {passwordLoading ? <Loader2 size={18} className="animate-spin" /> : t('settings.updatePassword')}
                         </button>
                     </form>
                 </div>
@@ -384,117 +383,122 @@ const SettingsPage = () => {
 
             {/* Usage Tab */}
             {activeTab === 'usage' && (
-                <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                    <h2 className="text-lg font-bold mb-6 dark:text-white">Plan & Limits</h2>
+                <div className={`p-4 sm:p-6 rounded-2xl shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-all`}>
+                    <div className="mb-8">
+                        <h2 className="text-xl font-bold dark:text-white">Plan & Limits</h2>
+                        <p className="text-sm text-gray-500 mt-1">Monitor your resource consumption and plan details.</p>
+                    </div>
                     {planLoading && !planData ? (
-                        <div className="flex justify-center p-8"><Loader2 className="animate-spin text-blue-500" /></div>
+                        <div className="flex justify-center p-12"><Loader2 className="animate-spin text-blue-500" size={32} /></div>
                     ) : planData ? (
                         <div className="space-y-8">
-                            <div className="p-6 bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl text-white shadow-lg flex justify-between items-center flex-wrap gap-4">
-                                <div>
-                                    <p className="text-blue-200 text-sm font-medium uppercase tracking-wide">Current Plan</p>
-                                    <h3 className="text-3xl font-black">{planData.planDisplayName}</h3>
+                            <div className="p-6 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl text-white shadow-xl flex justify-between items-center flex-wrap gap-6 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                <div className="relative z-10">
+                                    <p className="text-blue-200 text-xs font-bold uppercase tracking-widest">Active Plan</p>
+                                    <h3 className="text-3xl sm:text-4xl font-black mt-1">{planData.planDisplayName}</h3>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right relative z-10">
                                     <div className="text-3xl font-bold">₦{planData.price.toLocaleString()}</div>
-                                    <div className="text-blue-200 text-sm">per month</div>
+                                    <div className="text-blue-200 text-xs font-medium uppercase mt-1">per month</div>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className={`p-6 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h4 className="font-bold flex items-center gap-2"><Zap className="text-yellow-500" size={18} /> AI Actions Remaining</h4>
-                                        <span className="text-sm font-semibold">{planData.aiActions.remaining} / {planData.aiActions.limit}</span>
+                                <div className={`p-6 rounded-2xl border transition-all hover:shadow-md ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+                                    <div className="flex justify-between items-center mb-5">
+                                        <h4 className="font-bold flex items-center gap-2 dark:text-white"><Zap className="text-yellow-500" size={18} /> AI Actions</h4>
+                                        <span className="text-xs font-bold px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-md">{planData.aiActions.remaining} Left</span>
                                     </div>
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
-                                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(planData.aiActions.used / planData.aiActions.limit) * 100}%` }}></div>
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-3">
+                                        <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (planData.aiActions.used / planData.aiActions.limit) * 100)}%` }}></div>
                                     </div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Actions reset on the 1st of every month.</p>
+                                    <div className="flex justify-between text-[10px] sm:text-xs text-gray-500 font-medium">
+                                        <span>{planData.aiActions.used} Actions Used</span>
+                                        <span>Limit: {planData.aiActions.limit}</span>
+                                    </div>
                                 </div>
 
-                                <div className={`p-6 rounded-xl border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                                    <h4 className="font-bold flex items-center gap-2 mb-4"><ShoppingBag className="text-blue-500" size={18} /> Connected Stores</h4>
+                                <div className={`p-6 rounded-2xl border transition-all hover:shadow-md ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+                                    <h4 className="font-bold flex items-center gap-2 mb-5 dark:text-white"><ShoppingBag className="text-blue-500" size={18} /> Connected Stores</h4>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm dark:text-gray-300">Active Connections</span>
-                                        <span className="font-semibold">{planData.stores.connected} / {planData.stores.limit}</span>
+                                        <span className="text-sm dark:text-gray-300 font-medium font-medium">Usage</span>
+                                        <div className="text-right">
+                                            <span className="text-2xl font-black dark:text-white">{planData.stores.connected}</span>
+                                            <span className="text-gray-400 font-bold"> / {planData.stores.limit}</span>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-8">
-                                <h4 className="font-bold mb-4 dark:text-white">Upgrade Plan</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {planData.plan !== 'beginner' && (
-                                        <button disabled className="relative p-4 border border-blue-200 bg-blue-50/50 dark:bg-blue-900/10 dark:border-blue-800 rounded-xl text-left cursor-not-allowed opacity-80 overflow-hidden">
-                                            <div className="absolute top-2 right-2 bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Coming Soon</div>
-                                            <h5 className="font-bold text-blue-700/80 dark:text-blue-400/80">Beginner (₦4,000/mo)</h5>
-                                            <p className="text-xs text-blue-600/80 dark:text-blue-300/80 mt-1">2 stores, 30 AI actions, weekly full reports</p>
-                                        </button>
-                                    )}
-                                    {planData.plan !== 'pro' && (
-                                        <button disabled className="relative p-4 border border-purple-200 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-900/10 dark:to-pink-900/10 dark:border-purple-800 rounded-xl text-left cursor-not-allowed opacity-80 overflow-hidden">
-                                            <div className="absolute top-2 right-2 bg-purple-200 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Coming Soon</div>
-                                            <h5 className="font-bold text-purple-700/80 dark:text-purple-400/80">Pro (₦10,000/mo)</h5>
-                                            <p className="text-xs text-purple-600/80 dark:text-purple-300/80 mt-1">Unlimited stores, 200 AI actions, all reports</p>
-                                        </button>
-                                    )}
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <p className="text-red-500">Failed to load plan data.</p>
+                        <div className="flex flex-col items-center justify-center p-12 text-center">
+                            <AlertCircle className="text-red-500 mb-2" size={48} />
+                            <p className="text-gray-500">Failed to load plan metrics.</p>
+                        </div>
                     )}
                 </div>
             )}
 
             {/* Integrations Tab */}
             {activeTab === 'integrations' && (
-                <div className={`p-4 sm:p-6 rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold dark:text-white">{t('settings.connectedStores')}</h2>
-                        <div className="flex gap-2">
-                            <button onClick={handleGeneratePairingCode} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm flex items-center gap-2">
-                                <Key size={14} /> Pair Code
+                <div className={`p-4 sm:p-6 rounded-2xl shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} transition-all`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                        <div>
+                            <h2 className="text-xl font-bold dark:text-white">{t('settings.connectedStores')}</h2>
+                            <p className="text-sm text-gray-500 mt-1">Link your Shopify and social channels.</p>
+                        </div>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <button onClick={handleGeneratePairingCode} className="flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95 transition-all">
+                                <Key size={16} /> Pair Code
                             </button>
-                            <button onClick={handleAddStoreClick} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm flex items-center gap-2">
-                                <ShoppingBag size={14} /> Shopify
+                            <button onClick={handleAddStoreClick} className="flex-1 sm:flex-none px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-500/25 active:scale-95 transition-all">
+                                <ShoppingBag size={16} /> Shopify
                             </button>
                         </div>
                     </div>
 
                     {pairingCode && (
-                        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-lg flex items-center justify-between">
+                        <div className="mb-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-200 dark:border-blue-800 rounded-2xl flex items-center justify-between group">
                             <div>
-                                <p className="text-xs text-blue-600 font-bold uppercase">Your Pairing Code</p>
-                                <p className="text-2xl font-mono font-black text-blue-700 dark:text-blue-400">{pairingCode}</p>
+                                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mb-1">Pairing Code</p>
+                                <p className="text-3xl font-mono font-black text-blue-800 dark:text-blue-300 tracking-tighter">{pairingCode}</p>
+                                <p className="text-xs text-gray-500 mt-1 font-medium italic">Expires in 10 minutes</p>
                             </div>
-                            <button onClick={handleCopyCode} className="p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-                                {codeCopied ? <CheckCircle2 className="text-green-500" /> : <Copy />}
+                            <button onClick={handleCopyCode} className="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-90 flex items-center justify-center">
+                                {codeCopied ? <CheckCircle2 className="text-green-500" size={24} /> : <Copy className="dark:text-blue-400" size={24} />}
                             </button>
                         </div>
                     )}
 
-                    <div className="space-y-4 mb-8">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-10">
                         {user?.shopifyStores?.map(store => (
-                            <div key={store.id} className="p-4 bg-gray-50 dark:bg-gray-900/50 border rounded-xl flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <ShoppingBag className="text-gray-400" />
-                                    <div>
-                                        <p className="font-bold dark:text-white">{store.name || store.shop}</p>
-                                        <p className="text-xs text-gray-500">{store.shop}</p>
+                            <div key={store.id} className="p-5 bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 rounded-2xl flex items-center justify-between hover:border-blue-200 dark:hover:border-blue-800 transition-all group">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm flex items-center justify-center text-blue-600">
+                                        <ShoppingBag size={24} />
                                     </div>
-                                    {user.activeShopId === store.id && <span className="px-2 py-0.5 bg-green-100 text-green-600 text-[10px] font-bold rounded-full">ACTIVE</span>}
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-black dark:text-white truncate text-sm sm:text-base">{store.name || store.shop}</p>
+                                            {user.activeShopId === store.id && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[8px] font-black rounded-full ring-1 ring-green-500/20">ACTIVE</span>}
+                                        </div>
+                                        <p className="text-xs text-gray-500 truncate">{store.shop}</p>
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    {user.activeShopId !== store.id && <button onClick={() => handleSetActiveShop(store.id)} className="text-xs font-bold text-blue-600">Set Active</button>}
-                                    <button onClick={() => handleRemoveStore(store.id, store.shop)} className="text-xs font-bold text-red-500">Remove</button>
+                                <div className="flex gap-3 ml-4">
+                                    {user.activeShopId !== store.id && (
+                                        <button onClick={() => handleSetActiveShop(store.id)} className="text-xs font-black text-blue-600 hover:text-blue-700 p-2 uppercase tracking-tight">Focus</button>
+                                    )}
+                                    <button onClick={() => handleRemoveStore(store.id, store.shop)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                                        <Trash2 size={18} />
+                                    </button>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    <div className="pt-8 border-t border-gray-200 dark:border-gray-700">
+                    <div className="pt-10 border-t border-gray-100 dark:border-gray-800">
                         <SocialStoresPanel isDarkMode={isDarkMode} user={user} />
                     </div>
                 </div>
