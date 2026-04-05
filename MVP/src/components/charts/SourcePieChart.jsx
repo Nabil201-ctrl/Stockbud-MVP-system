@@ -49,54 +49,77 @@ const SourcePieChart = ({ data }) => {
   };
 
   const totalValue = sourceData.reduce((sum, entry) => sum + (entry.value || 0), 0);
-  const mainSource = sourceData.length > 0 && sourceData[0].name !== 'No Data'
-    ? sourceData.sort((a, b) => b.value - a.value)[0]
+  const sortedData = [...sourceData].sort((a, b) => b.value - a.value);
+  const mainSource = sortedData.length > 0 && sortedData[0].name !== 'No Data'
+    ? sortedData[0]
     : { name: 'Direct', value: 100 };
 
+  const CustomLegend = () => {
+    return (
+      <div className="flex flex-col gap-5 justify-center h-full sm:ml-8">
+        {sortedData.map((entry, index) => (
+          <div key={index} className="flex items-start gap-3 w-full group">
+            <div
+              className="mt-1.5 w-2 h-2 rounded-full shadow-sm flex-shrink-0 transition-transform group-hover:scale-150"
+              style={{ backgroundColor: entry.color }}
+            ></div>
+            <div className="flex flex-col gap-0.5">
+              <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} group-hover:text-blue-500 transition-colors truncate max-w-[100px]`}>
+                {entry.name}
+              </span>
+              <span className={`text-xl font-black tabular-nums leading-none ${isDarkMode ? 'text-white' : 'text-gray-900'} tracking-tighter`}>
+                {entry.value}%
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="relative h-64 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={sourceData}
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={90}
-            paddingAngle={2}
-            dataKey="value"
-            label={renderCustomizedLabel}
-            labelLine={false}
-          >
-            {sourceData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={entry.color}
-                stroke={isDarkMode ? '#1F2937' : '#FFFFFF'}
-                strokeWidth={2}
-              />
-            ))}
-          </Pie>
-          <Tooltip content={<CustomTooltip />} />
-          <Legend
-            layout="vertical"
-            verticalAlign="middle"
-            align="right"
-            wrapperStyle={{ fontSize: '12px', color: isDarkMode ? '#9CA3AF' : '#4B5563' }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-        <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-          {mainSource.value}%
+    <div className="flex items-center justify-between h-full w-full">
+      <div className="relative h-64 w-[55%]">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={sortedData}
+              cx="50%"
+              cy="50%"
+              innerRadius={70}
+              outerRadius={95}
+              paddingAngle={5}
+              dataKey="value"
+              animationBegin={0}
+              animationDuration={1000}
+              stroke="none"
+              cornerRadius={4}
+            >
+              {sortedData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.color}
+                  className="outline-none cursor-pointer hover:opacity-90 transition-all duration-300 transform"
+                />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+          <div className={`text-3xl sm:text-4xl font-black ${isDarkMode ? 'text-white' : 'text-gray-900'} leading-none tracking-tighter`}>
+            {mainSource.value}%
+          </div>
+          <div className={`text-[8px] sm:text-[10px] uppercase font-black tracking-[0.2em] mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            {mainSource.name}
+          </div>
         </div>
-        <div className={`text-[10px] uppercase tracking-tighter sm:text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          {mainSource.name}
-        </div>
+      </div>
+      <div className="w-[45%] pl-4 border-l border-gray-100 dark:border-gray-700/50">
+        <CustomLegend />
       </div>
     </div>
   );
-
 };
 
 export default SourcePieChart;

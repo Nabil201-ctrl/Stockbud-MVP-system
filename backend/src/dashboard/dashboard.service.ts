@@ -252,12 +252,12 @@ export class DashboardService {
 
 
     private getColorForSource(source: string): string {
-        switch (source.toLowerCase()) {
-            case 'shopify': return '#3B82F6';
-            case 'social store': return '#10B981';
-            case 'whatsapp': return '#10B981';
-            default: return '#6B7280';
-        }
+        const s = source.toLowerCase();
+        if (s.includes('shopify') || s.includes('web')) return '#4F46E5'; // Premium Indigo
+        if (s.includes('instagram')) return '#EC4899'; // Instagram Pink
+        if (s.includes('whatsapp')) return '#22C55E'; // WhatsApp Green
+        if (s.includes('pos')) return '#F59E0B'; // Amber for POS
+        return '#94A3B8'; // Slate for others
     }
 
     private getRandomColor(): string {

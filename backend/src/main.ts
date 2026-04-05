@@ -39,6 +39,18 @@ async function bootstrap() {
         },
     });
 
+    // Connect to Order Microservice via RabbitMQ (Consume from order_queue)
+    app.connectMicroservice<MicroserviceOptions>({
+        transport: Transport.RMQ,
+        options: {
+            urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+            queue: 'order_queue',
+            queueOptions: {
+                durable: false // Matches the durability in OrdersModule and order-processor
+            },
+        },
+    });
+
     await app.startAllMicroservices();
     console.log('PostgreSQL Database connected successfully via Prisma');
     console.log('RabbitMQ Microservice transport started successfully');

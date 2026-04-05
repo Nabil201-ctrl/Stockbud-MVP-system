@@ -8,10 +8,10 @@ export class OrdersMicroserviceController {
     constructor(private readonly ordersService: OrdersMicroserviceService) { }
 
     @EventPattern('order_action')
-    async handleOrderAction(@Payload() data: OrderMicroserviceMessage) {
-        console.log('[OrderMicroservice] Order action received:', data.action);
-        if (data.action === 'CREATE_ORDER') {
-            await this.ordersService.processCreateOrder(data.order as any);
+    async handleOrderAction(@Payload() data: any) {
+        console.log('[OrderMicroservice] Order action received:', data?.action);
+        if (data?.action === 'CREATE_ORDER') {
+            await this.ordersService.processCreateOrder(data);
         }
     }
 }

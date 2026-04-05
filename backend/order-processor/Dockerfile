@@ -14,7 +14,7 @@ RUN chown -R node:node /app
 USER node
 
 # Expose port (IMAGE_SERVICE_PORT typically 3002)
-EXPOSE 3002
+EXPOSE 3003
 
 # Start the application
 CMD ["node", "index.js"]

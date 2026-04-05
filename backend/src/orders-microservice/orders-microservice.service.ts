@@ -44,9 +44,14 @@ export class OrdersMicroserviceService {
                 const productId = item.productId;
                 if (!productId) continue;
 
-                // 1. Find product in local DB
-                const product = await this.prisma.product.findUnique({
-                    where: { id: productId }
+                // 1. Find product in local DB (Check both local id and shopify external gid)
+                const product = await this.prisma.product.findFirst({
+                    where: {
+                        OR: [
+                            { id: productId },
+                            { externalId: productId }
+                        ]
+                    }
                 });
 
                 if (product) {

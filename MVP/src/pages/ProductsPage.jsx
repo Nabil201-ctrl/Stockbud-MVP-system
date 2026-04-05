@@ -556,56 +556,58 @@ const ProductsPage = () => {
                             {thresholds[product.id] !== undefined ? thresholds[product.id] : 'Not Set'}
                           </div>
                         </td>
-                        <td className="py-4 px-4 flex gap-2">
-                          {user?.socialStores?.some(s => s.id === user.activeShopId) && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setImageFile(null);
-                                  setImagePreview(product.image);
-                                  setProductToEdit(product);
-                                }}
-                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-blue-500"
-                                title="Edit Product"
-                              >
-                                <Package size={18} />
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (window.confirm('Are you sure you want to delete this product?')) {
-                                    try {
-                                      await storesAPI.socialStores.deleteProduct(user.activeShopId, product.id);
-                                      await fetchProducts();
-                                    } catch (err) { alert('Failed to delete product') }
-                                  }
-                                }}
-                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-red-500"
-                                title="Delete Product"
-                              >
-                                <X size={18} />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setShowOrderModal(product);
-                                  setOrderQuantity(1);
-                                }}
-                                className="p-2 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg text-green-500"
-                                title="Create Manual Order"
-                              >
-                                <ShoppingBag size={18} />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => {
-                              setShowThresholdModal(product);
-                              setThresholdInput(thresholds[product.id] !== undefined ? thresholds[product.id].toString() : '');
-                            }}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-blue-500"
-                            title="Set Threshold"
-                          >
-                            <Bell size={18} />
-                          </button>
+                        <td className="py-4 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {user?.socialStores?.some(s => s.id === user.activeShopId) && (
+                              <div className="flex items-center gap-1 border-r pr-2 border-gray-100 dark:border-gray-700">
+                                <button
+                                  onClick={() => {
+                                    setImageFile(null);
+                                    setImagePreview(product.image);
+                                    setProductToEdit(product);
+                                  }}
+                                  className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500 transition-colors"
+                                  title="Edit Product"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm('Are you sure you want to delete this product?')) {
+                                      try {
+                                        await storesAPI.socialStores.deleteProduct(user.activeShopId, product.id);
+                                        await fetchProducts();
+                                      } catch (err) { alert('Failed to delete product') }
+                                    }
+                                  }}
+                                  className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 transition-colors"
+                                  title="Delete Product"
+                                >
+                                  <Trash size={16} />
+                                </button>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => {
+                                setShowThresholdModal(product);
+                                setThresholdInput(thresholds[product.id] !== undefined ? thresholds[product.id].toString() : '');
+                              }}
+                              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-indigo-500"
+                              title="Set Inventory Alert"
+                            >
+                              <Bell size={16} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowOrderModal(product);
+                                setOrderQuantity(1);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-black shadow-sm active:scale-95 transition-all ml-1"
+                            >
+                              <ShoppingBag size={14} />
+                              <span className="hidden xl:inline">QUICK SELL</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -971,87 +973,89 @@ const ProductsPage = () => {
         )
       }
       {/* Create Order Modal */}
-      {showOrderModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              <h3 className="font-bold text-xl flex items-center gap-2">
-                <ShoppingBag className="text-green-500" />
-                Create Manual Order
-              </h3>
-              <button onClick={() => setShowOrderModal(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50">
-                <div className="w-16 h-16 rounded-lg bg-gray-200 dark:bg-gray-800 overflow-hidden">
-                  <img src={showOrderModal.image} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <p className="font-bold text-lg">{showOrderModal.name}</p>
-                  <p className="text-sm text-gray-500">{showOrderModal.category}</p>
-                  <p className="text-blue-500 font-bold">${showOrderModal.price}</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-2">Quantity to Buy</label>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setOrderQuantity(Math.max(1, orderQuantity - 1))}
-                    className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all font-bold text-xl"
-                  >-</button>
-                  <input
-                    type="number"
-                    value={orderQuantity}
-                    onChange={e => setOrderQuantity(parseInt(e.target.value) || 1)}
-                    className="w-20 text-center text-xl font-bold bg-transparent outline-none"
-                  />
-                  <button
-                    onClick={() => setOrderQuantity(Math.min(showOrderModal.stock, orderQuantity + 1))}
-                    className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all font-bold text-xl"
-                  >+</button>
-                  <span className="text-xs text-gray-400">Available: {showOrderModal.stock}</span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                <div className="flex justify-between items-center mb-6">
-                  <span className="text-gray-500">Total Price</span>
-                  <span className="text-2xl font-black text-blue-600">${(showOrderModal.price * orderQuantity).toFixed(2)}</span>
-                </div>
-                <button
-                  disabled={creatingOrder || orderQuantity > showOrderModal.stock}
-                  onClick={async () => {
-                    setCreatingOrder(true);
-                    try {
-                      await ordersAPI.create({
-                        productId: showOrderModal.id,
-                        productName: showOrderModal.name,
-                        price: showOrderModal.price,
-                        quantity: orderQuantity,
-                        totalAmount: showOrderModal.price * orderQuantity,
-                        currency: activeCurrency
-                      });
-                      setShowOrderModal(null);
-                      await fetchProducts();
-                      alert("Order created and inventory updated!");
-                    } catch (err) {
-                      alert("Failed to create order");
-                    } finally {
-                      setCreatingOrder(false);
-                    }
-                  }}
-                  className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold shadow-xl shadow-green-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
-                >
-                  {creatingOrder ? 'Processing...' : 'Complete Sale'}
+      {
+        showOrderModal && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <h3 className="font-bold text-xl flex items-center gap-2">
+                  <ShoppingBag className="text-green-500" />
+                  Create Manual Order
+                </h3>
+                <button onClick={() => setShowOrderModal(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                  <X size={20} />
                 </button>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                  <div className="w-16 h-16 rounded-lg bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                    <img src={showOrderModal.image} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-lg">{showOrderModal.name}</p>
+                    <p className="text-sm text-gray-500">{showOrderModal.category}</p>
+                    <p className="text-blue-500 font-bold">${showOrderModal.price}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2">Quantity to Buy</label>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setOrderQuantity(Math.max(1, orderQuantity - 1))}
+                      className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all font-bold text-xl"
+                    >-</button>
+                    <input
+                      type="number"
+                      value={orderQuantity}
+                      onChange={e => setOrderQuantity(parseInt(e.target.value) || 1)}
+                      className="w-20 text-center text-xl font-bold bg-transparent outline-none"
+                    />
+                    <button
+                      onClick={() => setOrderQuantity(Math.min(showOrderModal.stock, orderQuantity + 1))}
+                      className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all font-bold text-xl"
+                    >+</button>
+                    <span className="text-xs text-gray-400">Available: {showOrderModal.stock}</span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex justify-between items-center mb-6">
+                    <span className="text-gray-500">Total Price</span>
+                    <span className="text-2xl font-black text-blue-600">${(showOrderModal.price * orderQuantity).toFixed(2)}</span>
+                  </div>
+                  <button
+                    disabled={creatingOrder || orderQuantity > showOrderModal.stock}
+                    onClick={async () => {
+                      setCreatingOrder(true);
+                      try {
+                        await ordersAPI.create({
+                          productId: showOrderModal.id,
+                          productName: showOrderModal.name,
+                          price: showOrderModal.price,
+                          quantity: orderQuantity,
+                          totalAmount: showOrderModal.price * orderQuantity,
+                          currency: activeCurrency
+                        });
+                        setShowOrderModal(null);
+                        await fetchProducts();
+                        alert("Order created and inventory updated!");
+                      } catch (err) {
+                        alert("Failed to create order");
+                      } finally {
+                        setCreatingOrder(false);
+                      }
+                    }}
+                    className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold shadow-xl shadow-green-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {creatingOrder ? 'Processing...' : 'Complete Sale'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
     </div >
   );
 };
