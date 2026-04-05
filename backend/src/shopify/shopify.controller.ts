@@ -62,6 +62,29 @@ export class ShopifyController {
     @UseGuards(AuthGuard('jwt'))
     async getOrders(@Req() req) {
         const user = req.user;
+        const activeShopId = user.activeShopId;
+        const socialStore = user.socialStores?.find(s => s.id === activeShopId);
+
+        if (socialStore) {
+            const orders = await this.socialStoresService.getOrders(socialStore.id);
+            // Format to match Shopify-like structure for the frontend if needed
+            return {
+                orders: orders.map(o => ({
+                    id: o.id,
+                    name: `SB-${o.id.toString().substring(0, 4)}`,
+                    created_at: o.createdAt,
+                    financial_status: 'paid',
+                    total_price: o.totalAmount.toString(),
+                    customer: {
+                        first_name: o.customerName || 'Social',
+                        last_name: 'Customer',
+                        email: o.customerEmail
+                    },
+                    line_items: o.items || []
+                })),
+                pageInfo: { hasNextPage: false }
+            };
+        }
 
         if (!user || !user.shopifyShop || !user.shopifyToken) {
             throw new HttpException('Shopify credentials not found. Please connect your store in Settings.', HttpStatus.BAD_REQUEST);

@@ -15,9 +15,11 @@ import {
     Cloud
 } from 'lucide-react';
 
+import { useAuth } from '../../context/AuthContext';
 import { storesAPI } from '../../services/api';
 
-const SocialStoresPanel = ({ isDarkMode, user }) => {
+const SocialStoresPanel = ({ isDarkMode, user: userFromProps }) => {
+    const { refreshUser } = useAuth();
     const [stores, setStores] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
@@ -29,6 +31,8 @@ const SocialStoresPanel = ({ isDarkMode, user }) => {
     const [products, setProducts] = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [storeStats, setStoreStats] = useState(null);
+    const [statsLoading, setStatsLoading] = useState(false);
 
     const fetchStores = async () => {
         try {
@@ -59,6 +63,18 @@ const SocialStoresPanel = ({ isDarkMode, user }) => {
         }
     };
 
+    const fetchStats = async (id) => {
+        setStatsLoading(true);
+        try {
+            const response = await storesAPI.socialStores.getStats(id);
+            setStoreStats(response.data);
+        } catch (error) {
+            console.error("Failed to fetch store stats", error);
+        } finally {
+            setStatsLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchStores();
     }, []);
@@ -66,6 +82,7 @@ const SocialStoresPanel = ({ isDarkMode, user }) => {
     useEffect(() => {
         if (activeStoreId) {
             fetchSocialProducts(activeStoreId);
+            fetchStats(activeStoreId);
         }
     }, [activeStoreId]);
 
@@ -75,6 +92,7 @@ const SocialStoresPanel = ({ isDarkMode, user }) => {
         try {
             await storesAPI.socialStores.create(newStore);
             await fetchStores();
+            await refreshUser();
             setIsAdding(false);
             setNewStore({ name: '', contact: '', type: 'instagram' });
         } catch (error) {
@@ -88,6 +106,7 @@ const SocialStoresPanel = ({ isDarkMode, user }) => {
         if (!window.confirm("Are you sure you want to remove this social sync?")) return;
         try {
             await storesAPI.deleteShop(id);
+            await refreshUser();
             const remaining = stores.filter(s => s.id !== id);
             setStores(remaining);
             if (activeStoreId === id) {
@@ -101,7 +120,7 @@ const SocialStoresPanel = ({ isDarkMode, user }) => {
     if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-blue-500" /></div>;
 
     const activeStore = stores.find(s => s.id === activeStoreId);
-    const filteredProducts = products.filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredProducts = products ? products.filter(p => p.title && p.title.toLowerCase().includes(searchTerm.toLowerCase())) : [];
 
     return (
         <div className="space-y-6">
@@ -179,32 +198,104 @@ const SocialStoresPanel = ({ isDarkMode, user }) => {
                     {/* Channel Selector */}
                     <div className="space-y-2">
                         {stores.map(store => (
-                            <button
-                                key={store.id}
-                                onClick={() => setActiveStoreId(store.id)}
-                                className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${activeStoreId === store.id
-                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-2 ring-blue-500'
-                                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                                    }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-lg ${store.type === 'instagram' ? 'bg-pink-500' : 'bg-green-500'} text-white`}>
-                                        {store.type === 'instagram' ? <Instagram size={16} /> : <MessageCircle size={16} />}
+                            <div key={store.id} className="relative group">
+                                <button
+                                    onClick={() => setActiveStoreId(store.id)}
+                                    className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all text-left ${activeStoreId === store.id
+                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-2 ring-blue-500'
+                                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3 pr-8">
+                                        <div className={`p-2 rounded-lg ${store.type === 'instagram' ? 'bg-pink-500' : 'bg-green-500'} text-white`}>
+                                            {store.type === 'instagram' ? <Instagram size={16} /> : <MessageCircle size={16} />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold dark:text-white truncate">{store.name}</p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${userFromProps?.activeShopId === store.id ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'}`} />
+                                                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
+                                                    {userFromProps?.activeShopId === store.id ? 'Active Context' : store.type}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="text-left">
-                                        <p className="text-sm font-bold dark:text-white truncate max-w-[100px]">{store.name}</p>
-                                        <p className="text-[10px] text-gray-500">{store.contact}</p>
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                        {userFromProps?.activeShopId !== store.id && (
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    try {
+                                                        await storesAPI.setActiveShop(store.id);
+                                                        await refreshUser();
+                                                        window.location.reload();
+                                                    } catch (err) { alert("Error setting active"); }
+                                                }}
+                                                className="p-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg hover:scale-110 transition-transform opacity-0 group-hover:opacity-100"
+                                                title="Set as Active Shop"
+                                            >
+                                                <CheckCircle2 size={14} />
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteStore(store.id); }}
+                                            className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                     </div>
-                                </div>
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteStore(store.id); }} className="text-gray-400 hover:text-red-500">
-                                    <Trash2 size={14} />
                                 </button>
-                            </button>
+                            </div>
                         ))}
                     </div>
 
-                    {/* Inventory Display */}
-                    <div className="lg:col-span-3 space-y-4">
+                    {/* Content Area (Stats + Inventory) */}
+                    <div className="lg:col-span-3 space-y-6 text-left">
+                        {/* Channel Performance Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} shadow-sm`}>
+                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Visits / Traffic</div>
+                                <div className="text-2xl font-black dark:text-white flex items-baseline gap-1">
+                                    {storeStats?.totalVisits || 0}
+                                    <span className="text-[10px] text-gray-400 font-normal">lifetime</span>
+                                </div>
+                                <div className="mt-2 h-1 w-full bg-gray-100 dark:bg-gray-900 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 rounded-full" style={{ width: '45%' }}></div>
+                                </div>
+                            </div>
+                            <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} shadow-sm`}>
+                                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Inquiries</div>
+                                <div className="text-2xl font-black dark:text-white flex items-baseline gap-1">
+                                    {storeStats?.totalInquiries || 0}
+                                    <span className="text-[10px] text-gray-400 font-normal">conv: {((storeStats?.totalInquiries / (storeStats?.totalVisits || 1)) * 100).toFixed(1)}%</span>
+                                </div>
+                                <div className="mt-2 h-1 w-full bg-gray-100 dark:bg-gray-900 rounded-full overflow-hidden">
+                                    <div className="h-full bg-purple-500 rounded-full" style={{ width: '30%' }}></div>
+                                </div>
+                            </div>
+                            <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} shadow-sm`}>
+                                <div className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1">Total Revenue</div>
+                                <div className="text-2xl font-black dark:text-white flex items-baseline gap-1 text-green-600">
+                                    ${storeStats?.totalRevenue?.toLocaleString() || '0.00'}
+                                    <span className="text-[10px] text-gray-400 font-normal">{storeStats?.totalOrders || 0} orders</span>
+                                </div>
+                                <div className="mt-2 h-1 w-full bg-gray-100 dark:bg-gray-900 rounded-full overflow-hidden">
+                                    <div className="h-full bg-green-500 rounded-full" style={{ width: '60%' }}></div>
+                                </div>
+                            </div>
+                            <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} shadow-sm`}>
+                                <div className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">Inventory Value</div>
+                                <div className="text-2xl font-black dark:text-white flex items-baseline gap-1 text-orange-500">
+                                    ${storeStats?.potentialStockValue?.toLocaleString() || '0.00'}
+                                    <span className="text-[10px] text-gray-400 font-normal">potential</span>
+                                </div>
+                                <div className="mt-2 h-1 w-full bg-gray-100 dark:bg-gray-900 rounded-full overflow-hidden">
+                                    <div className="h-full bg-orange-500 rounded-full" style={{ width: '80%' }}></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Product Table */}
                         <div className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-sm`}>
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                                 <div>
@@ -212,7 +303,7 @@ const SocialStoresPanel = ({ isDarkMode, user }) => {
                                         <Package className="text-blue-500" />
                                         Synced Products
                                     </h4>
-                                    <p className="text-xs text-gray-500">Inventory from your active Shopify store for {activeStore?.name}</p>
+                                    <p className="text-xs text-gray-500">Inventory across channels for {activeStore?.name}</p>
                                 </div>
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
                                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg w-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
@@ -239,16 +330,16 @@ const SocialStoresPanel = ({ isDarkMode, user }) => {
                             {productsLoading ? (
                                 <div className="flex flex-col items-center justify-center p-12 gap-4">
                                     <Loader2 className="animate-spin text-blue-500" size={32} />
-                                    <p className="text-sm text-gray-500">Pulling Shopify Inventory...</p>
+                                    <p className="text-sm text-gray-500">Loading catalog...</p>
                                 </div>
                             ) : filteredProducts.length === 0 ? (
-                                <div className="text-center py-12 italic text-gray-400 text-sm">No products found in Shopify catalog.</div>
+                                <div className="text-center py-12 italic text-gray-400 text-sm">No products found.</div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {filteredProducts.map(product => (
                                         <div key={product.id} className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-900/50 border-gray-700' : 'bg-gray-50 border-gray-100'} flex items-center gap-4`}>
                                             <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-800 overflow-hidden flex-shrink-0">
-                                                {product.images?.[0] && <img src={product.images[0].src} className="w-full h-full object-cover" />}
+                                                {product.images?.[0] && <img src={product.images[0].src} alt="" className="w-full h-full object-cover" />}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-bold dark:text-white truncate">{product.title}</p>

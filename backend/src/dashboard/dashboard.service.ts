@@ -12,7 +12,7 @@ export class DashboardService {
         private readonly prisma: PrismaService
     ) { }
 
-    async getStats(userId: string, shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string, sortBy: string = 'newest') {
+    async getStats(userId: string, shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string, sortBy: string = 'newest', activeShopId?: string) {
         let totalRevenue = 0;
         let revenueChange = 0;
         let revenueData = [];
@@ -53,7 +53,7 @@ export class DashboardService {
 
         // 2. Fetch Local Orders
         const [orders, stores] = await Promise.all([
-            this.prisma.order.findMany({ where: { userId } }),
+            activeShopId ? this.prisma.order.findMany({ where: { userId, storeId: activeShopId } }) : this.prisma.order.findMany({ where: { userId } }),
             this.prisma.socialStore.findMany({ where: { userId } })
         ]);
 
@@ -61,9 +61,10 @@ export class DashboardService {
             const store = stores.find(s => s.id === o.storeId);
             mergedOrders.push({
                 ...o,
-                source: store?.name || store?.type || 'Social Store',
+                source: store?.name || o.source || 'Social Store',
+                normalized_source: (store?.type || o.source || 'social').toLowerCase(),
                 created_at: o.createdAt,
-                normalized_total: o.totalAmount || 0,
+                normalized_total: Number(o.totalAmount) || 0,
                 type: 'local'
             });
         });
@@ -74,13 +75,13 @@ export class DashboardService {
         if (sourceFilter && sourceFilter !== 'all') {
             const normalizedFilter = sourceFilter.toLowerCase();
             filteredOrders = filteredOrders.filter(o => {
-                const source = (o.source || '').toLowerCase();
+                const fSource = o.normalized_source || (o.source || '').toLowerCase();
                 // If filter is 'web', match 'shopify' or 'web'
                 if (normalizedFilter === 'web' || normalizedFilter === 'shopify') {
-                    return source.includes('shopify') || source.includes('web');
+                    return fSource.includes('shopify') || fSource.includes('web');
                 }
-                // If filter is 'instagram' or 'pos', match exactly
-                return source.includes(normalizedFilter);
+                // Match the filter against the source type
+                return fSource.includes(normalizedFilter);
             });
         }
 
@@ -174,9 +175,10 @@ export class DashboardService {
                 id: o.id,
                 name: o.customerName || (o.customer ? `${o.customer.first_name} ${o.customer.last_name || ''}` : 'Customer'),
                 amount: Math.round(o.normalized_total),
-                avatar: (o.customerName?.[0] || (o.customer?.first_name?.[0]) || 'C').toUpperCase(),
+                avatar: (o.customerName?.[0] || (o.customer ? (o.customer.first_name?.[0] || 'C') : 'C')).toUpperCase(),
                 color: this.getRandomColor(),
-                date: o.created_at
+                date: o.created_at,
+                source: o.source || 'Direct'
             }));
 
         // 10. Heatmap Data (Last 35 Days)
@@ -218,6 +220,16 @@ export class DashboardService {
             .slice(0, 5)
             .map(([name, count]) => ({ name, count }));
 
+        // 12. Potential Inventory Value (Inventory items * Price)
+        const productsRaw = await this.prisma.product.findMany({
+            where: { userId }
+        });
+        const currentInventoryValue = productsRaw.reduce((sum, p) => {
+            const vars = Array.isArray(p.variants) ? (p.variants as any[]) : [];
+            const price = parseFloat(vars[0] && typeof vars[0] === 'object' ? vars[0].price || '0' : '0');
+            return sum + (price * (p.inventory || 0));
+        }, 0);
+
         return {
             revenue: {
                 total: totalRevenue,
@@ -225,6 +237,7 @@ export class DashboardService {
                 chartData: revenueData,
                 lost: lostRevenue
             },
+            inventoryValue: currentInventoryValue,
             targetDetails: {
                 type: targetType,
                 value: targetValue

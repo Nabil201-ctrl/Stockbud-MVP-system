@@ -44,7 +44,8 @@ export class DashboardController {
             userCurrency,
             range,
             sourceFilter,
-            sortBy
+            sortBy,
+            fullUser?.activeShopId || undefined
         );
     }
 

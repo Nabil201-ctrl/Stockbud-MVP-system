@@ -83,8 +83,9 @@ export const storesAPI = {
     socialStores: {
         getAll: () => api.get('/social-stores'),
         create: (data) => api.post('/social-stores', data),
-        update: (storeId, name) => api.put(`/social-stores/${storeId}`, { name }),
+        update: (storeId, data) => api.patch(`/social-stores/${storeId}`, data),
         getProducts: (storeId) => api.get(`/social-stores/${storeId}/products`),
+        getStats: (storeId) => api.get(`/social-stores/${storeId}/stats`),
         createProduct: (storeId, data) => api.post(`/social-stores/${storeId}/products`, data),
         updateProduct: (storeId, productId, data) => api.patch(`/social-stores/${storeId}/products/${productId}`, data),
         deleteProduct: (storeId, productId) => api.delete(`/social-stores/${storeId}/products/${productId}`),
@@ -97,6 +98,10 @@ export const dashboardAPI = {
 
     getTarget: () => api.get('/dashboard/target'),
     setTarget: (type, value) => api.post('/dashboard/target', { type, value }),
+};
+
+export const ordersAPI = {
+    create: (data) => api.post('/orders', data),
 };
 
 export const notificationsAPI = {

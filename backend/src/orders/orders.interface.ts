@@ -8,6 +8,7 @@ export interface OrderItem {
 export interface Order {
     id: string;
     storeId: string;
+    userId: string;
     items: OrderItem[];
     totalAmount: number;
     currency: string;
@@ -20,5 +21,6 @@ export interface Order {
 
 export interface OrderMicroserviceMessage {
     order: Partial<Order>;
+    userId: string;
     action: 'CREATE_ORDER';
 }

@@ -1,32 +1,26 @@
 const express = require('express');
 const amqp = require('amqplib');
-const fs = require('fs-extra');
 const path = require('path');
 require('dotenv').config();
 
-const client = require('prom-client');
+// Use the Prisma client from the main backend node_modules
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
+const client = require('prom-client');
 const app = express();
 const port = process.env.ORDER_PROCESSOR_PORT || 3001;
 
-// Prometheus Registry and Default Metrics
+// Prometheus Registry
 const register = new client.Registry();
 client.collectDefaultMetrics({ register });
 
-// Custom Metrics
 const ordersProcessedCounter = new client.Counter({
     name: 'orders_processed_total',
-    help: 'Total number of orders processed successfully or with failure',
+    help: 'Total number of orders processed',
     labelNames: ['status'],
+    registers: [register],
 });
-const orderProcessingHistogram = new client.Histogram({
-    name: 'order_processing_duration_seconds',
-    help: 'Time spent processing an order in seconds',
-    buckets: [0.1, 0.5, 1, 2, 5],
-});
-
-register.registerMetric(ordersProcessedCounter);
-register.registerMetric(orderProcessingHistogram);
 
 app.use(express.json());
 
@@ -36,34 +30,8 @@ app.get('/metrics', async (req, res) => {
     res.send(await register.metrics());
 });
 
-// Basic health check and simple dashboard endpoint
-app.get('/', (req, res) => {
-    res.send(`
-        <html>
-            <head>
-                <title>Order Processor Status</title>
-                <style>
-                    body { font-family: 'Inter', sans-serif; background: #0f172a; color: #fff; padding: 40px; }
-                    .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 24px; border-radius: 16px; }
-                    h1 { color: #34d399; margin-top: 0; }
-                    .status { display: flex; align-items: center; gap: 10px; font-weight: 600; }
-                    .dot { width: 12px; height: 12px; border-radius: 50%; background: #34d399; box-shadow: 0 0 10px #34d399; }
-                </style>
-            </head>
-            <body>
-                <div class="card">
-                    <h1>Order Processor Internal Dashboard</h1>
-                    <div class="status"><div class="dot"></div> System Online via RabbitMQ</div>
-                    <p>Processing orders for StockBud Social Stores...</p>
-                    <p>Current Time: ${new Date().toLocaleString()}</p>
-                </div>
-            </body>
-        </html>
-    `);
-});
-
 app.get('/health', (req, res) => {
-    res.json({ status: 'UP', service: 'order-processor-express' });
+    res.json({ status: 'UP', service: 'order-processor-standalone' });
 });
 
 // RabbitMQ Consumer
@@ -77,105 +45,93 @@ async function consumeOrders() {
         const queue = 'order_queue';
 
         await channel.assertQueue(queue, { durable: false });
-        console.log(`[*] Order Processor waiting for messages in "${queue}".`);
+        console.log(`[Order Processor] Waiting for messages in "${queue}".`);
 
         channel.consume(queue, async (msg) => {
             if (msg !== null) {
-                const content = JSON.parse(msg.content.toString());
-                console.log('[x] Received message:', content.action);
+                try {
+                    const rawContent = JSON.parse(msg.content.toString());
+                    // Handle NestJS envelope if present (pattern/data)
+                    const content = rawContent.data ? rawContent.data : rawContent;
+                    const action = content.action || (rawContent.pattern === 'order_action' ? 'CREATE_ORDER' : null);
 
-                if (content.action === 'CREATE_ORDER') {
-                    await processOrder(content.order);
+                    console.log(`[Order Processor] Processing action: ${action}`);
+
+                    if (action === 'CREATE_ORDER') {
+                        await processOrder(content.userId, content.order);
+                    }
+
+                    channel.ack(msg);
+                } catch (err) {
+                    console.error('[Order Processor] Error processing message:', err.message);
+                    channel.ack(msg);
                 }
-
-                channel.ack(msg);
             }
         });
-
-        connection.on('error', (err) => {
-            console.error('[RabbitMQ] Connection error', err);
-            setTimeout(consumeOrders, 5000);
-        });
-
     } catch (error) {
         console.error('[Order Processor] RabbitMQ connection failed:', error.message);
-        console.log('Retrying in 5 seconds...');
         setTimeout(consumeOrders, 5000);
     }
 }
 
-const CircuitBreaker = require('opossum');
+async function processOrder(userId, order) {
+    console.log(`[Order Processor] Saving order for customer: ${order.customerName}`);
 
-async function processOrderInternal(order) {
-    console.log(`[Order Processor] Processing order ${order.id} for ${order.customerName}...`);
-    // Ensure data directory exists
-    await fs.ensureDir(DATA_DIR);
+    try {
+        // 1. Create the order in PostgreSQL
+        const savedOrder = await prisma.order.create({
+            data: {
+                userId: userId,
+                storeId: order.storeId || 'manual',
+                customerName: order.customerName,
+                customerEmail: order.customerEmail || null,
+                totalAmount: order.totalAmount || 0,
+                currency: order.currency || 'USD',
+                source: order.source || 'social',
+                status: 'delivered',
+                items: order.items || [],
+                createdAt: order.createdAt ? new Date(order.createdAt) : new Date(),
+            }
+        });
 
-    // 1. Save order to orders.json (using existing orders.json in data/)
-    let orders = [];
-    if (await fs.pathExists(ORDERS_FILE)) {
-        try {
-            orders = await fs.readJson(ORDERS_FILE);
-        } catch (e) {
-            console.error('Error reading orders file, resetting');
-        }
-    }
-    orders.push(order);
-    await fs.writeJson(ORDERS_FILE, orders, { spaces: 2 });
-    console.log(`[Order Processor] Order saved to ${ORDERS_FILE}`);
+        console.log(`[Order Processor] Order ${savedOrder.id} saved to DB.`);
 
-    // 2. Update stock in social_stores.json
-    if (await fs.pathExists(STORES_FILE)) {
-        const socialStores = await fs.readJson(STORES_FILE);
-        let updated = false;
+        // 2. Decrement inventory for each item
+        const items = order.items || [];
+        for (const item of items) {
+            const productId = item.productId;
+            if (!productId) continue;
 
-        for (const store of socialStores) {
-            if (store.products && Array.isArray(store.products)) {
-                for (const item of order.items) {
-                    const product = store.products.find(p => p.id === item.productId);
-                    if (product) {
-                        const oldStock = product.stock;
-                        product.stock = Math.max(0, product.stock - item.quantity);
-                        console.log(`[Order Processor] Stock update in store "${store.name}" for "${product.name}": ${oldStock} -> ${product.stock}`);
-                        updated = true;
-                    }
+            const product = await prisma.product.findUnique({ where: { id: productId } });
+            if (product) {
+                const quantity = item.quantity || 1;
+                const newInventory = Math.max(0, (product.inventory || 0) - quantity);
+
+                // Update variants JSON
+                let variants = Array.isArray(product.variants) ? [...product.variants] : [];
+                if (variants.length > 0) {
+                    variants[0].inventory_quantity = Math.max(0, (parseFloat(variants[0].inventory_quantity) || 0) - quantity);
                 }
+
+                await prisma.product.update({
+                    where: { id: productId },
+                    data: {
+                        inventory: newInventory,
+                        variants: variants
+                    }
+                });
+                console.log(`[Order Processor] Updated stock for product: ${product.title}. Remaining: ${newInventory}`);
             }
         }
 
-        if (updated) {
-            await fs.writeJson(STORES_FILE, socialStores, { spaces: 2 });
-            console.log(`[Order Processor] social_stores.json updated successfully.`);
-        }
-    } else {
-        console.warn(`[Order Processor] Stores file not found at ${STORES_FILE}, skipping stock update.`);
-    }
-}
-
-const orderBreaker = new CircuitBreaker(async (order) => {
-    const start = Date.now();
-    try {
-        await processOrderInternal(order);
-        const duration = (Date.now() - start) / 1000;
-        orderProcessingHistogram.observe(duration);
         ordersProcessedCounter.inc({ status: 'success' });
     } catch (err) {
+        console.error('[Order Processor] Database operation failed:', err.message);
         ordersProcessedCounter.inc({ status: 'error' });
-        throw err;
     }
-}, {
-    timeout: 10000,
-    errorThresholdPercentage: 50,
-    resetTimeout: 20000,
-});
-
-orderBreaker.fallback(() => console.error('[Order Processor] Circuit Open: Failed to process order. Saving for retry...'));
-
-async function processOrder(order) {
-    return orderBreaker.fire(order);
 }
 
 app.listen(port, () => {
-    console.log(`Order Processor Express server running on http://localhost:${port}`);
+    console.log(`Order Processor running on http://localhost:${port}`);
     consumeOrders();
 });

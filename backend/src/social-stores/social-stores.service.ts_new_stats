@@ -1,0 +1,61 @@
+    async getStats(userId: string, id: string) {
+        const store = await this.findById(id);
+        if (!store || store.userId !== userId) throw new Error('Unauthorized or store not found');
+
+        // Extract last 7 days range
+        const days = 7;
+        const last7DaysDates = [...Array(days)].map((_, i) => {
+            const d = new Date();
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() - (days - 1 - i));
+            return d;
+        });
+
+        // Fetch actual orders for this store to get real revenue
+        const orders = await this.prisma.order.findMany({
+            where: {
+                storeId: id,
+                createdAt: { gte: last7DaysDates[0] },
+                status: { in: ['delivered', 'paid'] }
+            }
+        });
+
+        const dailyStats = Array.isArray(store.dailyStats) ? store.dailyStats as any[] : [];
+
+        const chartData = last7DaysDates.map(dateObj => {
+            const dateStr = dateObj.toISOString().split('T')[0];
+            
+            // Get visits/inquiries from JSON
+            const stat = dailyStats.find(s => s.date === dateStr);
+            
+            // Get revenue from actual orders
+            const dayRevenue = orders
+                .filter(o => new Date(o.createdAt).toISOString().split('T')[0] === dateStr)
+                .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+            return {
+                date: dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase(),
+                visits: stat?.visits || 0,
+                inquiries: stat?.inquiries || 0,
+                revenue: dayRevenue
+            };
+        });
+
+        // Aggregate totals
+        const lifetimeRevenue = (await this.prisma.order.aggregate({
+            where: { storeId: id, status: { in: ['delivered', 'paid'] } },
+            _sum: { totalAmount: true }
+        }))._sum.totalAmount || 0;
+
+        const totalOrders = await this.prisma.order.count({
+            where: { storeId: id, status: { in: ['delivered', 'paid'] } }
+        });
+
+        return {
+            totalVisits: store.visits,
+            totalInquiries: store.inquiries || 0,
+            totalRevenue: lifetimeRevenue,
+            totalOrders: totalOrders,
+            chartData
+        };
+    }

@@ -1,14 +1,13 @@
-import { Module } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
-import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
+import { Module, forwardRef } from '@nestjs/common';
 import { OrdersMicroserviceController } from './orders-microservice.controller';
 import { OrdersMicroserviceService } from './orders-microservice.service';
-import { HealthModule } from '../health/health.module';
+import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
+import { APP_FILTER } from '@nestjs/core';
+import { AppModule } from '../app.module';
 
 @Module({
     imports: [
-        HealthModule,
-        HealthModule,
+        forwardRef(() => AppModule),
         SentryModule.forRoot(),
     ],
     controllers: [OrdersMicroserviceController],

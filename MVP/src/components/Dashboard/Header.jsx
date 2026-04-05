@@ -130,7 +130,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
                     {activeStore?.isSocial ? <Store size={16} /> : <ShoppingBag size={16} />}
                   </div>
                   <span className={`text-sm font-medium max-w-[150px] truncate ${isDarkMode ? 'text-gray-200' : 'text-slate-700'}`}>
-                    {activeStore ? (activeStore.name || activeStore.shop?.replace('.myshopify.com', '')) : t('header.selectStore') || 'Select Store'}
+                    {activeStore ? (activeStore.name || activeStore.shop?.replace('.myshopify.com', '') || activeStore.type) : t('header.selectStore') || 'Select Store'}
                   </span>
                   <ChevronDown size={14} className={`text-gray-400 transition-transform ${showShopMenu ? 'rotate-180' : ''}`} />
                 </button>

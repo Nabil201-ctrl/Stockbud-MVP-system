@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical, Store, AlertCircle, Bell, X, Upload, Image as ImageIcon } from 'lucide-react';
+import { Package, Search, Filter, Plus, Edit, Trash, X, DollarSign, ShoppingCart, Star, ImageIcon, Upload, Loader2, Bell, ExternalLink, CheckCircle2, ShoppingBag, TrendingUp, TrendingDown, Store, AlertCircle } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { storesAPI, dashboardAPI, imageAPI } from '../services/api';
+import { storesAPI, dashboardAPI, imageAPI, ordersAPI } from '../services/api';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -47,6 +46,9 @@ const ProductsPage = () => {
   const [thresholds, setThresholds] = useState({});
   const [showThresholdModal, setShowThresholdModal] = useState(null);
   const [thresholdInput, setThresholdInput] = useState('');
+  const [showOrderModal, setShowOrderModal] = useState(null);
+  const [orderQuantity, setOrderQuantity] = useState(1);
+  const [creatingOrder, setCreatingOrder] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [triggerAddProduct, setTriggerAddProduct] = useState(false);
@@ -162,8 +164,21 @@ const ProductsPage = () => {
         stock: p.variants?.reduce((sum, v) => sum + (v.inventory_quantity || 0), 0) || p.stock || 0,
         status: p.status === 'active' ? 'active' : (p.status === 'low' ? 'low' : 'out'),
         image: p.images?.[0]?.src || p.image || '',
-        revenue: 0,
+        revenue: p.revenue || 0,
       }));
+
+      // Update statistics from server summary if available
+      if (data.summary) {
+        setProductStats(prev => ({
+          ...prev,
+          total: data.summary.total,
+          active: data.summary.active,
+          outOfStock: data.summary.outOfStock,
+          lowStock: data.summary.lowStock,
+          totalRevenue: data.summary.totalRevenue || prev.totalRevenue,
+          categories: data.summary.categories
+        }));
+      }
 
       setProducts(transformedProducts);
 
@@ -481,6 +496,7 @@ const ProductsPage = () => {
                       <th className="text-left py-3 px-4 font-medium">{t('products.category')}</th>
                       <th className="text-left py-3 px-4 font-medium">{t('products.price')}</th>
                       <th className="text-left py-3 px-4 font-medium">{t('products.stock')}</th>
+                      <th className="text-left py-3 px-4 font-medium">Revenue</th>
                       <th className="text-left py-3 px-4 font-medium">Threshold</th>
                       <th className="text-left py-3 px-4 font-medium"></th>
                     </tr>
@@ -532,6 +548,9 @@ const ProductsPage = () => {
                             <span>{product.stock}</span>
                           </div>
                         </td>
+                        <td className="py-4 px-4 font-medium text-green-600 dark:text-green-400">
+                          {activeCurrency} {(product.revenue || 0).toLocaleString()}
+                        </td>
                         <td className="py-4 px-4">
                           <div className={`text-sm ${thresholds[product.id] !== undefined && product.stock <= thresholds[product.id] ? 'text-red-500 font-bold' : ''}`}>
                             {thresholds[product.id] !== undefined ? thresholds[product.id] : 'Not Set'}
@@ -564,6 +583,16 @@ const ProductsPage = () => {
                                 title="Delete Product"
                               >
                                 <X size={18} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowOrderModal(product);
+                                  setOrderQuantity(1);
+                                }}
+                                className="p-2 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg text-green-500"
+                                title="Create Manual Order"
+                              >
+                                <ShoppingBag size={18} />
                               </button>
                             </>
                           )}
@@ -941,6 +970,88 @@ const ProductsPage = () => {
           </div>
         )
       }
+      {/* Create Order Modal */}
+      {showOrderModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <div className={`p-5 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <h3 className="font-bold text-xl flex items-center gap-2">
+                <ShoppingBag className="text-green-500" />
+                Create Manual Order
+              </h3>
+              <button onClick={() => setShowOrderModal(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                <div className="w-16 h-16 rounded-lg bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                  <img src={showOrderModal.image} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <p className="font-bold text-lg">{showOrderModal.name}</p>
+                  <p className="text-sm text-gray-500">{showOrderModal.category}</p>
+                  <p className="text-blue-500 font-bold">${showOrderModal.price}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Quantity to Buy</label>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setOrderQuantity(Math.max(1, orderQuantity - 1))}
+                    className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all font-bold text-xl"
+                  >-</button>
+                  <input
+                    type="number"
+                    value={orderQuantity}
+                    onChange={e => setOrderQuantity(parseInt(e.target.value) || 1)}
+                    className="w-20 text-center text-xl font-bold bg-transparent outline-none"
+                  />
+                  <button
+                    onClick={() => setOrderQuantity(Math.min(showOrderModal.stock, orderQuantity + 1))}
+                    className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all font-bold text-xl"
+                  >+</button>
+                  <span className="text-xs text-gray-400">Available: {showOrderModal.stock}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-gray-500">Total Price</span>
+                  <span className="text-2xl font-black text-blue-600">${(showOrderModal.price * orderQuantity).toFixed(2)}</span>
+                </div>
+                <button
+                  disabled={creatingOrder || orderQuantity > showOrderModal.stock}
+                  onClick={async () => {
+                    setCreatingOrder(true);
+                    try {
+                      await ordersAPI.create({
+                        productId: showOrderModal.id,
+                        productName: showOrderModal.name,
+                        price: showOrderModal.price,
+                        quantity: orderQuantity,
+                        totalAmount: showOrderModal.price * orderQuantity,
+                        currency: activeCurrency
+                      });
+                      setShowOrderModal(null);
+                      await fetchProducts();
+                      alert("Order created and inventory updated!");
+                    } catch (err) {
+                      alert("Failed to create order");
+                    } finally {
+                      setCreatingOrder(false);
+                    }
+                  }}
+                  className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold shadow-xl shadow-green-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {creatingOrder ? 'Processing...' : 'Complete Sale'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };

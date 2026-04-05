@@ -129,6 +129,7 @@ model Order {
   financialStatus String      @default("pending")
   fulfillmentStatus String    @default("unfulfilled")
   source          String      @default("manual") // "shopify", "whatsapp", etc
+  status          String      @default("pending")
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   

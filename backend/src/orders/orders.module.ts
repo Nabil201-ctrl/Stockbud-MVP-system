@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { OrdersProducerService } from './orders.producer.service';
+import { OrdersController } from './orders.controller';
+import { UsersModule } from '../users/users.module';
 
 @Module({
     imports: [
+        UsersModule,
         ClientsModule.register([{
             name: 'ORDERS_SERVICE',
             transport: Transport.RMQ,
@@ -16,7 +19,7 @@ import { OrdersProducerService } from './orders.producer.service';
             },
         }]),
     ],
-    controllers: [],
+    controllers: [OrdersController],
     providers: [OrdersProducerService],
     exports: [OrdersProducerService],
 })

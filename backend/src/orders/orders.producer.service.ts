@@ -27,11 +27,14 @@ export class OrdersProducerService {
     }
 
     async sendOrderMessage(message: OrderMicroserviceMessage) {
+        console.log(`[OrdersProducer] Attempting to emit order_action for user: ${message.userId}`);
         try {
             const result = await this.breaker.fire(message);
+            console.log(`[OrdersProducer] Message emitted successfully.`);
             this.orderCounter.inc({ source: (message as any).source || 'unknown', status: 'success' });
             return result;
         } catch (error) {
+            console.error(`[OrdersProducer] FAILED to emit message:`, error.message);
             this.orderCounter.inc({ source: (message as any).source || 'unknown', status: 'failed' });
             throw error;
         }

@@ -43,15 +43,22 @@ const SalesHistory = ({ isDarkMode, data, currencySymbol = '$' }) => {
         {salesHistory.length > 0 ? salesHistory.map((sale, idx) => (
           <div key={idx} className="flex items-center justify-between group">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 ${sale.color || 'bg-blue-500'} rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm ring-2 ring-white dark:ring-gray-700`}>
-                {sale.avatar}
+              <div className={`w-10 h-10 ${sale.color || 'bg-blue-600'} rounded-full flex items-center justify-center text-white text-[10px] font-black shadow-sm ring-2 ring-white dark:ring-gray-700 relative`}>
+                {sale.avatar || (sale.source?.toLowerCase().includes('whatsapp') ? 'WA' : (sale.source?.toLowerCase().includes('instagram') ? 'IG' : 'WEB'))}
+                {sale.source && (
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-lg border border-gray-100 dark:border-gray-700">
+                    {sale.source.toLowerCase().includes('whatsapp') ? <span className="text-[8px] text-green-500 font-black">W</span> :
+                      (sale.source.toLowerCase().includes('instagram') ? <span className="text-[8px] text-pink-500 font-black">I</span> :
+                        <span className="text-[8px] text-blue-500 font-black">S</span>)}
+                  </div>
+                )}
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-sm font-medium">{sale.name}</span>
-                <span className="text-[10px] text-gray-500 font-mono tracking-tight uppercase">Confirmed</span>
+                <span className="text-sm font-bold truncate max-w-[120px]">{sale.name}</span>
+                <span className="text-[9px] text-gray-500 font-black uppercase tracking-tighter">{sale.source || 'Confirmed'}</span>
               </div>
             </div>
-            <span className="font-bold text-sm tabular-nums">{currencySymbol}{sale.amount.toLocaleString()}</span>
+            <span className="font-black text-sm tabular-nums text-blue-600">${parseFloat(sale.amount).toLocaleString()}</span>
           </div>
         )) : (
           <div className="py-8 text-center text-gray-400 text-sm italic">

@@ -393,4 +393,89 @@ export class ShopifyService {
       return { products: [], pageInfo: {}, totalCount: 0 };
     }
   }
+  async updateInventory(shop: string, token: string, variantId: string, delta: number) {
+    if (!shop || !token) return;
+
+    // First fetch the inventoryItemId for this variant
+    const variantQuery = `
+    {
+      productVariant(id: "${variantId}") {
+        inventoryItem {
+          id
+        }
+      }
+    }`;
+
+    try {
+      const apiUrl = `https://${shop}/admin/api/2024-01/graphql.json`;
+      const headers = {
+        'X-Shopify-Access-Token': token,
+        'Content-Type': 'application/json',
+      };
+
+      const variantResponse = await firstValueFrom(
+        this.httpService.post(apiUrl, { query: variantQuery }, { headers, timeout: 30000 }),
+      );
+
+      const inventoryItemId = variantResponse.data?.data?.productVariant?.inventoryItem?.id;
+      if (!inventoryItemId) {
+        console.error(`[ShopifyService] Could not find inventory item for variant ${variantId}`);
+        return;
+      }
+
+      // Fetch the first location ID
+      const locationQuery = `{ locations(first: 1) { edges { node { id } } } }`;
+      const locationResponse = await firstValueFrom(
+        this.httpService.post(apiUrl, { query: locationQuery }, { headers, timeout: 30000 }),
+      );
+
+      const locationId = locationResponse.data?.data?.locations?.edges?.[0]?.node?.id;
+      if (!locationId) {
+        console.error('[ShopifyService] No inventory location found');
+        return;
+      }
+
+      // Perform the adjustment
+      const mutation = `
+      mutation inventoryAdjustQuantities($input: InventoryAdjustQuantitiesInput!) {
+        inventoryAdjustQuantities(input: $input) {
+          inventoryAdjustmentGroup {
+            createdAt
+            reason
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }`;
+
+      const variables = {
+        input: {
+          reason: "correction",
+          name: "available",
+          changes: [
+            {
+              delta,
+              inventoryItemId,
+              locationId
+            }
+          ]
+        }
+      };
+
+      const response = await firstValueFrom(
+        this.httpService.post(apiUrl, { query: mutation, variables }, { headers, timeout: 30000 }),
+      );
+
+      if (response.data?.data?.inventoryAdjustQuantities?.userErrors?.length > 0) {
+        console.error('[ShopifyService] Inventory adjustment error:', response.data.data.inventoryAdjustQuantities.userErrors);
+      } else {
+        console.log(`[ShopifyService] Successfully adjusted inventory by ${delta} for variant ${variantId} on Shopify`);
+      }
+
+    } catch (error) {
+      console.error('[ShopifyService] Failed to update Shopify inventory:', error.message);
+    }
+  }
 }
