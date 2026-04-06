@@ -6,22 +6,27 @@ export class LokiLogger implements LoggerService {
     private logger: pino.Logger;
 
     constructor() {
+        const targets: pino.TransportTargetOptions[] = [
+            {
+                target: 'pino-pretty',
+                options: { colorize: true },
+            },
+        ];
+
+        if (process.env.LOKI_HOST) {
+            targets.push({
+                target: 'pino-loki',
+                options: {
+                    host: process.env.LOKI_HOST,
+                    labels: { app: 'stockbud-backend' },
+                },
+            });
+        }
+
         this.logger = pino({
             level: 'info',
             transport: {
-                targets: [
-                    {
-                        target: 'pino-pretty',
-                        options: { colorize: true },
-                    },
-                    {
-                        target: 'pino-loki',
-                        options: {
-                            host: process.env.LOKI_HOST || 'http://localhost:3100',
-                            labels: { app: 'stockbud-backend' },
-                        },
-                    },
-                ],
+                targets,
             },
         });
     }

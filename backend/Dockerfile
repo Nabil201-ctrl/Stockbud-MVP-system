@@ -27,4 +27,3 @@ ENV NODE_ENV=production
 
 # 6. Start the app
 CMD ["node", "dist/src/main.js"]
-
