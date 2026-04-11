@@ -54,6 +54,8 @@ services:
       - loki_data:/loki
       - ./loki-config.yaml:/etc/loki/local-config.yaml
     command: -config.file=/etc/loki/local-config.yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
 
   grafana:

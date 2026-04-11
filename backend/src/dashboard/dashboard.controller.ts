@@ -21,31 +21,37 @@ export class DashboardController {
         const fullUser = await this.usersService.findById(user.id);
         const userCurrency = fullUser?.currency || 'USD';
 
-        const shopStore = await this.usersService.getActiveShop(user.id);
-        const shop = shopStore?.shop || fullUser?.shopifyShop;
-        const targetType = shopStore?.targetType || 'monthly';
-        const targetValue = shopStore?.targetValue || 0;
-        const token = await this.usersService.getDecryptedShopifyToken(user.id);
+        // Gather ALL Shopify stores for unified dashboard
+        const allShopifyStores: { shop: string; token: string; targetType: string; targetValue: number }[] = [];
+        for (const store of ((fullUser as any)?.shopifyStores || [])) {
+            try {
+                const decryptedToken = this.usersService['encryptionService'].decrypt(store.token);
+                allShopifyStores.push({
+                    shop: store.shop,
+                    token: decryptedToken,
+                    targetType: store.targetType || 'monthly',
+                    targetValue: store.targetValue || 0,
+                });
+            } catch (e) {
+                console.error(`[Dashboard] Failed to decrypt token for store ${store.shop}:`, e.message);
+            }
+        }
+
+        // Use first store's target as default (or fallback)
+        const targetType = allShopifyStores[0]?.targetType || 'monthly';
+        const targetValue = allShopifyStores[0]?.targetValue || 0;
 
         let sourceFilter: string | undefined = filter !== 'all' ? filter : undefined;
 
-        // If it's a social store and no filter specified, default to that social store's type
-        const socialStore = (fullUser as any)?.socialStores?.find((s: any) => s.id === fullUser.activeShopId);
-        if (socialStore && !sourceFilter) {
-            sourceFilter = socialStore.type;
-        }
-
         return this.dashboardService.getStats(
             user.id,
-            shop,
-            token,
+            allShopifyStores,
             targetType as 'weekly' | 'monthly',
             targetValue,
             userCurrency,
             range,
             sourceFilter,
             sortBy,
-            fullUser?.activeShopId || undefined
         );
     }
 

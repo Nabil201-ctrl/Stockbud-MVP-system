@@ -22,7 +22,7 @@ const logger = pino({
             {
                 target: 'pino-loki',
                 options: {
-                    host: process.env.LOKI_HOST || 'http://loki:3100',
+                    host: process.env.LOKI_HOST || 'http://localhost:3100',
                     labels: { app: 'image-service' }
                 }
             }

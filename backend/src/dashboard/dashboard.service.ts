@@ -12,7 +12,7 @@ export class DashboardService {
         private readonly prisma: PrismaService
     ) { }
 
-    async getStats(userId: string, shop?: string, token?: string, targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string, sortBy: string = 'newest', activeShopId?: string) {
+    async getStats(userId: string, shopifyStores: { shop: string; token: string; targetType: string; targetValue: number }[] = [], targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string, sortBy: string = 'newest') {
         let totalRevenue = 0;
         let revenueChange = 0;
         let revenueData = [];
@@ -30,11 +30,11 @@ export class DashboardService {
 
         let mergedOrders: any[] = [];
 
-        // 1. Fetch Shopify Orders
-        if (shop && token) {
+        // 1. Fetch Shopify Orders from ALL connected stores
+        for (const store of shopifyStores) {
             try {
                 const limit = range === 'year' ? 250 : (range === 'month' ? 100 : 50);
-                const ordersData = await this.shopifyService.getOrders(shop, token, { first: limit });
+                const ordersData = await this.shopifyService.getOrders(store.shop, store.token, { first: limit });
                 let shopifyOrders = Array.isArray(ordersData) ? ordersData : (ordersData as any).orders || [];
 
                 shopifyOrders.forEach(o => {
@@ -43,17 +43,18 @@ export class DashboardService {
                         source: o.source_name || 'Shopify',
                         normalized_total: Number(o.total_price),
                         type: 'shopify',
-                        created_at: o.created_at || o.createdAt
+                        created_at: o.created_at || o.createdAt,
+                        storeName: store.shop,
                     });
                 });
             } catch (error) {
-                console.error("Dashboard stats Shopify fetch error:", error.message);
+                console.error(`Dashboard stats Shopify fetch error for ${store.shop}:`, error.message);
             }
         }
 
-        // 2. Fetch Local Orders
+        // 2. Fetch ALL Local Orders (no store filtering)
         const [orders, stores] = await Promise.all([
-            activeShopId ? this.prisma.order.findMany({ where: { userId, storeId: activeShopId } }) : this.prisma.order.findMany({ where: { userId } }),
+            this.prisma.order.findMany({ where: { userId } }),
             this.prisma.socialStore.findMany({ where: { userId } })
         ]);
 

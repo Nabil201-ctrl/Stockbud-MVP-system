@@ -13,7 +13,7 @@ const SalesHistory = ({ isDarkMode, data, currencySymbol = '$' }) => {
     const headers = ['Customer Name', 'Amount', 'Date'];
     const csvContent = [
       headers.join(','),
-      ...salesHistory.map(sale => `"${sale.name}","${sale.amount}","${new Date().toLocaleDateString()}"`)
+      ...salesHistory.map(sale => `"${sale.name}","${sale.amount}","${new Date(sale.date).toLocaleDateString()}"`)
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -58,7 +58,7 @@ const SalesHistory = ({ isDarkMode, data, currencySymbol = '$' }) => {
                 <span className="text-[9px] text-gray-500 font-black uppercase tracking-tighter">{sale.source || 'Confirmed'}</span>
               </div>
             </div>
-            <span className="font-black text-sm tabular-nums text-blue-600">${parseFloat(sale.amount).toLocaleString()}</span>
+            <span className="font-black text-sm tabular-nums text-blue-600">{currencySymbol}{parseFloat(sale.amount).toLocaleString()}</span>
           </div>
         )) : (
           <div className="py-8 text-center text-gray-400 text-sm italic">

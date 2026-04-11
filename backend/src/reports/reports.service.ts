@@ -162,7 +162,24 @@ export class ReportsService {
     private async generateReportData(reportId: string, shop: string, token: string, type: string, userId: string) {
         try {
             const user = await this.usersService.findById(userId);
-            const stats = await this.dashboardService.getStats(userId, shop, token);
+
+            // Build stores array for unified dashboard stats
+            const shopifyStores: { shop: string; token: string; targetType: string; targetValue: number }[] = [];
+            for (const store of ((user as any)?.shopifyStores || [])) {
+                try {
+                    const decryptedToken = (this.usersService as any).encryptionService.decrypt(store.token);
+                    shopifyStores.push({
+                        shop: store.shop,
+                        token: decryptedToken,
+                        targetType: store.targetType || 'monthly',
+                        targetValue: store.targetValue || 0,
+                    });
+                } catch (e) {
+                    console.error(`[Reports] Failed to decrypt token for store ${store.shop}:`, e.message);
+                }
+            }
+
+            const stats = await this.dashboardService.getStats(userId, shopifyStores);
 
             let reportData: any = {};
             let aiContent = "";

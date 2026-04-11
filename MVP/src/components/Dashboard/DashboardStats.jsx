@@ -25,8 +25,8 @@ const DashboardStats = ({ isDarkMode, onSort, onFilter, onDateRange, currentSort
   ];
 
   const filterOptions = [
-    { value: 'all', label: 'All Sources' },
-    { value: 'web', label: 'Web Store' },
+    { value: 'all', label: 'All Stores' },
+    { value: 'web', label: 'Shopify' },
     { value: 'pos', label: 'Point of Sale' },
     { value: 'instagram', label: 'Instagram' },
     { value: 'whatsapp', label: 'WhatsApp' }

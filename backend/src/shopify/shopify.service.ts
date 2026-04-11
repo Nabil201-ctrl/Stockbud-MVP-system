@@ -15,6 +15,37 @@ export class ShopifyService {
 
   private pairingCodes = new Map<string, { userId: string; expiresAt: Date }>();
 
+  /** In-memory cache: key -> { data, expiresAt } */
+  private cache = new Map<string, { data: any; expiresAt: number }>();
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+  private getCached(key: string): any | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      this.cache.delete(key);
+      return null;
+    }
+    return entry.data;
+  }
+
+  private setCache(key: string, data: any): void {
+    this.cache.set(key, { data, expiresAt: Date.now() + this.CACHE_TTL_MS });
+  }
+
+  /** Invalidate cache entries for a specific shop (e.g. after inventory update) */
+  invalidateCache(shop?: string): void {
+    if (!shop) {
+      this.cache.clear();
+      return;
+    }
+    for (const key of this.cache.keys()) {
+      if (key.includes(shop)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
@@ -163,6 +194,13 @@ export class ShopifyService {
   async getOrders(shop: string, token: string, options: any = {}) {
     if (!shop || !token) throw new HttpException('Missing Shopify credentials', HttpStatus.UNAUTHORIZED);
 
+    const cacheKey = `orders:${shop}:${JSON.stringify(options)}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) {
+      console.log(`[ShopifyService] Cache HIT for orders: ${shop}`);
+      return cached;
+    }
+
     const { first = 20, last, after, before } = options;
 
     let args = '';
@@ -256,10 +294,13 @@ export class ShopifyService {
         };
       });
 
-      return {
+      const result = {
         orders,
         pageInfo: response.data.data.orders.pageInfo
       };
+
+      this.setCache(cacheKey, result);
+      return result;
 
     } catch (error) {
       console.error('Error fetching orders via GraphQL:', {
@@ -273,6 +314,13 @@ export class ShopifyService {
   }
 
   async getProducts(shop: string, token: string, options: any = {}) {
+
+    const cacheKey = `products:${shop}:${JSON.stringify(options)}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) {
+      console.log(`[ShopifyService] Cache HIT for products: ${shop}`);
+      return cached;
+    }
 
     console.log(`[ShopifyService] Fetching products for shop: ${shop} `, options);
 
@@ -377,11 +425,14 @@ export class ShopifyService {
         };
       });
 
-      return {
+      const result = {
         products,
         pageInfo: response.data.data.products.pageInfo,
         totalCount
       };
+
+      this.setCache(cacheKey, result);
+      return result;
 
     } catch (error) {
       console.error('[ShopifyService] Error fetching products:', {
@@ -472,6 +523,7 @@ export class ShopifyService {
         console.error('[ShopifyService] Inventory adjustment error:', response.data.data.inventoryAdjustQuantities.userErrors);
       } else {
         console.log(`[ShopifyService] Successfully adjusted inventory by ${delta} for variant ${variantId} on Shopify`);
+        this.invalidateCache(shop);
       }
 
     } catch (error) {

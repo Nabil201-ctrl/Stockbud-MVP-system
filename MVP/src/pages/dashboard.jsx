@@ -18,8 +18,6 @@ const RevenueChart = lazy(() => import('../components/charts/RevenueChart'));
 const SourcePieChart = lazy(() => import('../components/charts/SourcePieChart'));
 
 const Dashboard = () => {
-  const [selectedDate, setSelectedDate] = useState(17);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(true);
   const { isDarkMode, toggleTheme } = useTheme();
   const { t } = useLanguage();
 
@@ -49,14 +47,9 @@ const Dashboard = () => {
   const currencySymbol = getCurrencySymbol(userCurrency);
 
   const fetchStats = async () => {
-    // If no active shop, stop
-    if (!user?.activeShopId) {
-      setLoading(false);
-      return;
-    }
 
     setLoading(true);
-    const cacheKey = `dashboard_stats_${user.activeShopId}_${dateRange}_${filterBy}_${sortBy}`;
+    const cacheKey = `dashboard_stats_all_${dateRange}_${filterBy}_${sortBy}`;
 
     try {
       // 1. Try to load from cache first for instant load
@@ -89,36 +82,12 @@ const Dashboard = () => {
     if (user) {
       fetchStats();
     }
-  }, [user?.activeShopId, dateRange, sortBy, filterBy]);
-
+  }, [dateRange, sortBy, filterBy]);
 
   useEffect(() => {
     if (!stats) return;
-
-    let history = [...(stats.salesHistory || [])];
-
-    // Handle Filtering (Mock logic based on names or random for now as source isn't in history item yet)
-    if (filterBy !== 'all') {
-      // In a real app, each sale item would have a source
-      // For now, let's just filter a subset to show it works
-      history = history.filter((_, idx) => filterBy === 'web' ? idx % 2 === 0 : idx % 2 !== 0);
-    }
-
-    // Handle Sorting
-    if (sortBy === 'highest') {
-      history.sort((a, b) => b.amount - a.amount);
-    } else if (sortBy === 'lowest') {
-      history.sort((a, b) => a.amount - b.amount);
-    } else if (sortBy === 'oldest') {
-      history.reverse();
-    }
-
-    setFilteredStats({
-      ...stats,
-      salesHistory: history
-    });
-
-  }, [stats, sortBy, filterBy]);
+    setFilteredStats(stats);
+  }, [stats]);
 
   const saveTarget = async () => {
     try {
@@ -126,14 +95,12 @@ const Dashboard = () => {
 
       setIsTargetModalOpen(false);
 
-      if (user?.activeShopId) {
-        setLoading(true);
-        const fresh = await dashboardAPI.getStats();
-        const freshData = fresh.data;
-        setStats(freshData);
-        await storage.set(`dashboard_stats_${user.activeShopId}`, freshData);
-        setLoading(false);
-      }
+      setLoading(true);
+      const fresh = await dashboardAPI.getStats();
+      const freshData = fresh.data;
+      setStats(freshData);
+      await storage.set(`dashboard_stats_all`, freshData);
+      setLoading(false);
     } catch (error) {
       console.error('Network error saving target', error);
     }

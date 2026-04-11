@@ -179,8 +179,23 @@ export class ChatService implements OnModuleInit {
                 if (dataAccess === 'Limited') {
                     storeStats = "Access to detailed store data is disabled in Bot Customization settings.";
                 } else {
-                    const decryptedToken = await this.usersService.getDecryptedShopifyToken(userId);
-                    const stats = await this.dashboardService.getStats(user.shopifyShop, decryptedToken);
+                    // Build stores array for unified stats
+                    const shopifyStores: { shop: string; token: string; targetType: string; targetValue: number }[] = [];
+                    for (const store of ((user as any)?.shopifyStores || [])) {
+                        try {
+                            const decryptedToken = (this.usersService as any).encryptionService.decrypt(store.token);
+                            shopifyStores.push({
+                                shop: store.shop,
+                                token: decryptedToken,
+                                targetType: store.targetType || 'monthly',
+                                targetValue: store.targetValue || 0,
+                            });
+                        } catch (e) {
+                            // skip stores with decrypt errors
+                        }
+                    }
+
+                    const stats = await this.dashboardService.getStats(userId, shopifyStores);
 
                     const recentSales = stats.salesHistory.map(s => `${s.name} ($${s.amount})`).join(', ');
                     const revenueTrend = stats.revenue.chartData.map(d => `${d.date}: $${d.revenue}`).join(', ');

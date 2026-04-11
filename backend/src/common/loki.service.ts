@@ -8,7 +8,7 @@ export class LokiService {
     private locator: string;
 
     constructor(private configService: ConfigService) {
-        this.locator = this.configService.get<string>('LOKI_HOST') || 'http://loki:3100';
+        this.locator = this.configService.get<string>('LOKI_HOST') || 'http://localhost:3100';
     }
 
     /**

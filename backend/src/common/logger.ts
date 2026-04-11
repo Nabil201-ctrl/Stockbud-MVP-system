@@ -13,15 +13,13 @@ export class LokiLogger implements LoggerService {
             },
         ];
 
-        if (process.env.LOKI_HOST) {
-            targets.push({
-                target: 'pino-loki',
-                options: {
-                    host: process.env.LOKI_HOST,
-                    labels: { app: 'stockbud-backend' },
-                },
-            });
-        }
+        targets.push({
+            target: 'pino-loki',
+            options: {
+                host: process.env.LOKI_HOST || 'http://localhost:3100',
+                labels: { app: 'stockbud-backend' },
+            },
+        });
 
         this.logger = pino({
             level: 'info',

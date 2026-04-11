@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2, Zap, ShoppingBag, Languages, Copy, Key } from 'lucide-react';
+import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2, Zap, ShoppingBag, Languages, Copy, Key, Trash2 } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -220,7 +220,7 @@ const SettingsPage = () => {
         setPairingLoading(true);
         try {
             const res = await storesAPI.getPairingCode();
-            setPairingCode(res.data.pairingCode);
+            setPairingCode(res.data.code || res.data.pairingCode);
             setCodeCopied(false);
         } catch (error) {
             alert(`Error: ${error.message}`);

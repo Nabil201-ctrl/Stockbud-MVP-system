@@ -2,16 +2,16 @@
 import React from 'react';
 
 const SalesHeatmap = ({ isDarkMode, data }) => {
-  
+
   const heatmapData = React.useMemo(() => {
     if (!data || data.length === 0) {
-      
+
       return [
         [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]
       ];
     }
 
-    
+
     const flatLevels = data.map(d => d.level);
     while (flatLevels.length < 35) flatLevels.push(0);
 
@@ -57,11 +57,10 @@ const SalesHeatmap = ({ isDarkMode, data }) => {
         <span>SUN</span>
       </div>
       <div className="flex justify-between items-center mt-4 text-xs text-gray-400">
-        <span>0 - 300</span>
-        <span>300 - 600</span>
-        <span>600 - 900</span>
-        <span>900 - 1200</span>
-        <span>1200 - 1500</span>
+        <span>0</span>
+        <span>&gt; 0</span>
+        <span>&gt; 1000</span>
+        <span>&gt; 2000</span>
       </div>
     </div>
   );
