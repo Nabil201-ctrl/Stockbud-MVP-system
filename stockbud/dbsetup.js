@@ -7,7 +7,7 @@ import fs from 'node:fs'
 const env = { ...process.env }
 
 
-const source = path.resolve('/dev.sqlite')
+const source = path.resolve('dev.sqlite')
 const target = '/data/' + path.basename(source)
 if (!fs.existsSync(source) && fs.existsSync('/data')) fs.symlinkSync(target, source)
 const newDb = !fs.existsSync(target)
