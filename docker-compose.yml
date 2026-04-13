@@ -1,10 +1,12 @@
+version: "3.9"
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: stockbud-rabbitmq
     ports:
-      - "5672:5672" # AMQP protocol port
-      - "15672:15672" # Management UI port
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -29,6 +31,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
+      POSTGRES_DB: stockbud
     ports:
       - "5432:5432"
     volumes:
@@ -57,9 +60,69 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
     restart: always
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stockbud-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - postgres
+      - rabbitmq
+    volumes:
+      - ./backend/data:/app/data
+
+  order-processor:
+    build:
+      context: ./backend/order-processor
+      dockerfile: Dockerfile
+    container_name: stockbud-order-processor
+    restart: always
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./backend/order-processor/.env
+    depends_on:
+      - rabbitmq
+
+  image-service:
+    build:
+      context: ./backend/image-service
+      dockerfile: Dockerfile
+    container_name: stockbud-image-service
+    restart: always
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./backend/image-service/.env
+    depends_on:
+      - rabbitmq
+
+  shopify-app:
+    build:
+      context: ./stockbud
+      dockerfile: Dockerfile
+    container_name: stockbud-shopify-app
+    restart: always
+    ports:
+      - "3004:3000"
+    env_file:
+      - ./stockbud/.env
+    environment:
+      - STOCKBUD_BACKEND_URL=http://backend:3000
+      - SHOPIFY_APP_URL=https://your-app-domain.com # Update this to your public domain
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    volumes:
+      - shopify_data:/data
+
 volumes:
   rabbitmq_data:
   postgres_data:
   grafana_data:
-
-
+  shopify_data:

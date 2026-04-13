@@ -2,7 +2,7 @@
 
 client_id = "d1131bed562962ede818c27c2f4c0081"
 name = "Stockbud"
-application_url = "https://example.com"
+application_url = "https://shopify.stockbud.xyz"
 embedded = true
 
 [build]
@@ -31,4 +31,8 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [
+  "https://shopify.stockbud.xyz/auth/callback",
+  "https://shopify.stockbud.xyz/auth/shopify/callback",
+  "https://shopify.stockbud.xyz/api/auth"
+]
