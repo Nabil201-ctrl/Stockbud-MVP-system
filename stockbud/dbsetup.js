@@ -9,7 +9,14 @@ const env = { ...process.env }
 
 const source = path.resolve('dev.sqlite')
 const target = '/data/' + path.basename(source)
-if (!fs.existsSync(source) && fs.existsSync('/data')) fs.symlinkSync(target, source)
+
+if (fs.existsSync('/data')) {
+  try {
+    fs.symlinkSync(target, source)
+  } catch (err) {
+    if (err.code !== 'EEXIST') throw err
+  }
+}
 const newDb = !fs.existsSync(target)
 if (newDb && process.env.BUCKET_NAME) {
   await exec(`npx litestream restore -config litestream.yml -if-replica-exists ${target}`)
