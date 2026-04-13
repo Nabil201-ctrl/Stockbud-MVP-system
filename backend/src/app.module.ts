@@ -20,7 +20,7 @@ import { OrdersModule } from './orders/orders.module';
 import { ImageMicroserviceModule } from './image-microservice/image-microservice.module';
 import { AdminModule } from './admin/admin.module';
 import { SocialStoresModule } from './social-stores/social-stores.module';
-import { LokiLogger } from './common/logger';
+import { AppLogger } from './common/logger';
 
 import { HealthModule } from './health/health.module';
 
@@ -53,7 +53,7 @@ import { HealthModule } from './health/health.module';
         SocialStoresModule,
     ],
     providers: [
-        LokiLogger,
+        AppLogger,
         {
             provide: APP_FILTER,
             useClass: SentryGlobalFilter,
