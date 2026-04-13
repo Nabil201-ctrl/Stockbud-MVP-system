@@ -4,25 +4,29 @@ import db from "../db.server";
 export const action = async ({ request }) => {
     const { shop, payload, topic } = await authenticate.webhook(request);
 
-    console.log(`Received SHOP_REDACT webhook for ${shop}`);
+    console.log(`[GDPR] Received SHOP_REDACT for ${shop}`);
 
-    
+    // 1. Clear sessions from local SQLite
     try {
         await db.session.deleteMany({ where: { shop } });
+        console.log(`[GDPR] Cleared local sessions for ${shop}`);
     } catch (e) {
-        console.error(`Failed to clear session DB during SHOP_REDACT for ${shop}:`, e);
+        console.error(`[GDPR] Failed to clear local session DB for ${shop}:`, e);
     }
 
-    
+    // 2. Notify Backend to redact store data
     try {
         const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
-        await fetch(`${backendUrl}/shopify/webhook/uninstall`, {
+        await fetch(`${backendUrl}/shopify/webhook/redact-shop`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ shop }),
+            headers: {
+                "Content-Type": "application/json",
+                "x-internal-api-key": process.env.INTERNAL_API_KEY
+            },
+            body: JSON.stringify({ shop_domain: shop }),
         });
     } catch (err) {
-        console.error(`Failed to notify Stockbud Backend of shop redact for ${shop}:`, err);
+        console.error(`[GDPR] Failed to notify backend of shop redact for ${shop}:`, err);
     }
 
     return new Response("OK", { status: 200 });

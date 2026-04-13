@@ -6,19 +6,22 @@ export const action = async ({ request }) => {
 
   console.log(`Received ${topic} webhook for ${shop}`);
 
-  
-  
+
+
   if (session) {
     await db.session.deleteMany({ where: { shop } });
   }
 
-  
+
   try {
     const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
     console.log(`Sending Uninstall Request to Stockbud Backend for ${shop}`);
     await fetch(`${backendUrl}/shopify/webhook/uninstall`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-api-key": process.env.INTERNAL_API_KEY
+      },
       body: JSON.stringify({ shop }),
     });
   } catch (err) {

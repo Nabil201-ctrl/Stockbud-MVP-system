@@ -138,4 +138,36 @@ export class ShopifyController {
 
         return result;
     }
+
+    @Post('webhook/uninstall')
+    @UseGuards(ApiKeyGuard)
+    async handleUninstall(@Body() payload: { shop: string }) {
+        console.log(`[Webhook] Handling uninstall for ${payload.shop}`);
+        // Logic to disable sync for this shop
+        return { success: true };
+    }
+
+    @Post('webhook/redact-shop')
+    @UseGuards(ApiKeyGuard)
+    async redactShop(@Body() payload: { shop_domain: string }) {
+        console.log(`[GDPR] Redacting shop data for ${payload.shop_domain}`);
+        // Logic to delete shop data
+        return { success: true };
+    }
+
+    @Post('webhook/redact-customer')
+    @UseGuards(ApiKeyGuard)
+    async redactCustomer(@Body() payload: any) {
+        console.log(`[GDPR] Redacting customer data for shop ${payload.shop_domain}`);
+        // Logic to find and delete customer data
+        return { success: true };
+    }
+
+    @Post('webhook/data-request')
+    @UseGuards(ApiKeyGuard)
+    async dataRequest(@Body() payload: any) {
+        console.log(`[GDPR] Processing data request for shop ${payload.shop_domain}`);
+        // Logic to retrieve data
+        return { success: true };
+    }
 }

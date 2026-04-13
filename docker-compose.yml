@@ -1,64 +1,46 @@
 version: "3.9"
 
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: stockbud-rabbitmq
+  nginx:
+    image: nginx:alpine
+    container_name: stockbud-nginx
+    restart: always
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+      - shopify-app
+    networks:
+      - stockbud-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: stockbud-rabbitmq
+    restart: always
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-    restart: always
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: stockbud-prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: always
+    networks:
+      - stockbud-network
 
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: stockbud-postgres
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: stockbud
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: always
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: stockbud-pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@stockbud.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "8080:80"
-    restart: always
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: stockbud-grafana
-    ports:
-      - "3005:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    restart: always
+    networks:
+      - stockbud-network
 
   backend:
     build:
@@ -66,8 +48,6 @@ services:
       dockerfile: Dockerfile
     container_name: stockbud-backend
     restart: always
-    ports:
-      - "3000:3000"
     env_file:
       - ./backend/.env
     depends_on:
@@ -75,6 +55,8 @@ services:
       - rabbitmq
     volumes:
       - ./backend/data:/app/data
+    networks:
+      - stockbud-network
 
   order-processor:
     build:
@@ -82,12 +64,12 @@ services:
       dockerfile: Dockerfile
     container_name: stockbud-order-processor
     restart: always
-    ports:
-      - "3003:3003"
     env_file:
       - ./backend/order-processor/.env
     depends_on:
       - rabbitmq
+    networks:
+      - stockbud-network
 
   image-service:
     build:
@@ -95,12 +77,12 @@ services:
       dockerfile: Dockerfile
     container_name: stockbud-image-service
     restart: always
-    ports:
-      - "3002:3002"
     env_file:
       - ./backend/image-service/.env
     depends_on:
       - rabbitmq
+    networks:
+      - stockbud-network
 
   shopify-app:
     build:
@@ -108,21 +90,45 @@ services:
       dockerfile: Dockerfile
     container_name: stockbud-shopify-app
     restart: always
-    ports:
-      - "3004:3000"
     env_file:
       - ./stockbud/.env
     environment:
-      - STOCKBUD_BACKEND_URL=http://backend:3000
-      - SHOPIFY_APP_URL=https://your-app-domain.com # Update this to your public domain
+      - STOCKBUD_BACKEND_URL=http://stockbud-backend:3000
+      - SHOPIFY_APP_URL=https://shopify.stockbud.xyz
+      - DATABASE_URL=postgresql://postgres:password@stockbud-postgres:5432/stockbud?schema=shopify_app
       - NODE_ENV=production
     depends_on:
       - backend
+      - postgres
+    networks:
+      - stockbud-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: stockbud-prometheus
+    restart: always
     volumes:
-      - shopify_data:/data
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - stockbud-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: stockbud-grafana
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - stockbud-network
+
+networks:
+  stockbud-network:
+    driver: bridge
 
 volumes:
   rabbitmq_data:
   postgres_data:
   grafana_data:
-  shopify_data:
