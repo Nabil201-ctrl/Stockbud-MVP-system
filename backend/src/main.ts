@@ -1,6 +1,6 @@
 import './instrument';
 import { NestFactory } from '@nestjs/core';
-import { LokiLogger } from './common/logger';
+import { AppLogger } from './common/logger';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -23,7 +23,7 @@ import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 
 
 async function bootstrap() {
-    const logger = new LokiLogger();
+    const logger = new AppLogger();
     const app = await NestFactory.create(AppModule, {
         logger,
     });

@@ -14,19 +14,8 @@ const pino = require('pino');
 const logger = pino({
     level: 'info',
     transport: {
-        targets: [
-            {
-                target: 'pino-pretty',
-                options: { colorize: true }
-            },
-            {
-                target: 'pino-loki',
-                options: {
-                    host: process.env.LOKI_HOST || 'http://localhost:3100',
-                    labels: { app: 'image-service' }
-                }
-            }
-        ]
+        target: 'pino-pretty',
+        options: { colorize: true }
     }
 });
 

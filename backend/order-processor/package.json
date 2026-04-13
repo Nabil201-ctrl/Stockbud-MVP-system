@@ -17,7 +17,6 @@
     "fs-extra": "^11.3.4",
     "opossum": "^5.0.1",
     "pino": "^10.3.1",
-    "pino-loki": "^2.2.0",
     "prom-client": "^15.1.3"
   }
 }
