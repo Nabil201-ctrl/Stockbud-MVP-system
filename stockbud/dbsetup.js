@@ -1,36 +1,17 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process'
-import path from 'node:path'
-import fs from 'node:fs'
 
 const env = { ...process.env }
 
+// Since we are using PostgreSQL, we can skip the SQLite-specific symlinking and Litestream logic.
+// We use 'prisma db push' instead of 'migrate deploy' for the initial setup to handle existing schemas gracefully.
+console.log('Running database setup...')
+await exec('npx prisma generate')
+await exec('npx prisma db push')
 
-const source = path.resolve('dev.sqlite')
-const target = '/data/' + path.basename(source)
-
-if (fs.existsSync('/data')) {
-  try {
-    fs.symlinkSync(target, source)
-  } catch (err) {
-    if (err.code !== 'EEXIST') throw err
-  }
-}
-const newDb = !fs.existsSync(target)
-if (newDb && process.env.BUCKET_NAME) {
-  await exec(`npx litestream restore -config litestream.yml -if-replica-exists ${target}`)
-}
-
-
-await exec('npx prisma migrate deploy')
-
-
-if (process.env.BUCKET_NAME) {
-  await exec(`npx litestream replicate -config litestream.yml -exec ${JSON.stringify(process.argv.slice(2).join(' '))}`)
-} else {
-  await exec(process.argv.slice(2).join(' '))
-}
+// Run the main application command
+await exec(process.argv.slice(2).join(' '))
 
 function exec(command) {
   const child = spawn(command, { shell: true, stdio: 'inherit', env })
@@ -44,3 +25,4 @@ function exec(command) {
     })
   })
 }
+
