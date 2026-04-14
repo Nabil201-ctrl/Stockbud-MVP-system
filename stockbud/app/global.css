@@ -4,24 +4,26 @@
     --sb-heading-font: 'League Spartan', sans-serif;
     --sb-body-font: 'Glacial Indifference', sans-serif;
     --sb-primary-blue: #2563eb;
-    --sb-heading-color: #1e293b;
-    /* Slate-800 (Landing Page Heading Color) */
-    --sb-text-color: #475569;
-    /* Slate-600 (Landing Page Text Color) */
-    --sb-gradient: linear-gradient(to right, #2563eb, #06b6d4);
+    --sb-cyan: #06b6d4;
+    --sb-heading-color: #0f172a;
+    /* Slate-900 (High contrast) */
+    --sb-text-color: #334155;
+    /* Slate-700 (High contrast) */
+    --sb-gradient: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+    --sb-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(37, 99, 235, 0.05);
 }
 
+/* Base Typography Overrides */
 body,
-p,
-span,
-div,
+.Polaris-AppProvider,
 .Polaris-Text--variantBodyMd,
 .Polaris-Text--variantBodySm,
 .Polaris-Text--variantBodyLg {
     font-family: var(--sb-body-font) !important;
-    color: var(--sb-text-color) !important;
+    -webkit-font-smoothing: antialiased;
 }
 
+/* Heading Overrides */
 h1,
 h2,
 h3,
@@ -34,29 +36,69 @@ h6,
 .Polaris-Text--variantHeadingXl {
     font-family: var(--sb-heading-font) !important;
     font-weight: 700 !important;
-    color: var(--sb-heading-color) !important;
+    color: var(--sb-heading-color);
+    letter-spacing: -0.02em;
 }
 
-/* Use the brand gradient for the most prominent headings like in the landing page */
-.Polaris-Page-Header__Title,
+/* The "Landing Page" Hero Style for Page Titles */
+.Polaris-Header-Title,
 .Polaris-Text--variantHeadingXl,
-.main-brand-heading {
+.sb-brand-heading {
     background: var(--sb-gradient);
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
     display: inline-block;
-    font-weight: 900 !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.03em;
 }
 
-/* Button styles to match landing page */
+/* Button Refinement (Better Combo) */
 .Polaris-Button--variantPrimary {
-    background-color: var(--sb-primary-blue) !important;
-    border-color: var(--sb-primary-blue) !important;
-    font-family: var(--sb-body-font) !important;
+    background: var(--sb-gradient) !important;
+    border: none !important;
+    color: white !important;
+    font-family: var(--sb-heading-font) !important;
     font-weight: 700 !important;
+    box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.3) !important;
+    transition: all 0.2s ease !important;
 }
 
 .Polaris-Button--variantPrimary:hover {
-    background-color: #1d4ed8 !important;
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4) !important;
+    opacity: 1 !important;
+}
+
+.Polaris-Button--variantPrimary:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* Polaris Card and Box refinement to feel more "Premium" */
+.Polaris-Card {
+    border-radius: 16px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    box-shadow: var(--sb-shadow) !important;
+    overflow: hidden;
+}
+
+.Polaris-Box {
+    border-radius: 12px;
+}
+
+/* Input highlights */
+.Polaris-TextField__Input:focus {
+    border-color: var(--sb-primary-blue) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* Navigation Menu highlight */
+.Polaris-Navigation__Item--selected {
+    background-color: rgba(37, 99, 235, 0.08) !important;
+    border-left: 3px solid var(--sb-primary-blue) !important;
+}
+
+.Polaris-Navigation__Item--selected .Polaris-Navigation__Text {
+    color: var(--sb-primary-blue) !important;
+    font-weight: 600 !important;
 }
