@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, Req, UseGuards, Res, UnauthorizedException } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
@@ -66,6 +67,7 @@ export class AuthController {
         return { user };
     }
 
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @Post('admin/login')
     async adminLogin(@Body() body: any, @Res({ passthrough: true }) res: Response) {
         const { access_token, user } = await this.authService.adminLogin(body.email, body.password);
@@ -80,6 +82,7 @@ export class AuthController {
         return { user, access_token };
     }
 
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @UseGuards(AuthGuard('local'))
     @Post('login')
     async login(@Req() req, @Res({ passthrough: true }) res: Response) {
@@ -117,6 +120,7 @@ export class AuthController {
         return req.user;
     }
 
+    @Throttle({ default: { limit: 3, ttl: 60000 } })
     @Post('register')
     async register(@Req() req, @Body() body: any, @Res({ passthrough: true }) res: Response) {
         let ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip;

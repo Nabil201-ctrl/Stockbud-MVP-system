@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const amqp = require('amqplib');
 require('dotenv').config();
 const client = require('prom-client');
@@ -27,6 +28,16 @@ const ordersProcessedCounter = new client.Counter({
 });
 
 app.use(express.json());
+
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { success: false, error: 'Too many orders processed from this IP, please wait.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(limiter);
 
 // RabbitMQ Connection setup for publishing
 let amqpChannel;

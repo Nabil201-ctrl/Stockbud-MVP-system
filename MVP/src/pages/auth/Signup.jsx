@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import { User, Mail, Lock, ArrowRight, Loader2, AlertCircle, Chrome } from 'lucide-react';
 
 const Signup = () => {
     const navigate = useNavigate();
     const { register } = useAuth();
+    const { showNotification } = useNotification();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -23,6 +25,7 @@ const Signup = () => {
 
         const result = await register(name, email, password);
         if (result.success) {
+            showNotification('Account created successfully!', 'success');
             navigate('/get-started');
         } else {
             setError(result.error || 'Registration failed');

@@ -1,0 +1,62 @@
+/* Global styles for Stockbud Shopify App */
+
+:root {
+    --sb-heading-font: 'League Spartan', sans-serif;
+    --sb-body-font: 'Glacial Indifference', sans-serif;
+    --sb-primary-blue: #2563eb;
+    --sb-heading-color: #1e293b;
+    /* Slate-800 (Landing Page Heading Color) */
+    --sb-text-color: #475569;
+    /* Slate-600 (Landing Page Text Color) */
+    --sb-gradient: linear-gradient(to right, #2563eb, #06b6d4);
+}
+
+body,
+p,
+span,
+div,
+.Polaris-Text--variantBodyMd,
+.Polaris-Text--variantBodySm,
+.Polaris-Text--variantBodyLg {
+    font-family: var(--sb-body-font) !important;
+    color: var(--sb-text-color) !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.Polaris-Text--variantHeadingLg,
+.Polaris-Text--variantHeadingMd,
+.Polaris-Text--variantHeadingSm,
+.Polaris-Text--variantHeadingXl {
+    font-family: var(--sb-heading-font) !important;
+    font-weight: 700 !important;
+    color: var(--sb-heading-color) !important;
+}
+
+/* Use the brand gradient for the most prominent headings like in the landing page */
+.Polaris-Page-Header__Title,
+.Polaris-Text--variantHeadingXl,
+.main-brand-heading {
+    background: var(--sb-gradient);
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    display: inline-block;
+    font-weight: 900 !important;
+}
+
+/* Button styles to match landing page */
+.Polaris-Button--variantPrimary {
+    background-color: var(--sb-primary-blue) !important;
+    border-color: var(--sb-primary-blue) !important;
+    font-family: var(--sb-body-font) !important;
+    font-weight: 700 !important;
+}
+
+.Polaris-Button--variantPrimary:hover {
+    background-color: #1d4ed8 !important;
+}

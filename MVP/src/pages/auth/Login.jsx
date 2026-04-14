@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import { Chrome, Mail, Lock, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 
 const Login = () => {
     const navigate = useNavigate();
     const { loginLocal } = useAuth();
+    const { showNotification } = useNotification();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -18,6 +20,7 @@ const Login = () => {
 
         const result = await loginLocal(email, password);
         if (result.success) {
+            showNotification('Welcome back!', 'success');
             navigate('/dashboard');
         } else {
             setError(result.error || 'Login failed');

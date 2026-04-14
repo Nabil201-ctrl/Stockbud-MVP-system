@@ -54,6 +54,8 @@ export const action = async ({ request }) => {
       if (response.ok) {
         const data = await response.json();
         return { status: "success", userId: data.userId, usedCode: true };
+      } else if (response.status === 429) {
+        return { status: "error", message: "Too many requests. Please try again in a minute.", isRateLimited: true };
       } else {
         const errorText = await response.text();
         return { status: "error", message: errorText || "Invalid pairing code" };
@@ -78,6 +80,8 @@ export const action = async ({ request }) => {
       if (response.ok) {
         const data = await response.json();
         return { status: "success", userId: data.userId };
+      } else if (response.status === 429) {
+        return { status: "error", message: "Too many requests. Please try again in a minute.", isRateLimited: true };
       } else {
         return { status: "error", message: await response.text() };
       }

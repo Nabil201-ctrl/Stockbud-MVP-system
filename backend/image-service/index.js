@@ -2,6 +2,7 @@ const express = require('express');
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const amqp = require('amqplib');
 const CircuitBreaker = require('opossum');
@@ -49,6 +50,16 @@ register.registerMetric(uploadDurationHistogram);
 
 app.use(cors());
 app.use(express.json());
+
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 50, // limit each IP to 50 requests per windowMs
+    message: { success: false, error: 'Too many requests, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(limiter);
 
 // Metrics Endpoint
 app.get('/metrics', async (req, res) => {

@@ -22,8 +22,20 @@ api.interceptors.response.use(
             return Promise.reject({ isOffline: true, message: 'You are currently offline' });
         }
 
+        // Handle rate limiting (429 Too Many Requests)
+        if (error.response && error.response.status === 429) {
+            console.error("Too many requests. Rate limit exceeded.");
+            globalThis.dispatchEvent(new CustomEvent('app:notification', {
+                detail: {
+                    message: "Too many requests. Please slow down.",
+                    type: 'error'
+                }
+            }));
+            return Promise.reject(error);
+        }
+
         // If error is 401 Unauthorized, attempt to refresh tokens
-        if (error.response.status === 401 && !originalRequest._retry) {
+        if (error.response && error.response.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
 
             try {
