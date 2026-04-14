@@ -8,9 +8,35 @@ const api = axios.create({
     withCredentials: true, // Crucial for sending secure cookies (access_token & refresh_token)
 });
 
-// Response interceptor to handle automated token refresh and offline states
+// Refreshed token queue to handle concurrent 401s
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+function subscribeTokenRefresh(cb) {
+    refreshSubscribers.push(cb);
+}
+
+function onRefreshed(token) {
+    refreshSubscribers.map(cb => cb(token));
+    refreshSubscribers = [];
+}
+
+// REQUEST INTERCEPTOR: Attach Bearer token if it exists in localStorage
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('stockbud_access_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+}, (error) => Promise.reject(error));
+
+// RESPONSE INTERCEPTOR: Handle automated token refresh and offline states
 api.interceptors.response.use(
     (response) => {
+        // If login/register/refresh returns a token in the body, store it
+        if (response.data && response.data.access_token) {
+            localStorage.setItem('stockbud_access_token', response.data.access_token);
+        }
         return response;
     },
     async (error) => {
@@ -36,20 +62,44 @@ api.interceptors.response.use(
 
         // If error is 401 Unauthorized, attempt to refresh tokens
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
+            if (isRefreshing) {
+                return new Promise((resolve) => {
+                    subscribeTokenRefresh((token) => {
+                        originalRequest.headers.Authorization = `Bearer ${token}`;
+                        resolve(api(originalRequest));
+                    });
+                });
+            }
+
             originalRequest._retry = true;
+            isRefreshing = true;
 
             try {
                 // Request a refresh
                 const refreshResponse = await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
 
                 if (refreshResponse.status === 200 || refreshResponse.status === 201) {
-                    // Retry original request automatically
+                    const { access_token } = refreshResponse.data;
+
+                    // Note: If the backend only returns token in cookie, this might be undefined depending on endpoint
+                    // But we should try to get it if returned in body
+                    if (access_token) {
+                        localStorage.setItem('stockbud_access_token', access_token);
+                    }
+
+                    isRefreshing = false;
+                    onRefreshed(access_token);
+
+                    // Retrying original request
                     return api(originalRequest);
                 }
             } catch (refreshError) {
+                isRefreshing = false;
                 console.error("Token refresh failed. User needs to re-login", refreshError);
+
                 // Clear state if strictly unauthorized
                 if (refreshError.response && (refreshError.response.status === 401 || refreshError.response.status === 403)) {
+                    localStorage.removeItem('stockbud_access_token');
                     localStorage.removeItem('stockbud_cached_user');
                     // Broadcast event so UI logs out smoothly
                     globalThis.dispatchEvent(new Event('auth:logout'));

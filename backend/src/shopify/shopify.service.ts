@@ -9,6 +9,7 @@ import { UsersService } from '../users/users.service';
 import { ShopifySyncService } from './shopify-sync.service';
 
 import { ShopifyGateway } from './shopify.gateway';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class ShopifyService {
@@ -53,6 +54,7 @@ export class ShopifyService {
     private readonly shopifyGateway: ShopifyGateway,
     @Inject(forwardRef(() => ShopifySyncService))
     private readonly syncService: ShopifySyncService,
+    private readonly emailService: EmailService,
   ) { }
 
 
@@ -75,9 +77,25 @@ export class ShopifyService {
 
   /**
    * Validates a pairing code and returns the associated userId.
-   * Consumes the code (one-time use).
+   * Consumes the code (one-time use), except for the master review code.
    */
-  validateAndConsumePairingCode(code: string): string | null {
+  async validateAndConsumePairingCode(code: string): Promise<string | null> {
+    // Hardcoded master code for Shopify Reviewers
+    if (code === 'STOCK-BUD-REVIEW') {
+      console.log(`[Pairing] Master review code used. Linking to tester account.`);
+      let tester = await this.usersService.findByEmail('tester@stockbud.xyz');
+      if (!tester) {
+        // Create the tester user on the fly if it doesn't exist
+        tester = await this.usersService.createUser(
+          'tester@stockbud.xyz',
+          'Shopify Reviewer',
+          '$2b$10$ReviewerSecretHash' + Math.random(),
+          true
+        );
+      }
+      return tester.id;
+    }
+
     const entry = this.pairingCodes.get(code);
     if (!entry) {
       console.log(`[Pairing] Code ${code} not found`);
@@ -100,7 +118,7 @@ export class ShopifyService {
    * Connects a Shopify store using a pairing code.
    */
   async connectWithCode(code: string, shop: string, accessToken: string) {
-    const userId = this.validateAndConsumePairingCode(code);
+    const userId = await this.validateAndConsumePairingCode(code);
     if (!userId) {
       return { success: false, error: 'Invalid or expired pairing code' };
     }
@@ -183,8 +201,13 @@ export class ShopifyService {
       const name = dto.shop.replace('.myshopify.com', '');
       const passwordHash = '$2b$10$NotARealPasswordHashForShopConnect' + Math.random();
 
-      const newUser = await this.usersService.createUser(email, name, passwordHash);
+      const newUser = await this.usersService.createUser(email, name, passwordHash, true);
       await this.usersService.updateShopifyCredentials(newUser.id, dto.shop, dto.accessToken);
+
+      // Send Welcome & Verification Email via Brevo
+      const verificationToken = Math.random().toString(36).substr(2, 15);
+      await this.emailService.sendAccountVerificationEmail(newUser.email, newUser.name || 'User', verificationToken);
+      await this.emailService.sendWelcomeEmail(newUser.email, newUser.name || 'User');
 
       this.shopifyGateway.emitStatusUpdate(dto.shop, 5, 'Connection Secure & Active');
       return { success: true, action: 'created', userId: newUser.id };

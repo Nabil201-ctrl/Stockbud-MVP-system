@@ -25,6 +25,7 @@ model User {
   reportTokens          Int            @default(250)
   botSettings           Json?
   lastTokenReset        String?
+  requiresPasswordChange Boolean        @default(false)
 
   hasFreeReports        Boolean        @default(false)
   language              String         @default("en")

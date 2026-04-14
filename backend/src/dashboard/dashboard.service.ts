@@ -6,6 +6,8 @@ import axios from 'axios';
 @Injectable()
 export class DashboardService {
     private cachedRates: Record<string, { rates: any, timestamp: number }> = {};
+    private statsCache = new Map<string, { data: any, expiresAt: number }>();
+    private readonly CACHE_TTL = 300000; // 5 minutes
 
     constructor(
         private readonly shopifyService: ShopifyService,
@@ -13,6 +15,13 @@ export class DashboardService {
     ) { }
 
     async getStats(userId: string, shopifyStores: { shop: string; token: string; targetType: string; targetValue: number }[] = [], targetType: 'weekly' | 'monthly' = 'monthly', targetValue: number = 0, targetCurrency: string = 'USD', range: '7days' | 'month' | 'year' = 'month', sourceFilter?: string, sortBy: string = 'newest') {
+        const cacheKey = `${userId}:${JSON.stringify(shopifyStores)}:${targetType}:${targetValue}:${targetCurrency}:${range}:${sourceFilter}:${sortBy}`;
+        const cached = this.statsCache.get(cacheKey);
+        if (cached && Date.now() < cached.expiresAt) {
+            console.log(`[DashboardService] Cache HIT for user ${userId}`);
+            return cached.data;
+        }
+
         let totalRevenue = 0;
         let revenueChange = 0;
         let revenueData = [];
@@ -231,7 +240,7 @@ export class DashboardService {
             return sum + (price * (p.inventory || 0));
         }, 0);
 
-        return {
+        const result = {
             revenue: {
                 total: totalRevenue,
                 change: revenueChange,
@@ -248,6 +257,9 @@ export class DashboardService {
             topProducts: topProducts,
             heatmap: heatmapData
         };
+
+        this.statsCache.set(cacheKey, { data: result, expiresAt: Date.now() + this.CACHE_TTL });
+        return result;
     }
 
 

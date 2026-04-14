@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { UsersService } from '../users/users.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -23,12 +24,13 @@ export class PaymentsService {
     private readonly logger = new Logger(PaymentsService.name);
     private readonly paymentsFilePath: string;
     private processedPayments: Map<string, ProcessedPayment> = new Map();
-    private processingLocks: Set<string> = new Set(); 
+    private processingLocks: Set<string> = new Set();
 
     constructor(
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
         private readonly usersService: UsersService,
+        private readonly notificationsService: NotificationsService
     ) {
         this.paystackSecretKey = this.configService.get<string>('PAYSTACK_SECRET_KEY');
         this.paymentsFilePath = path.join(process.cwd(), 'data', 'payments.json');
@@ -121,7 +123,7 @@ export class PaymentsService {
             throw new HttpException('Paystack is not configured', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        
+
         const existing = this.processedPayments.get(reference);
         if (existing && existing.status === 'success') {
             this.logger.log(`[Idempotent] Payment ${reference} already processed. Returning cached result.`);
@@ -133,13 +135,13 @@ export class PaymentsService {
         }
         if (existing && existing.status === 'failed') {
             this.logger.log(`[Idempotent] Payment ${reference} previously failed. Allowing retry.`);
-            
+
         }
 
-        
+
         if (this.processingLocks.has(reference)) {
             this.logger.warn(`[Idempotent] Payment ${reference} is currently being processed. Waiting...`);
-            
+
             await new Promise(resolve => setTimeout(resolve, 2000));
             const result = this.processedPayments.get(reference);
             if (result && result.status === 'success') {
@@ -148,11 +150,11 @@ export class PaymentsService {
             return { success: false, message: 'Payment is still being processed. Please try again shortly.' };
         }
 
-        
+
         this.processingLocks.add(reference);
 
         try {
-            
+
             const response = await firstValueFrom(
                 this.httpService.get(
                     `https://api.paystack.co/transaction/verify/${reference}`,
@@ -197,13 +199,23 @@ export class PaymentsService {
                         result = { success: true, message: 'Payment verified (no action required)' };
                     }
 
-                    
+
                     this.recordPayment(reference, 'success', type, userId, result, data.status, data.amount || 0);
                     this.logger.log(`[Payment] Successfully processed ${reference} (type: ${type}) for user ${userId}`);
+
+                    // Send notification for payment
+                    await this.notificationsService.create(
+                        userId,
+                        'Transaction Confirmation',
+                        `Payment of $${(data.amount / 100).toFixed(2)} for ${type.replace('_', ' ')} has been successfully processed and confirmed.`,
+                        'success',
+                        ['in-app', 'email']
+                    );
+
                     return result;
 
                 } catch (sideEffectError) {
-                    
+
                     this.logger.error(`[Payment] Side effect failed for ${reference}:`, sideEffectError.message);
                     const failResult = { success: false, message: `Payment verified but action failed: ${sideEffectError.message}` };
                     this.recordPayment(reference, 'failed', type, userId, failResult, data.status, data.amount || 0);
@@ -211,7 +223,7 @@ export class PaymentsService {
                 }
             }
 
-            
+
             const failResult = { success: false, message: `Transaction status: ${data.status}` };
             this.recordPayment(reference, 'failed', 'unknown', data.metadata?.userId || '', failResult, data.status, data.amount || 0);
             return failResult;

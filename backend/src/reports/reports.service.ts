@@ -371,8 +371,8 @@ export class ReportsService {
             // Notify in-app
             await this.notificationsService.create(
                 userId,
-                'Report Ready',
-                `Your ${type} report "${reports[idx].title}" has been generated.${emailSent ? ' A copy was sent to your email.' : ''}`,
+                'Analytics Ready',
+                `Your ${type} analytics report ("${reports[idx].title}") is now complete and available for review in your dashboard.`,
                 'success'
             );
 
@@ -386,8 +386,8 @@ export class ReportsService {
 
                 await this.notificationsService.create(
                     userId,
-                    'Report Failed',
-                    `Your ${type} report "${reports[idx].title}" failed to generate. Please try again.`,
+                    'System Alert',
+                    `An technical issue occurred while generating your report ("${reports[idx].title}"). Please attempt to regenerate it or contact support.`,
                     'error'
                 );
             }
@@ -434,10 +434,6 @@ export class ReportsService {
                     to: [{ email: user.email, name: user.name || 'User' }],
                     subject,
                     htmlContent,
-                    attachment: {
-                        name: attachmentName,
-                        content: docxBase64,
-                    },
                 }
             });
 

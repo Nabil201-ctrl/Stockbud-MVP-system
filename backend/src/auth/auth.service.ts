@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import * as bcrypt from 'bcrypt';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +13,7 @@ export class AuthService {
         private usersService: UsersService,
         private jwtService: JwtService,
         private notificationsService: NotificationsService,
+        private emailService: EmailService,
     ) { }
 
     async validateUser(details: any) {
@@ -61,6 +63,16 @@ export class AuthService {
         if (ip && user) {
             await this.usersService.fetchAndSetLocation(user.id, ip);
         }
+
+        // Send Welcome & Verification Email via Brevo
+        if (user) {
+            const verificationToken = Math.random().toString(36).substr(2, 15);
+            // In a real app, we'd save this token to the DB.
+            // Skipping the "steps" as per user request.
+            await this.emailService.sendAccountVerificationEmail(user.email, user.name || 'User', verificationToken);
+            await this.emailService.sendWelcomeEmail(user.email, user.name || 'User');
+        }
+
         const { password, refreshToken, ...result } = user;
         return result;
     }
@@ -126,7 +138,10 @@ export class AuthService {
         if (!isMatch) throw new UnauthorizedException('Invalid current password');
 
         const hashedPassword = await bcrypt.hash(newPass, 10);
-        return this.usersService.updateProfile(userId, { password: hashedPassword });
+        return this.usersService.updateProfile(userId, {
+            password: hashedPassword,
+            requiresPasswordChange: false
+        });
     }
 
     async forgotPassword(email: string) {
@@ -134,30 +149,19 @@ export class AuthService {
         if (!user) return { message: 'If email exists, reset info sent.' };
 
         const token = Math.random().toString(36).substr(2, 12);
-        this.resetTokens.set(token, email);
+        this.resetTokens.set(token, JSON.stringify({ email, expiresAt: Date.now() + 3600000 }));
 
-        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/reset-password?token=${token}`;
+        const resetLink = `${process.env.FRONTEND_URL || 'https://stockbud.xyz'}/auth/reset-password?token=${token}`;
 
-        await this.notificationsService.sendEmail(
-            email,
-            'Password Reset Request - StockBud',
-            `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-                <h2 style="color: #2563eb;">Password Reset Request</h2>
-                <p>Hello ${user.name || 'User'},</p>
-                <p>We received a request to reset your StockBud password. Click the button below to choose a new password:</p>
-                <div style="margin: 30px 0;">
-                    <a href="${resetLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
-                </div>
-                <p>If you didn't request a password reset, you can safely ignore this email. The link will expire shortly.</p>
-                <p>Thanks,<br>The StockBud Team</p>
-            </div>
-            `
+        await this.emailService.sendPasswordResetEmail(
+            user.email,
+            user.name || 'User',
+            resetLink
         );
 
         console.log(`[DEV ONLY] Reset Email Sent. URL for ${email}: ${resetLink}`);
 
-        return { message: 'Reset info sent.' };
+        return { message: 'Password reset instructions have been dispatched to your email address.' };
     }
 
     async resetPassword(token: string, newPass: string) {
@@ -165,7 +169,19 @@ export class AuthService {
         if (!tokenDataStr) throw new UnauthorizedException('Invalid or expired token');
 
         try {
-            const { email, expiresAt } = JSON.parse(tokenDataStr);
+            let email: string;
+            let expiresAt: number;
+
+            try {
+                // Try parsing as JSON first (new format)
+                const data = JSON.parse(tokenDataStr);
+                email = data.email;
+                expiresAt = data.expiresAt;
+            } catch (e) {
+                // Fallback for old format if any (just the email string)
+                email = tokenDataStr;
+                expiresAt = Date.now() + 3600000; // Assume not expired
+            }
 
             if (Date.now() > expiresAt) {
                 this.resetTokens.delete(token);

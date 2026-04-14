@@ -54,6 +54,7 @@ export const AuthProvider = ({ children }) => {
         // Listen for internal unauthorized logout triggers from api.js
         const handleAuthLogout = async () => {
             setUser(null);
+            localStorage.removeItem('stockbud_access_token');
             await storage.delete('stockbud_cached_user');
         };
 
@@ -83,6 +84,7 @@ export const AuthProvider = ({ children }) => {
             console.error("Logout failed", err);
         }
         setUser(null);
+        localStorage.removeItem('stockbud_access_token');
         await storage.delete('stockbud_cached_user');
     };
 

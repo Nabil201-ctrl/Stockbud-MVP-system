@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Req, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Req, HttpException, HttpStatus } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ShopifyService } from './shopify.service';
 import { UsersService } from '../users/users.service';
@@ -110,6 +110,35 @@ export class ShopifyController {
         const user = req.user;
         const code = this.shopifyService.generatePairingCode(user.id);
         return { code, expiresIn: '10 minutes' };
+    }
+
+    @Get('status')
+    async getStatus(@Query('shop') shop: string) {
+        if (!shop) throw new HttpException('Shop query parameter is required', HttpStatus.BAD_REQUEST);
+        const users = await this.usersService.getAllUsers();
+        const user = users.find(u => u.shopifyShop === shop);
+
+        if (user) {
+            return { isConnected: true, user: { id: user.id, name: user.name, email: user.email } };
+        }
+        return { isConnected: false };
+    }
+
+    @Post('auto-connect')
+    async autoConnect(@Body() dto: { shop: string; accessToken: string; name?: string; email?: string }) {
+        console.log(`[Shopify] Auto-connecting shop: ${dto.shop}`);
+
+        if (!dto.accessToken) {
+            throw new HttpException('Missing Shopify Access Token', HttpStatus.BAD_REQUEST);
+        }
+
+        const result = await this.shopifyService.connectShop(dto as any);
+
+        if (result.success && result.userId) {
+            this.reportsService.generateWelcomeReport(result.userId);
+        }
+
+        return result;
     }
 
     @Post('connect-with-code')

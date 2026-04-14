@@ -296,6 +296,18 @@ const SettingsPage = () => {
                 <h1 className="text-2xl font-black dark:text-white tracking-tight">{t('settings.title')}</h1>
             </div>
 
+            {location.state?.forcedPasswordChange && (
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-xl text-amber-600 dark:text-amber-400">
+                        <AlertCircle size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-base font-bold text-amber-900 dark:text-amber-100 italic">Password Update Required</h3>
+                        <p className="text-sm text-amber-800 dark:text-amber-300">Your account was created via Shopify. For security, please set a password to access the Stockbud platform directly.</p>
+                    </div>
+                </div>
+            )}
+
             <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 -mx-3 px-3 sm:mx-0 sm:px-0">
                 <nav className="flex space-x-4 sm:space-x-8">
                     {[

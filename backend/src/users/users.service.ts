@@ -55,7 +55,7 @@ export class UsersService implements OnModuleInit {
         return user;
     }
 
-    async createUser(email: string, name: string, passwordHash: string): Promise<User> {
+    async createUser(email: string, name: string, passwordHash: string, requiresPasswordChange: boolean = false): Promise<User> {
         const existing = await this.findByEmail(email);
         if (existing) throw new ConflictException('User already exists');
 
@@ -65,7 +65,8 @@ export class UsersService implements OnModuleInit {
             name,
             password: passwordHash,
             createdAt: new Date().toISOString(),
-            lastTokenReset: String(Date.now())
+            lastTokenReset: String(Date.now()),
+            requiresPasswordChange
         });
         return user;
     }
@@ -256,6 +257,7 @@ export class UsersService implements OnModuleInit {
         if (data.loginDates !== undefined) payload.loginDates = data.loginDates;
         if (data.aiActionsUsed !== undefined) payload.aiActionsUsed = data.aiActionsUsed;
         if (data.aiActionsResetDate !== undefined) payload.aiActionsResetDate = data.aiActionsResetDate;
+        if (data.requiresPasswordChange !== undefined) payload.requiresPasswordChange = data.requiresPasswordChange;
 
         return await this.db.updateUser(userId, payload);
     }

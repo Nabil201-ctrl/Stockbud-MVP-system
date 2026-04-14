@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { NotificationsGateway } from './notifications.gateway';
 import { PrismaService } from '../database/prisma.service';
+import { UsersService } from '../users/users.service';
 
 export interface Notification {
     id: string;
@@ -15,36 +16,19 @@ export interface Notification {
 }
 
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
 import * as webpush from 'web-push';
+import { EmailService } from '../email/email.service';
 
 
 @Injectable()
 export class NotificationsService implements OnModuleInit {
-    private mailer: nodemailer.Transporter;
-
     constructor(
         private readonly configService: ConfigService,
         private readonly notificationsGateway: NotificationsGateway,
-        private readonly db: PrismaService
+        private readonly db: PrismaService,
+        private readonly emailService: EmailService,
+        private readonly usersService: UsersService
     ) {
-
-        const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.ethereal.email';
-        const smtpPort = this.configService.get<number>('SMTP_PORT') || 587;
-        const smtpUser = this.configService.get<string>('SMTP_USER') || 'ethereal_user';
-        const smtpPass = this.configService.get<string>('SMTP_PASS') || 'ethereal_pass';
-
-        this.mailer = nodemailer.createTransport({
-            host: smtpHost,
-            port: smtpPort,
-            secure: false,
-            auth: {
-                user: smtpUser,
-                pass: smtpPass,
-            },
-        });
-
-
         const vapidPublicKey = this.configService.get<string>('VAPID_PUBLIC_KEY') || 'BFZhuGm7mzZ46vV6jPV8KiPOmbjnay0d5lQL9Qm1-rV6x69IBPgyd_nZGMu77y9t3lbLrHkAUprNu-TCtXPcqyY';
         const vapidPrivateKey = this.configService.get<string>('VAPID_PRIVATE_KEY') || 'YQ8ZfVCq3Xi8Dgbb1MZ2Al-fLJZbESHfPn3cATVnUXs';
         const vapidEmail = this.configService.get<string>('VAPID_EMAIL') || 'mailto:admin@stockbud.com';
@@ -71,26 +55,29 @@ export class NotificationsService implements OnModuleInit {
 
         try {
             this.notificationsGateway.sendNotificationToUser(userId, notification);
+
+            // Only send email if requested in channels
+            const user = await this.usersService.findById(userId);
+            if (channels.includes('email') && user && user.email) {
+                await this.emailService.sendEmail({
+                    to: [{ email: user.email, name: user.name || 'User' }],
+                    subject: `StockBud: ${title}`,
+                    htmlContent: this.emailService.buildGeneralNotificationHtml(user.name || 'User', title, message),
+                });
+            }
         } catch (error) {
-            console.error('Failed to send push notification', error);
+            console.error('Failed to send push/email notification', error);
         }
 
         return notification as any;
     }
 
     async sendEmail(to: string, subject: string, html: string) {
-        try {
-            const info = await this.mailer.sendMail({
-                from: '"StockBud Notification" <notify@stockbud.com>',
-                to,
-                subject,
-                html,
-            });
-            return info;
-        } catch (error) {
-            console.error('Error sending email:', error);
-            throw error;
-        }
+        return this.emailService.sendEmail({
+            to: [{ email: to }],
+            subject,
+            htmlContent: html,
+        });
     }
 
     async sendPush(subscription: any, payload: any) {

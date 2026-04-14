@@ -8,6 +8,10 @@ export class AppLogger implements LoggerService {
     constructor() {
         this.logger = pino({
             level: 'info',
+            redact: {
+                paths: ['password', 'oldPassword', 'newPassword', 'token', 'refreshToken', 'access_token', 'refresh_token', 'creditCard', 'authorization'],
+                censor: '[REDACTED]'
+            },
             transport: {
                 target: 'pino-pretty',
                 options: { colorize: true },

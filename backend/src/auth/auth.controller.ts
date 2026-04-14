@@ -4,6 +4,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { RegisterDto, LoginDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -64,12 +65,12 @@ export class AuthController {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        return { user };
+        return { user, access_token };
     }
 
     @Throttle({ default: { limit: 5, ttl: 60000 } })
     @Post('admin/login')
-    async adminLogin(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+    async adminLogin(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
         const { access_token, user } = await this.authService.adminLogin(body.email, body.password);
 
         res.cookie('access_token', access_token, {
@@ -122,7 +123,7 @@ export class AuthController {
 
     @Throttle({ default: { limit: 3, ttl: 60000 } })
     @Post('register')
-    async register(@Req() req, @Body() body: any, @Res({ passthrough: true }) res: Response) {
+    async register(@Req() req, @Body() body: RegisterDto, @Res({ passthrough: true }) res: Response) {
         let ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.ip;
         if (Array.isArray(ip)) ip = ip[0];
 
@@ -150,17 +151,17 @@ export class AuthController {
 
     @Post('change-password')
     @UseGuards(AuthGuard('jwt'))
-    async changePassword(@Req() req, @Body() body: any) {
+    async changePassword(@Req() req, @Body() body: ChangePasswordDto) {
         return this.authService.changePassword(req.user.id, body.oldPassword, body.newPassword);
     }
 
     @Post('forgot-password')
-    async forgotPassword(@Body() body: any) {
+    async forgotPassword(@Body() body: ForgotPasswordDto) {
         return this.authService.forgotPassword(body.email);
     }
 
     @Post('reset-password')
-    async resetPassword(@Body() body: any) {
+    async resetPassword(@Body() body: ResetPasswordDto) {
         return this.authService.resetPassword(body.token, body.newPassword);
     }
 }

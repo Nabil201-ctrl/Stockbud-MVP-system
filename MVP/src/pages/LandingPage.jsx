@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { ArrowRight, BarChart2, Shield, Zap, Globe, Check, Menu, X, Bot, Sparkles, ShoppingBag, Package, MessageSquare, TrendingUp, FileText, Bell } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import Slogo from '../assets/Slogo.png';
 import BusinessVideo from '../assets/business_video.mp4';
 
@@ -10,7 +11,12 @@ const LandingPage = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
     const { t, language, changeLanguage } = useLanguage();
+    const { isAuthenticated, loading: authLoading } = useAuth();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    if (!authLoading && isAuthenticated) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const toggleLanguage = () => {
         changeLanguage(language === 'en' ? 'fr' : 'en');

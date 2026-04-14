@@ -22,13 +22,18 @@ const ProtectedRoute = ({ children }) => {
         return <Navigate to="/auth/login" state={{ from: location }} replace />;
     }
 
-    
-    
+
+
     if (user && !user.isOnboardingComplete && !location.pathname.startsWith('/onboarding') && location.pathname !== '/get-started') {
         return <Navigate to="/get-started" replace />;
     }
 
-    
+
+    // Check for forced password change
+    if (user && user.requiresPasswordChange && location.pathname !== '/settings') {
+        return <Navigate to="/settings" state={{ activeTab: 'security', forcedPasswordChange: true }} replace />;
+    }
+
     if (user && user.isOnboardingComplete && (location.pathname.startsWith('/onboarding') || location.pathname === '/get-started')) {
         return <Navigate to="/dashboard" replace />;
     }

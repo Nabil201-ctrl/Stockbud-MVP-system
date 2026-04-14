@@ -2,13 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { ShopifyService } from '../shopify/shopify.service';
 import { UsersService } from '../users/users.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersMicroserviceService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly shopifyService: ShopifyService,
-        private readonly usersService: UsersService
+        private readonly usersService: UsersService,
+        private readonly notificationsService: NotificationsService
     ) { }
 
     async processCreateOrder(orderMessage: any) {
@@ -35,8 +37,17 @@ export class OrdersMicroserviceService {
                     createdAt: order.createdAt ? new Date(order.createdAt) : new Date(),
                 } as any
             });
-
             console.log(`[OrderMicroservice] Order ${(savedOrder as any).id} saved! Now managing inventory...`);
+
+            // Notify user about new order
+            if (userId) {
+                await this.notificationsService.create(
+                    userId,
+                    'Business Insight',
+                    `A new order totaling $${order.totalAmount || 0} has been processed from ${order.customerName || 'customer'}.`,
+                    'info'
+                );
+            }
 
             // Inventory Deduction Logic
             const items = order.items || [];
@@ -73,6 +84,17 @@ export class OrdersMicroserviceService {
                         }
                     });
                     console.log(`[OrderMicroservice] Deducted ${quantity} from local product ${product.title}. Remaining: ${newInventory}`);
+
+                    // Notification for low inventory
+                    if (newInventory < 10 && (product.inventory || 0) >= 10 && userId) {
+                        await this.notificationsService.create(
+                            userId,
+                            'Inventory Management',
+                            `Inventory for "${product.title}" has fallen below the safety threshold. Current balance: ${newInventory} units.`,
+                            'warning',
+                            ['in-app', 'email']
+                        );
+                    }
 
                     // 3. If it's a Shopify product, sync back to Shopify
                     if (product.shopifyStoreId && product.externalId) {

@@ -12,35 +12,113 @@ import {
   TextField,
   FormLayout,
   Banner,
+  Grid,
+  Icon,
+  Badge,
+  EmptyState,
 } from "@shopify/polaris";
+import {
+  ChartLineIcon,
+  OrderIcon,
+  ProductIcon,
+  PaymentIcon,
+  CheckIcon,
+  AlertBubbleIcon,
+} from "@shopify/polaris-icons";
 import shopify, { authenticate, getOfflineId } from "../shopify.server";
 
 export const loader = async ({ request }) => {
-  const { session } = await authenticate.admin(request);
-  return { shop: session?.shop };
+  const { session, admin } = await authenticate.admin(request);
+  const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://127.0.0.1:3000";
+
+  // Fetch shop details for seamless onboarding
+  const response = await admin.graphql(
+    `#graphql
+    query getShop {
+      shop {
+        name
+        email
+        contactEmail
+        myshopifyDomain
+      }
+    }`
+  );
+
+  const resData = await response.json();
+  const shop = resData?.data?.shop;
+
+  // Check if this shop is already connected to Stockbud
+  let isConnected = false;
+  let userData = null;
+  let stats = null;
+
+  try {
+    const statusResponse = await fetch(`${backendUrl}/shopify/status?shop=${session.shop}`);
+    if (statusResponse.ok) {
+      const statusData = await statusResponse.json();
+      isConnected = statusData.isConnected;
+      userData = statusData.user;
+
+      if (isConnected && userData?.id) {
+        // Fetch stats if connected
+        const statsResponse = await fetch(`${backendUrl}/dashboard/stats?userId=${userData.id}&range=month&sourceFilter=shopify`);
+        if (statsResponse.ok) {
+          stats = await statsResponse.json();
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to check connection status", e.message);
+  }
+
+  return {
+    shop: session?.shop,
+    shopDetails: shop,
+    isConnected,
+    userData,
+    stats,
+    backendUrl
+  };
 };
 
 export const action = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   if (!session) return { status: "error", message: "No session" };
 
-
   const offlineId = getOfflineId(session.shop);
   const offlineSession = await shopify.sessionStorage.loadSession(offlineId);
   const offlineToken = offlineSession?.accessToken;
 
   const formData = await request.formData();
+  const intent = formData.get("intent");
   const pairingCode = formData.get("pairingCode");
-  const stockbudToken = formData.get("stockbudToken");
   const name = formData.get("name");
+  const email = formData.get("email");
 
-  console.log("Syncing with Stockbud Backend...", session.shop);
   try {
     const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://127.0.0.1:3000";
 
+    if (intent === "AUTO_CONNECT") {
+      const response = await fetch(`${backendUrl}/shopify/auto-connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop: session.shop,
+          accessToken: offlineToken || session.accessToken,
+          name: name,
+          email: email,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { status: "success", userId: data.userId, auto: true };
+      } else {
+        return { status: "error", message: "Auto-connection failed. Please try manual pairing." };
+      }
+    }
 
     if (pairingCode) {
-
       const response = await fetch(`${backendUrl}/shopify/connect-with-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,40 +132,13 @@ export const action = async ({ request }) => {
       if (response.ok) {
         const data = await response.json();
         return { status: "success", userId: data.userId, usedCode: true };
-      } else if (response.status === 429) {
-        return { status: "error", message: "Too many requests. Please try again in a minute.", isRateLimited: true };
       } else {
         const errorText = await response.text();
         return { status: "error", message: errorText || "Invalid pairing code" };
       }
-    } else if (stockbudToken) {
-
-      const headers = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${stockbudToken}`,
-      };
-
-      const response = await fetch(`${backendUrl}/shopify/connect`, {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify({
-          shop: session.shop,
-          accessToken: offlineToken || session.accessToken,
-          name: name,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return { status: "success", userId: data.userId };
-      } else if (response.status === 429) {
-        return { status: "error", message: "Too many requests. Please try again in a minute.", isRateLimited: true };
-      } else {
-        return { status: "error", message: await response.text() };
-      }
-    } else {
-      return { status: "error", message: "No pairing code or token provided" };
     }
+
+    return { status: "error", message: "Invalid request" };
   } catch (error) {
     return { status: "error", message: error.message };
   }
@@ -139,77 +190,162 @@ const PolarisTimeline = ({ currentStep }) => {
   )
 }
 
+const DashboardUI = ({ stats, shop }) => {
+  const revenue = stats?.revenue?.total || 0;
+  const change = stats?.revenue?.change || 0;
+  const inventoryValue = stats?.inventoryValue || 0;
+  const recentOrders = stats?.salesHistory || [];
+
+  return (
+    <BlockStack gap="500">
+      <Grid>
+        <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
+          <Card>
+            <Box padding="400">
+              <BlockStack gap="200">
+                <Text variant="headingSm" as="h6" tone="subdued">Total Revenue</Text>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <Text variant="headingLg" as="p">${revenue.toLocaleString()}</Text>
+                  <Badge tone={change >= 0 ? "success" : "critical"}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <Icon source={ChartLineIcon} />
+                      {change >= 0 ? '+' : ''}{change}%
+                    </div>
+                  </Badge>
+                </div>
+              </BlockStack>
+            </Box>
+          </Card>
+        </Grid.Cell>
+        <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
+          <Card>
+            <Box padding="400">
+              <BlockStack gap="200">
+                <Text variant="headingSm" as="h6" tone="subdued">Inventory Value</Text>
+                <Text variant="headingLg" as="p">${inventoryValue.toLocaleString()}</Text>
+              </BlockStack>
+            </Box>
+          </Card>
+        </Grid.Cell>
+        <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
+          <Card>
+            <Box padding="400">
+              <BlockStack gap="200">
+                <Text variant="headingSm" as="h6" tone="subdued">Sync Status</Text>
+                <Badge tone="success">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Icon source={CheckIcon} />
+                    Active
+                  </div>
+                </Badge>
+              </BlockStack>
+            </Box>
+          </Card>
+        </Grid.Cell>
+      </Grid>
+
+      <Layout>
+        <Layout.Section>
+          <Card padding="0">
+            <Box padding="400">
+              <Text variant="headingMd" as="h2">Recent Orders</Text>
+            </Box>
+            <Divider />
+            {recentOrders.length > 0 ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #f1f1f1' }}>
+                      <th style={{ padding: '12px 16px' }}>Order</th>
+                      <th style={{ padding: '12px 16px' }}>Customer</th>
+                      <th style={{ padding: '12px 16px' }}>Total</th>
+                      <th style={{ padding: '12px 16px' }}>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentOrders.map((order) => (
+                      <tr key={order.id} style={{ borderBottom: '1px solid #f1f1f1' }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <Text variant="bodyMd" fontWeight="bold">#{order.id.toString().substring(0, 5)}</Text>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>{order.name}</td>
+                        <td style={{ padding: '12px 16px' }}>${order.amount}</td>
+                        <td style={{ padding: '12px 16px' }}>{new Date(order.date).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <Box padding="1000">
+                <EmptyState
+                  heading="No orders yet"
+                  image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+                >
+                  <p>When you start making sales, they will show up here.</p>
+                </EmptyState>
+              </Box>
+            )}
+          </Card>
+        </Layout.Section>
+        <Layout.Section variant="oneThird">
+          <Card>
+            <Box padding="400">
+              <BlockStack gap="400">
+                <Text variant="headingMd" as="h2">AI Insights</Text>
+                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <BlockStack gap="200">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Icon source={AlertBubbleIcon} tone="info" />
+                      <Text variant="bodyMd" fontWeight="bold">Store Health</Text>
+                    </div>
+                    <Text variant="bodySm">Your inventory-to-sales ratio is healthy. Consider restocking top products soon.</Text>
+                  </BlockStack>
+                </div>
+              </BlockStack>
+            </Box>
+          </Card>
+        </Layout.Section>
+      </Layout>
+    </BlockStack>
+  );
+};
+
 export default function Index() {
   const loaderData = useLoaderData();
   const fetcher = useFetcher();
-  const [currentStep, setCurrentStep] = useState(0);
-
-
-  const [name, setName] = useState("");
+  const [currentStep, setCurrentStep] = useState(loaderData.isConnected ? 5 : 0);
   const [pairingCode, setPairingCode] = useState("");
-  const [password, setPassword] = useState("");
-  const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
-
-  const openApp = () => window.open("https://stockbud.app", "_blank");
+  const [token, setToken] = useState(loaderData.isConnected ? 'paired' : null);
+  const [email, setEmail] = useState(loaderData.shopDetails?.email || loaderData.shopDetails?.contactEmail || "");
 
   const handleLogin = async () => {
     setIsLoading(true);
     setLoginError("");
-    try {
-      const formData = new FormData();
-      formData.append("pairingCode", pairingCode);
-      fetcher.submit(formData, { method: "POST" });
-    } catch (err) {
-      setLoginError("Connection error: " + err.message);
-      setIsLoading(false);
-    }
+    const formData = new FormData();
+    formData.append("pairingCode", pairingCode);
+    fetcher.submit(formData, { method: "POST" });
   };
 
-  const handleGoogleLogin = () => {
-    const backendUrl = "http://localhost:3000";
-
-    const width = 600;
-    const height = 700;
-    const left = window.screen.width / 2 - width / 2;
-    const top = window.screen.height / 2 - height / 2;
-
-    window.open(
-      `${backendUrl}/auth/google`,
-      "stockbud_login",
-      `width=${width},height=${height},top=${top},left=${left}`
-    );
-
-    const listener = (event) => {
-      if (event.data?.type === "STOCKBUD_AUTH_SUCCESS" && event.data.token) {
-        setToken(event.data.token);
-        window.removeEventListener("message", listener);
-      }
-    };
-    window.addEventListener("message", listener);
+  const handleAutoConnect = () => {
+    setIsLoading(true);
+    setLoginError("");
+    const formData = new FormData();
+    formData.append("intent", "AUTO_CONNECT");
+    formData.append("name", loaderData.shopDetails?.name);
+    formData.append("email", email);
+    fetcher.submit(formData, { method: "POST" });
   };
-
 
   useEffect(() => {
-
-    if (fetcher.data?.status === 'success' && fetcher.data?.usedCode && !token && currentStep === 0) {
-
+    if (fetcher.data?.status === 'success' && (fetcher.data?.usedCode || fetcher.data?.auto) && !token && currentStep === 0) {
       setToken('paired');
       setIsLoading(false);
       setCurrentStep(1);
       setTimeout(() => setCurrentStep(2), 1500);
-    } else if (token && fetcher.state === 'idle' && !fetcher.data && currentStep === 0) {
-
-      setCurrentStep(1);
-      setTimeout(() => setCurrentStep(2), 1500);
-
-      const formData = new FormData();
-      formData.append("stockbudToken", token);
-      formData.append("name", name);
-      fetcher.submit(formData, { method: "POST" });
     }
-
 
     if (fetcher.data?.status === 'error' && fetcher.data?.message) {
       setLoginError(fetcher.data.message);
@@ -218,90 +354,117 @@ export default function Index() {
   }, [token, fetcher.state, fetcher.data, currentStep]);
 
   useEffect(() => {
-    if (currentStep >= 2) {
+    if (currentStep >= 2 && currentStep < 5) {
       if (fetcher.data?.status === 'success') {
-
         if (currentStep === 2) setTimeout(() => setCurrentStep(3), 1000);
         if (currentStep === 3) setTimeout(() => setCurrentStep(4), 2500);
         if (currentStep === 4) setTimeout(() => setCurrentStep(5), 2000);
-      } else if (fetcher.data?.status === 'error') {
-
-        console.error("Sync Error:", fetcher.data.message);
       }
     }
   }, [currentStep, fetcher.data]);
 
+  const isDashboardView = loaderData.isConnected || currentStep === 5;
+
   return (
-    <Page title="Connection Status">
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="500">
-              <Box padding="400">
-                <Text variant="headingLg" as="h2" alignment="center">Connecting to Stockbud AI</Text>
-                <Box paddingBlockStart="200">
-                  <Text variant="bodyMd" as="p" tone="subdued" alignment="center">Store: {loaderData.shop}</Text>
+    <Page
+      title={isDashboardView ? "Retail Intelligence" : "Stockbud Onboarding"}
+      secondaryActions={[
+        {
+          content: 'Help & Documentation',
+          onAction: () => window.open('https://docs.stockbud.xyz', '_blank'),
+        },
+        {
+          content: 'Privacy Policy',
+          onAction: () => window.open('https://stockbud.xyz/privacy', '_blank'),
+        }
+      ]}
+    >
+      {isDashboardView ? (
+        <DashboardUI stats={loaderData.stats} shop={loaderData.shop} />
+      ) : (
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="500">
+                <Box padding="400">
+                  <Text variant="headingLg" as="h2" alignment="center">Welcome to Stockbud AI</Text>
+                  <Box paddingBlockStart="200">
+                    <Text variant="bodyMd" as="p" tone="subdued" alignment="center">Securely connect your store to begin generating retail insights.</Text>
+                  </Box>
                 </Box>
-              </Box>
 
-              <Divider />
+                <Divider />
 
-              <Box padding="400">
-                {!token ? (
-                  <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-                    <BlockStack gap="400">
-                      <Text variant="bodyMd" as="p" alignment="center">
-                        Enter the pairing code from your Stockbud account to link this store.
-                      </Text>
-                      {loginError && (
-                        <Banner tone="critical">
-                          <p>{loginError}</p>
-                        </Banner>
-                      )}
-                      <FormLayout>
-                        <TextField
-                          label="Pairing Code"
-                          value={pairingCode}
-                          onChange={setPairingCode}
-                          placeholder="ABC-123-XYZ"
-                          autoComplete="off"
-                        />
-                        <Button
-                          variant="primary"
-                          fullWidth
-                          onClick={handleLogin}
-                          loading={isLoading || fetcher.state === 'submitting'}
-                        >
-                          Connect Store
-                        </Button>
-                      </FormLayout>
-                      <Text variant="bodySm" as="p" tone="subdued" alignment="center">
-                        Get your code from the Stockbud settings page.
-                      </Text>
-                    </BlockStack>
-                  </div>
-                ) : (
-                  <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-                    <PolarisTimeline currentStep={currentStep} />
-                  </div>
-                )}
-              </Box>
+                <Box padding="400">
+                  {currentStep === 0 ? (
+                    <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+                      <BlockStack gap="600">
+                        {loginError && <Banner tone="critical"><p>{loginError}</p></Banner>}
 
-              {currentStep === 5 && (
-                <Box padding="400" background="bg-surface-secondary">
-                  <BlockStack gap="400" align="center">
-                    <div style={{ fontSize: '48px', textAlign: 'center' }}>✓</div>
-                    <Text variant="headingMd" as="h3" alignment="center">Setup Complete!</Text>
-                    <Button variant="primary" size="large" onClick={openApp}>
-                      Launch Stockbud Dashboard
-                    </Button>
-                  </BlockStack>
+                        <Card background="subdued">
+                          <Box padding="400">
+                            <BlockStack gap="400">
+                              <Text variant="headingMd" as="h3">Seamless Connection</Text>
+                              <Text variant="bodyMd" as="p">We'll automatically set up your Stockbud account using your Shopify store details.</Text>
+                              <TextField
+                                label="Confirmed Account Email"
+                                type="email"
+                                value={email}
+                                onChange={setEmail}
+                                autoComplete="email"
+                                placeholder="name@store.com"
+                                helpText="We'll use this email to create your Stockbud account."
+                                disabled={isLoading}
+                              />
+                              <Button
+                                variant="primary"
+                                size="large"
+                                fullWidth
+                                onClick={handleAutoConnect}
+                                loading={isLoading}
+                                disabled={!email || !email.includes('@')}
+                              >
+                                Connect {loaderData.shopDetails?.name || 'Store'} Now
+                              </Button>
+                            </BlockStack>
+                          </Box>
+                        </Card>
+
+                        <Divider label="OR MANUALLY PAIR" />
+
+                        <div style={{ opacity: isLoading ? 0.5 : 1 }}>
+                          <FormLayout>
+                            <TextField
+                              label="Enter Pairing Code"
+                              value={pairingCode}
+                              onChange={setPairingCode}
+                              placeholder="ABC-123-XYZ"
+                              helpText="If you already have a Stockbud account, enter the code from your settings."
+                              autoComplete="off"
+                              disabled={isLoading}
+                            />
+                            <Button
+                              onClick={handleLogin}
+                              loading={isLoading}
+                              disabled={!pairingCode}
+                            >
+                              Pair Manual Account
+                            </Button>
+                          </FormLayout>
+                        </div>
+                      </BlockStack>
+                    </div>
+                  ) : (
+                    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px 0' }}>
+                      <PolarisTimeline currentStep={currentStep} />
+                    </div>
+                  )}
                 </Box>
-              )}
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      )}
     </Page>
   );
 }
