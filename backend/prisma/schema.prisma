@@ -26,6 +26,9 @@ model User {
   botSettings           Json?
   lastTokenReset        String?
   requiresPasswordChange Boolean        @default(false)
+  isVerified            Boolean        @default(false)
+  verificationToken     String?
+
 
   hasFreeReports        Boolean        @default(false)
   language              String         @default("en")

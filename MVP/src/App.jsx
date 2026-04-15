@@ -30,7 +30,10 @@ import { AuthProvider } from './context/AuthContext';
 import AuthSuccess from './pages/AuthSuccess';
 
 import LandingPage from './pages/LandingPage';
+import PrivacyPage from './pages/PrivacyPage';
+import Verify from './pages/auth/Verify';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+
 
 function App() {
 
@@ -63,6 +66,8 @@ function App() {
           <Routes>
             { }
             <Route path="/" element={<LandingPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+
 
             { }
             <Route path="/auth/login" element={<Login />} />
@@ -70,6 +75,7 @@ function App() {
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
             <Route path="/auth/reset-password" element={<ResetPassword />} />
             <Route path="/auth/success" element={<AuthSuccess />} />
+            <Route path="/auth/verify" element={<Verify />} />
 
             { }
             <Route path="/get-started" element={<ProtectedRoute><GetStarted /></ProtectedRoute>} />

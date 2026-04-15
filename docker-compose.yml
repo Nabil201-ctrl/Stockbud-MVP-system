@@ -124,6 +124,26 @@ services:
     networks:
       - stockbud-network
 
+  docs-app:
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+    container_name: stockbud-docs
+    restart: always
+    networks:
+      - stockbud-network
+
+  mvp-app:
+    build:
+      context: ./MVP
+      dockerfile: Dockerfile
+    container_name: stockbud-mvp
+    restart: always
+    environment:
+      - VITE_API_URL=https://api.stockbud.xyz
+    networks:
+      - stockbud-network
+
 networks:
   stockbud-network:
     driver: bridge

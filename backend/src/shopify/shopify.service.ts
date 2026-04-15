@@ -200,14 +200,15 @@ export class ShopifyService {
       const email = dto.email || `shop+${dto.shop}@stockbud.com`;
       const name = dto.shop.replace('.myshopify.com', '');
       const passwordHash = '$2b$10$NotARealPasswordHashForShopConnect' + Math.random();
+      const verificationToken = Math.random().toString(36).substr(2, 15);
 
-      const newUser = await this.usersService.createUser(email, name, passwordHash, true);
+      const newUser = await this.usersService.createUser(email, name, passwordHash, true, verificationToken);
       await this.usersService.updateShopifyCredentials(newUser.id, dto.shop, dto.accessToken);
 
       // Send Welcome & Verification Email via Brevo
-      const verificationToken = Math.random().toString(36).substr(2, 15);
       await this.emailService.sendAccountVerificationEmail(newUser.email, newUser.name || 'User', verificationToken);
       await this.emailService.sendWelcomeEmail(newUser.email, newUser.name || 'User');
+
 
       this.shopifyGateway.emitStatusUpdate(dto.shop, 5, 'Connection Secure & Active');
       return { success: true, action: 'created', userId: newUser.id };

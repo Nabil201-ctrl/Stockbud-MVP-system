@@ -20,8 +20,8 @@ const LinkShop = () => {
 
     const platforms = [
         { id: 'shopify', name: 'Shopify', icon: ShoppingBag, color: 'bg-green-100 text-green-600 dark:bg-green-900/30' },
-        { id: 'whop', name: 'Whop', icon: Globe, color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30' },
-        { id: 'api', name: 'Custom API', icon: Code, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300' },
+        { id: 'instagram', name: 'Instagram', icon: Globe, color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30' },
+        { id: 'whatsapp', name: 'Whatsapp', icon: Code, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300' },
     ];
 
     const handleGeneratePairingCode = async () => {

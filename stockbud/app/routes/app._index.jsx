@@ -112,7 +112,7 @@ export const action = async ({ request }) => {
 
       if (response.ok) {
         const data = await response.json();
-        return { status: "success", userId: data.userId, auto: true };
+        return { status: "success", userId: data.userId, auto: true, action: data.action };
       } else {
         return { status: "error", message: "Auto-connection failed. Please try manual pairing." };
       }
@@ -320,6 +320,7 @@ export default function Index() {
   const [loginError, setLoginError] = useState("");
   const [token, setToken] = useState(loaderData.isConnected ? 'paired' : null);
   const [email, setEmail] = useState(loaderData.shopDetails?.email || loaderData.shopDetails?.contactEmail || "");
+  const [verificationSent, setVerificationSent] = useState(false);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -341,6 +342,9 @@ export default function Index() {
 
   useEffect(() => {
     if (fetcher.data?.status === 'success' && (fetcher.data?.usedCode || fetcher.data?.auto) && !token && currentStep === 0) {
+      if (fetcher.data?.action === 'created') {
+        setVerificationSent(true);
+      }
       setToken('paired');
       setIsLoading(false);
       setCurrentStep(1);
@@ -400,6 +404,11 @@ export default function Index() {
                     <div style={{ maxWidth: '500px', margin: '0 auto' }}>
                       <BlockStack gap="600">
                         {loginError && <Banner tone="critical"><p>{loginError}</p></Banner>}
+                        {verificationSent && (
+                          <Banner title="Verification Email Sent" tone="success">
+                            <p>We've sent a verification email to <strong>{email}</strong>. Please check your inbox and verify your account to unlock full access to the Stockbud Platform.</p>
+                          </Banner>
+                        )}
 
                         <Card background="subdued">
                           <Box padding="400">

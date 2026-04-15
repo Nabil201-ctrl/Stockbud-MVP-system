@@ -21,8 +21,9 @@ export class UsersController {
     @Get('me')
     @UseGuards(AuthGuard('jwt'))
     async getProfile(@Req() req) {
-        return req.user;
+        return this.usersService.findById(req.user.id);
     }
+
 
     @Put('me')
     @UseGuards(AuthGuard('jwt'))

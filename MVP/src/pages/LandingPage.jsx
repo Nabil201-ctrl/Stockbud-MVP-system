@@ -386,9 +386,25 @@ const LandingPage = () => {
             </main>
 
             { }
-            <footer className={`py-8 text-center text-sm ${isDarkMode ? 'text-gray-500' : 'text-slate-400'}`}>
-                {t('landing.footer')}
+            <footer className={`py-12 border-t mt-20 ${isDarkMode ? 'border-gray-800 text-gray-500' : 'border-slate-200 text-slate-400'}`}>
+                <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-2">
+                        <img src={Slogo} alt="Stockbud Logo" className="w-6 h-6 grayscale opacity-50" />
+                        <span className="font-bold tracking-tight">stockbud.</span>
+                    </div>
+
+                    <p className="text-sm">
+                        {t('landing.footer')}
+                    </p>
+
+                    <div className="flex items-center gap-8">
+                        <button onClick={() => navigate('/privacy')} className="hover:text-blue-500 transition-colors">Privacy Policy</button>
+                        <button onClick={() => navigate('/privacy')} className="hover:text-blue-500 transition-colors">Terms of Service</button>
+                        <button onClick={() => window.open('https://github.com/Nabil201-ctrl/Stockbud-MVP-system', '_blank')} className="hover:text-blue-500 transition-colors">GitHub</button>
+                    </div>
+                </div>
             </footer>
+
         </div>
     );
 };

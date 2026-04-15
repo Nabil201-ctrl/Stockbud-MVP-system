@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req, UseGuards, Res, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, UseGuards, Res, UnauthorizedException, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
@@ -164,4 +164,10 @@ export class AuthController {
     async resetPassword(@Body() body: ResetPasswordDto) {
         return this.authService.resetPassword(body.token, body.newPassword);
     }
+
+    @Get('verify')
+    async verifyEmail(@Query('token') token: string) {
+        return this.authService.verifyEmail(token);
+    }
 }
+

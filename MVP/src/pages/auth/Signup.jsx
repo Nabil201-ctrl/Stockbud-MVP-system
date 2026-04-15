@@ -17,10 +17,6 @@ const Signup = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [strength, setStrength] = useState(0);
 
-    if (!authLoading && isAuthenticated) {
-        return <Navigate to="/dashboard" replace />;
-    }
-
     useEffect(() => {
         // Simple strength calculation
         let s = 0;
@@ -30,6 +26,10 @@ const Signup = () => {
         if (/[^A-Za-z0-9]/.test(password)) s++; // Special
         setStrength(s);
     }, [password]);
+
+    if (!authLoading && isAuthenticated) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const handleGoogleLogin = () => {
         window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;

@@ -59,19 +59,19 @@ export class AuthService {
 
     async register(email: string, pass: string, name: string, ip?: string) {
         const hashedPassword = await bcrypt.hash(pass, 12);
-        const user = await this.usersService.createUser(email, name, hashedPassword);
+        const verificationToken = Math.random().toString(36).substr(2, 15);
+        const user = await this.usersService.createUser(email, name, hashedPassword, false, verificationToken);
+
         if (ip && user) {
             await this.usersService.fetchAndSetLocation(user.id, ip);
         }
 
         // Send Welcome & Verification Email via Brevo
         if (user) {
-            const verificationToken = Math.random().toString(36).substr(2, 15);
-            // In a real app, we'd save this token to the DB.
-            // Skipping the "steps" as per user request.
             await this.emailService.sendAccountVerificationEmail(user.email, user.name || 'User', verificationToken);
             await this.emailService.sendWelcomeEmail(user.email, user.name || 'User');
         }
+
 
         const { password, refreshToken, ...result } = user;
         return result;
@@ -132,10 +132,14 @@ export class AuthService {
 
     async changePassword(userId: string, oldPass: string, newPass: string) {
         const user = await this.usersService.findById(userId);
-        if (!user || !user.password) throw new UnauthorizedException('User not found or no password set');
+        if (!user) throw new UnauthorizedException('User not found');
 
-        const isMatch = await bcrypt.compare(oldPass, user.password);
-        if (!isMatch) throw new UnauthorizedException('Invalid current password');
+        // Allow bypassing old password check if the user is required to set their initial password
+        if (!user.requiresPasswordChange) {
+            if (!user.password) throw new UnauthorizedException('No password set and not in password-change mode');
+            const isMatch = await bcrypt.compare(oldPass, user.password);
+            if (!isMatch) throw new UnauthorizedException('Invalid current password');
+        }
 
         const hashedPassword = await bcrypt.hash(newPass, 10);
         return this.usersService.updateProfile(userId, {
@@ -143,6 +147,7 @@ export class AuthService {
             requiresPasswordChange: false
         });
     }
+
 
     async forgotPassword(email: string) {
         const user = await this.usersService.findByEmail(email);
@@ -201,4 +206,19 @@ export class AuthService {
             throw new UnauthorizedException('Invalid token data');
         }
     }
+
+    async verifyEmail(token: string) {
+        const users = await this.usersService.getAllUsers();
+        const user = users.find(u => (u as any).verificationToken === token);
+
+        if (!user) throw new UnauthorizedException('Invalid or expired verification token');
+
+        await this.usersService.updateProfile(user.id, {
+            isVerified: true,
+            verificationToken: null
+        } as any);
+
+        return { message: 'Account verified successfully', email: user.email };
+    }
 }
+

@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { RefreshCw, TrendingUp } from 'lucide-react';
 import { dashboardAPI } from '../services/api';
+import SetPasswordModal from '../components/Dashboard/SetPasswordModal';
 
 const RevenueChart = lazy(() => import('../components/charts/RevenueChart'));
 const SourcePieChart = lazy(() => import('../components/charts/SourcePieChart'));
@@ -108,6 +109,13 @@ const Dashboard = () => {
 
   return (
     <div className="flex flex-col min-h-full transition-all duration-300">
+      <SetPasswordModal
+        isOpen={user?.requiresPasswordChange}
+        onSuccess={() => {
+          // Modal will close automatically because refreshUser updates user object
+          // Tour will start automatically because isOnboardingComplete is false
+        }}
+      />
       <ChatBotButton />
       <div className="flex-1 flex flex-col min-h-0">
         {/* Dashboard Header Bar */}

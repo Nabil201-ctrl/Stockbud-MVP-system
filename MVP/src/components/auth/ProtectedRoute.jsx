@@ -24,9 +24,11 @@ const ProtectedRoute = ({ children }) => {
 
 
 
+    /* 
     if (user && !user.isOnboardingComplete && !location.pathname.startsWith('/onboarding') && location.pathname !== '/get-started') {
         return <Navigate to="/get-started" replace />;
     }
+    */
 
 
     // Check for forced password change

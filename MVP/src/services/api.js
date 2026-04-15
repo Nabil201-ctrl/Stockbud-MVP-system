@@ -123,7 +123,9 @@ export const authAPI = {
     forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
     resetPassword: (token, newPassword) => api.post('/auth/reset-password', { token, newPassword }),
     changePassword: (oldPassword, newPassword) => api.post('/auth/change-password', { oldPassword, newPassword }),
+    verifyEmail: (token) => api.get(`/auth/verify?token=${token}`),
 };
+
 
 export const userAPI = {
     getProfile: () => api.get(`/users/me?t=${Date.now()}`),
