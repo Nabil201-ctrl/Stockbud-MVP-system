@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://localhost:3000'
+  const apiBaseUrl = env.VITE_API_BASE_URL || 'https://api.stockbud.xyz'
 
   // Create regex pattern from apiBaseUrl
   // Escaping periods and slashes for regex usage in runtimeCaching

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Wifi, WifiOff, Globe, User, Lock, Save, Loader2, AlertCircle, CheckCircle2, Zap, ShoppingBag, Languages, Copy, Key, Trash2 } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useTheme } from '../context/ThemeContext';
@@ -12,7 +12,8 @@ import { authAPI, userAPI, storesAPI } from '../services/api';
 const SettingsPage = () => {
     const isOnline = useOnlineStatus();
     const { isDarkMode, fontSize, changeFontSize } = useTheme();
-    const { user, updateProfile, refreshUser } = useAuth();
+    const navigate = useNavigate();
+    const { user, updateProfile, refreshUser, logout } = useAuth();
     const { t, language, changeLanguage, availableLanguages } = useLanguage();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile');
@@ -183,8 +184,16 @@ const SettingsPage = () => {
         setPasswordLoading(true);
         try {
             await authAPI.changePassword(passwordData.oldPassword, passwordData.newPassword);
-            setPasswordMessage({ type: 'success', text: 'Password changed' });
+            setPasswordMessage({ type: 'success', text: 'Password changed successfully! Redirecting...' });
             setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+
+            // Logout and redirect after a short delay so they can read the message
+            setTimeout(async () => {
+                await logout();
+                navigate('/auth/login', {
+                    state: { message: 'Password changed successfully. Please log in with your new credentials.' }
+                });
+            }, 2000);
         } catch (error) {
             setPasswordMessage({ type: 'error', text: error.response?.data?.message || 'Error' });
         }
@@ -371,10 +380,34 @@ const SettingsPage = () => {
                         <h2 className="text-xl font-bold dark:text-white">{t('settings.security')}</h2>
                         <p className="text-sm text-gray-500 mt-1">Keep your account secure by updating your password regularly.</p>
                     </div>
+
+                    {user?.requiresPasswordChange && (
+                        <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-2xl flex items-start gap-3">
+                            <Key className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" size={18} />
+                            <div>
+                                <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Setup Your Secret Key</p>
+                                <p className="text-xs text-blue-800 dark:text-blue-300 mt-1">
+                                    Since you connected via Shopify, you haven't set a personalized password yet.
+                                    You can set one below to access Stockbud directly.
+                                    <span className="font-bold underline ml-1">No current password is required.</span>
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     <form onSubmit={handlePasswordChange} className="space-y-6 max-w-md">
-                        <div>
-                            <label className="block text-sm font-bold mb-2 dark:text-gray-300">{t('settings.currentPassword')}</label>
-                            <input type="password" value={passwordData.oldPassword} onChange={e => setPasswordData({ ...passwordData, oldPassword: e.target.value })} className="w-full px-4 py-3 rounded-xl border dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" />
+                        <div className={user?.requiresPasswordChange ? 'opacity-50 pointer-events-none' : ''}>
+                            <label className="block text-sm font-bold mb-2 dark:text-gray-300">
+                                {t('settings.currentPassword')}
+                                {user?.requiresPasswordChange && <span className="ml-2 text-[10px] text-gray-400 italic">(Bypassed for first-time setup)</span>}
+                            </label>
+                            <input
+                                type="password"
+                                value={user?.requiresPasswordChange ? 'SYSTEM_GENERATED_BYPASS' : passwordData.oldPassword}
+                                onChange={e => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
+                                placeholder={user?.requiresPasswordChange ? '••••••••' : ''}
+                                className="w-full px-4 py-3 rounded-xl border dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                            />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>

@@ -12,7 +12,7 @@ export const Dashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await axios.get('http://localhost:3000/users'); 
+                const response = await axios.get('https://api.stockbud.xyz/users'); 
                 const userList = response.data;
                 setUsers(userList);
 
@@ -60,7 +60,7 @@ export const Dashboard = () => {
 
     const toggleFreeReports = async (userId, currentStatus) => {
         try {
-            await axios.patch(`http://localhost:3000/users/${userId}/free-reports`, { enable: !currentStatus });
+            await axios.patch(`https://api.stockbud.xyz/users/${userId}/free-reports`, { enable: !currentStatus });
             setUsers(users.map(u => u.id === userId ? { ...u, hasFreeReports: !currentStatus } : u));
         } catch (error) {
             console.error('Failed to update user', error);
@@ -71,7 +71,7 @@ export const Dashboard = () => {
     const toggleAllFreeReports = async (enable) => {
         try {
             if (!window.confirm(`Are you sure you want to ${enable ? 'ENABLE' : 'DISABLE'} free reports for ALL users?`)) return;
-            await axios.patch('http://localhost:3000/users/free-reports-all', { enable });
+            await axios.patch('https://api.stockbud.xyz/users/free-reports-all', { enable });
             setUsers(users.map(u => ({ ...u, hasFreeReports: enable })));
         } catch (error) {
             console.error('Failed to update all users', error);

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Query, UseGuards, Req, HttpException, Http
 import { AuthGuard } from '@nestjs/passport';
 import { ShopifyService } from './shopify.service';
 import { UsersService } from '../users/users.service';
+import { AuthService } from '../auth/auth.service';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { ConnectShopDto } from './dto/connect-shop.dto';
 import { ReportsService } from '../reports/reports.service';
@@ -14,7 +15,8 @@ export class ShopifyController {
         private readonly shopifyService: ShopifyService,
         private readonly usersService: UsersService,
         private readonly reportsService: ReportsService,
-        private readonly socialStoresService: SocialStoresService
+        private readonly socialStoresService: SocialStoresService,
+        private readonly authService: AuthService
     ) { }
 
     @Post('connect')
@@ -119,7 +121,12 @@ export class ShopifyController {
         const user = users.find(u => u.shopifyShop === shop);
 
         if (user) {
-            return { isConnected: true, user: { id: user.id, name: user.name, email: user.email } };
+            const authResult = await this.authService.login(user);
+            return {
+                isConnected: true,
+                user: { id: user.id, name: user.name, email: user.email },
+                token: authResult.access_token
+            };
         }
         return { isConnected: false };
     }
@@ -136,6 +143,9 @@ export class ShopifyController {
 
         if (result.success && result.userId) {
             this.reportsService.generateWelcomeReport(result.userId);
+            const user = await this.usersService.findById(result.userId);
+            const authResult = await this.authService.login(user);
+            return { ...result, token: authResult.access_token };
         }
 
         return result;
@@ -163,6 +173,10 @@ export class ShopifyController {
             console.log(`[Handshake] Triggering welcome report for user ${userId}`);
 
             this.reportsService.generateWelcomeReport(userId);
+
+            const user = await this.usersService.findById(userId);
+            const authResult = await this.authService.login(user);
+            return { ...result, token: authResult.access_token };
         }
 
         return result;

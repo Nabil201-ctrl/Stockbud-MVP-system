@@ -14,7 +14,7 @@ export const action = async ({ request }) => {
 
   
   try {
-    const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
+    const backendUrl = process.env.STOCKBUD_BACKEND_URL || "https://api.stockbud.xyz";
     console.log(`Sending Uninstall Request to Stockbud Backend for ${shop}`);
     await fetch(`${backendUrl}/shopify/webhook/uninstall`, {
       method: "POST",

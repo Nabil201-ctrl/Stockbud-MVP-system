@@ -18,7 +18,7 @@ export const ProtectedRoute = () => {
 
             try {
                 
-                await axios.get('http://localhost:3000/users/me'); 
+                await axios.get('https://api.stockbud.xyz/users/me'); 
                 localStorage.setItem('stockbud_admin_auth', 'true');
                 setIsAuthenticated(true);
             } catch (error) {

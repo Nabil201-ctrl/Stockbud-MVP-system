@@ -32,7 +32,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
-            urlPattern: /http:\/\/localhost:3000\/.*/i,
+            urlPattern: /http:\/\/api.stockbud.xyz\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'admin-api-cache',
@@ -53,7 +53,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'https://api.stockbud.xyz',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }

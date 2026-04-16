@@ -27,7 +27,7 @@ const Signup = () => {
         setStrength(s);
     }, [password]);
 
-    if (!authLoading && isAuthenticated) {
+    if (isAuthenticated) {
         return <Navigate to="/dashboard" replace />;
     }
 

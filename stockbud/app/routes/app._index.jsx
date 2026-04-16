@@ -18,12 +18,7 @@ import {
   EmptyState,
 } from "@shopify/polaris";
 import {
-  ChartLineIcon,
-  OrderIcon,
-  ProductIcon,
-  PaymentIcon,
   CheckIcon,
-  AlertBubbleIcon,
 } from "@shopify/polaris-icons";
 import shopify, { authenticate, getOfflineId } from "../shopify.server";
 
@@ -60,11 +55,24 @@ export const loader = async ({ request }) => {
       userData = statusData.user;
 
       if (isConnected && userData?.id) {
+        // Pass the token for auto-login
+        const token = statusData.token;
+
         // Fetch stats if connected
         const statsResponse = await fetch(`${backendUrl}/dashboard/stats?userId=${userData.id}&range=month&sourceFilter=shopify`);
         if (statsResponse.ok) {
           stats = await statsResponse.json();
         }
+
+        return {
+          shop: session?.shop,
+          shopDetails: shop,
+          isConnected,
+          userData,
+          stats,
+          backendUrl,
+          token
+        };
       }
     }
   } catch (e) {
@@ -77,7 +85,8 @@ export const loader = async ({ request }) => {
     isConnected,
     userData,
     stats,
-    backendUrl
+    backendUrl,
+    token: null
   };
 };
 
@@ -112,7 +121,7 @@ export const action = async ({ request }) => {
 
       if (response.ok) {
         const data = await response.json();
-        return { status: "success", userId: data.userId, auto: true, action: data.action };
+        return { status: "success", userId: data.userId, auto: true, action: data.action, token: data.token };
       } else {
         return { status: "error", message: "Auto-connection failed. Please try manual pairing." };
       }
@@ -131,7 +140,7 @@ export const action = async ({ request }) => {
 
       if (response.ok) {
         const data = await response.json();
-        return { status: "success", userId: data.userId, usedCode: true };
+        return { status: "success", userId: data.userId, usedCode: true, token: data.token };
       } else {
         const errorText = await response.text();
         return { status: "error", message: errorText || "Invalid pairing code" };
@@ -190,124 +199,48 @@ const PolarisTimeline = ({ currentStep }) => {
   )
 }
 
-const DashboardUI = ({ stats, shop }) => {
-  const revenue = stats?.revenue?.total || 0;
-  const change = stats?.revenue?.change || 0;
-  const inventoryValue = stats?.inventoryValue || 0;
-  const recentOrders = stats?.salesHistory || [];
+const DashboardUI = ({ stats, shop, currentStep, token }) => {
+  const openPlatform = () => {
+    const targetUrl = token ? `https://stockbud.xyz/dashboard?token=${token}` : 'https://stockbud.xyz/dashboard';
+    window.open(targetUrl, '_blank');
+  };
 
   return (
-    <BlockStack gap="500">
-      <Grid>
-        <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-          <Card>
-            <Box padding="400">
-              <BlockStack gap="200">
-                <Text variant="headingSm" as="h6" tone="subdued">Total Revenue</Text>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <Text variant="headingLg" as="p">${revenue.toLocaleString()}</Text>
-                  <Badge tone={change >= 0 ? "success" : "critical"}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <Icon source={ChartLineIcon} />
-                      {change >= 0 ? '+' : ''}{change}%
-                    </div>
-                  </Badge>
-                </div>
-              </BlockStack>
-            </Box>
-          </Card>
-        </Grid.Cell>
-        <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-          <Card>
-            <Box padding="400">
-              <BlockStack gap="200">
-                <Text variant="headingSm" as="h6" tone="subdued">Inventory Value</Text>
-                <Text variant="headingLg" as="p">${inventoryValue.toLocaleString()}</Text>
-              </BlockStack>
-            </Box>
-          </Card>
-        </Grid.Cell>
-        <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3 }}>
-          <Card>
-            <Box padding="400">
-              <BlockStack gap="200">
-                <Text variant="headingSm" as="h6" tone="subdued">Sync Status</Text>
-                <Badge tone="success">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Icon source={CheckIcon} />
-                    Active
-                  </div>
-                </Badge>
-              </BlockStack>
-            </Box>
-          </Card>
-        </Grid.Cell>
-      </Grid>
-
-      <Layout>
-        <Layout.Section>
-          <Card padding="0">
-            <Box padding="400">
-              <Text variant="headingMd" as="h2">Recent Orders</Text>
-            </Box>
-            <Divider />
-            {recentOrders.length > 0 ? (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #f1f1f1' }}>
-                      <th style={{ padding: '12px 16px' }}>Order</th>
-                      <th style={{ padding: '12px 16px' }}>Customer</th>
-                      <th style={{ padding: '12px 16px' }}>Total</th>
-                      <th style={{ padding: '12px 16px' }}>Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentOrders.map((order) => (
-                      <tr key={order.id} style={{ borderBottom: '1px solid #f1f1f1' }}>
-                        <td style={{ padding: '12px 16px' }}>
-                          <Text variant="bodyMd" fontWeight="bold">#{order.id.toString().substring(0, 5)}</Text>
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>{order.name}</td>
-                        <td style={{ padding: '12px 16px' }}>${order.amount}</td>
-                        <td style={{ padding: '12px 16px' }}>{new Date(order.date).toLocaleDateString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+    <Layout>
+      <Layout.Section>
+        <Card>
+          <Box padding="600">
+            <BlockStack gap="600">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text variant="headingLg" as="h2">System Sync Status</Text>
               </div>
-            ) : (
-              <Box padding="1000">
-                <EmptyState
-                  heading="No orders yet"
-                  image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-                >
-                  <p>When you start making sales, they will show up here.</p>
-                </EmptyState>
-              </Box>
-            )}
-          </Card>
-        </Layout.Section>
-        <Layout.Section variant="oneThird">
-          <Card>
-            <Box padding="400">
-              <BlockStack gap="400">
-                <Text variant="headingMd" as="h2">AI Insights</Text>
-                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <BlockStack gap="200">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Icon source={AlertBubbleIcon} tone="info" />
-                      <Text variant="bodyMd" fontWeight="bold">Store Health</Text>
+              <Divider />
+              {currentStep === 5 && (
+                <Box padding="400" background="bg-surface-info-subdued" borderRadius="200">
+                  <BlockStack gap="300">
+                    <Text variant="headingMd" as="h3">Synchronization Complete!</Text>
+                    <Text variant="bodyMd" as="p">Your store data is now fully synced with Stockbud. You can access your full analytics dashboard and AI insights platform below.</Text>
+                    <div style={{ marginTop: '10px' }}>
+                      <Button variant="primary" size="large" onClick={openPlatform} fullWidth>
+                        Access My Stockbud Account
+                      </Button>
                     </div>
-                    <Text variant="bodySm">Your inventory-to-sales ratio is healthy. Consider restocking top products soon.</Text>
                   </BlockStack>
-                </div>
-              </BlockStack>
-            </Box>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </BlockStack>
+                </Box>
+              )}
+              <Box paddingBlockStart="400">
+                <PolarisTimeline currentStep={currentStep || 5} />
+              </Box>
+              {currentStep < 5 && (
+                <Box paddingBlockStart="200">
+                  <Text variant="bodySm" color="subdued" tone="subdued">Keep this window open while we finalize your data synchronization...</Text>
+                </Box>
+              )}
+            </BlockStack>
+          </Box>
+        </Card>
+      </Layout.Section>
+    </Layout>
   );
 };
 
@@ -318,7 +251,7 @@ export default function Index() {
   const [pairingCode, setPairingCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [token, setToken] = useState(loaderData.isConnected ? 'paired' : null);
+  const [token, setToken] = useState(loaderData.token);
   const [email, setEmail] = useState(loaderData.shopDetails?.email || loaderData.shopDetails?.contactEmail || "");
   const [verificationSent, setVerificationSent] = useState(false);
 
@@ -345,7 +278,7 @@ export default function Index() {
       if (fetcher.data?.action === 'created') {
         setVerificationSent(true);
       }
-      setToken('paired');
+      setToken(fetcher.data.token);
       setIsLoading(false);
       setCurrentStep(1);
       setTimeout(() => setCurrentStep(2), 1500);
@@ -367,6 +300,13 @@ export default function Index() {
     }
   }, [currentStep, fetcher.data]);
 
+  useEffect(() => {
+    // Automatic redirect removed per user request to favor a explicit button action
+    if (currentStep === 5) {
+      console.log("Onboarding complete. User can now access their dashboard via the button.");
+    }
+  }, [currentStep]);
+
   const isDashboardView = loaderData.isConnected || currentStep === 5;
 
   return (
@@ -375,16 +315,16 @@ export default function Index() {
       secondaryActions={[
         {
           content: 'Help & Documentation',
-          onAction: () => window.open('https://docs.stockbud.xyz', '_blank'),
+          onAction: () => window.open('http://docs.localhost', '_blank'),
         },
         {
           content: 'Privacy Policy',
-          onAction: () => window.open('https://stockbud.xyz/privacy', '_blank'),
+          onAction: () => window.open('http://localhost/privacy', '_blank'),
         }
       ]}
     >
       {isDashboardView ? (
-        <DashboardUI stats={loaderData.stats} shop={loaderData.shop} />
+        <DashboardUI stats={loaderData.stats} shop={loaderData.shop} currentStep={currentStep} token={token} />
       ) : (
         <Layout>
           <Layout.Section>

@@ -94,7 +94,7 @@ services:
       - ./stockbud/.env
     environment:
       - STOCKBUD_BACKEND_URL=http://stockbud-backend:3000
-      - SHOPIFY_APP_URL=https://shopify.stockbud.xyz
+      - SHOPIFY_APP_URL=http://localhost:8000
       - DATABASE_URL=postgresql://postgres:password@stockbud-postgres:5432/stockbud?schema=shopify_app
       - NODE_ENV=production
     depends_on:

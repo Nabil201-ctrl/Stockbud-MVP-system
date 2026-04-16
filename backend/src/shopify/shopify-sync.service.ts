@@ -112,7 +112,7 @@ export class ShopifySyncService {
                 storeId: storeId,
                 items: o.line_items,
                 totalAmount: parseFloat(o.total_price),
-                currency: o.total_price_set?.shop_money?.currency_code || 'USD',
+                currency: o.currency || 'USD',
                 customerName: o.customer ? `${o.customer.first_name} ${o.customer.last_name || ''}` : 'Shopify Customer',
                 customerEmail: o.customer?.email,
                 financialStatus: o.financial_status,

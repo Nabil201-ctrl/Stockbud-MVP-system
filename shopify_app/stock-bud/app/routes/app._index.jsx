@@ -36,7 +36,7 @@ export const action = async ({ request }) => {
 
   console.log("Syncing with Stockbud Backend...", session.shop);
   try {
-    const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
+    const backendUrl = process.env.STOCKBUD_BACKEND_URL || "https://api.stockbud.xyz";
 
 
     if (pairingCode) {
@@ -164,7 +164,7 @@ export default function Index() {
   };
 
   const handleGoogleLogin = () => {
-    const backendUrl = "http://localhost:3000";
+    const backendUrl = "https://api.stockbud.xyz";
 
     const width = 600;
     const height = 700;

@@ -156,7 +156,7 @@ export class AuthService {
         const token = Math.random().toString(36).substr(2, 12);
         this.resetTokens.set(token, JSON.stringify({ email, expiresAt: Date.now() + 3600000 }));
 
-        const resetLink = `${process.env.FRONTEND_URL || 'https://stockbud.xyz'}/auth/reset-password?token=${token}`;
+        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost'}/auth/reset-password?token=${token}`;
 
         await this.emailService.sendPasswordResetEmail(
             user.email,
@@ -197,7 +197,10 @@ export class AuthService {
             if (!user) throw new UnauthorizedException('User no longer exists');
 
             const hashedPassword = await bcrypt.hash(newPass, 12);
-            await this.usersService.updateProfile(user.id, { password: hashedPassword });
+            await this.usersService.updateProfile(user.id, {
+                password: hashedPassword,
+                requiresPasswordChange: false
+            });
 
             this.resetTokens.delete(token);
             return { message: 'Password reset successful' };

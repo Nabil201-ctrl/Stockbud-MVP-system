@@ -8,6 +8,11 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        const urlParams = new URLSearchParams(window.location.search);
+        return !!(urlParams.get('token') || localStorage.getItem('stockbud_access_token'));
+    });
     const [loading, setLoading] = useState(true);
 
     const checkAuth = async () => {
@@ -20,6 +25,7 @@ export const AuthProvider = ({ children }) => {
 
             const response = await userAPI.getProfile();
             setUser(response.data);
+            setIsAuthenticated(true);
             await storage.set('stockbud_cached_user', response.data);
         } catch (error) {
             if (error.isOffline) {
@@ -27,16 +33,20 @@ export const AuthProvider = ({ children }) => {
                 const cachedUser = await storage.get('stockbud_cached_user');
                 if (cachedUser) {
                     setUser(cachedUser);
+                    setIsAuthenticated(true);
                 } else {
                     setUser(null);
+                    setIsAuthenticated(false);
                 }
             } else if (error.response && (error.response.status === 401 || error.response.status === 403)) {
                 // explicit unauthorization
                 setUser(null);
+                setIsAuthenticated(false);
                 await storage.delete('stockbud_cached_user');
             } else {
                 console.error('Failed to check auth', error);
                 setUser(null);
+                setIsAuthenticated(false);
             }
         } finally {
             setLoading(false);
@@ -44,6 +54,15 @@ export const AuthProvider = ({ children }) => {
     };
 
     useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('token');
+        if (urlToken) {
+            localStorage.setItem('stockbud_access_token', urlToken);
+            setIsAuthenticated(true);
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
         checkAuth();
 
         const handleOnline = () => {
@@ -54,6 +73,7 @@ export const AuthProvider = ({ children }) => {
         // Listen for internal unauthorized logout triggers from api.js
         const handleAuthLogout = async () => {
             setUser(null);
+            setIsAuthenticated(false);
             localStorage.removeItem('stockbud_access_token');
             await storage.delete('stockbud_cached_user');
         };
@@ -70,6 +90,7 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await authAPI.login(email, password);
             setUser(response.data.user);
+            setIsAuthenticated(true);
             await storage.set('stockbud_cached_user', response.data.user);
             return { success: true };
         } catch (error) {
@@ -84,6 +105,7 @@ export const AuthProvider = ({ children }) => {
             console.error("Logout failed", err);
         }
         setUser(null);
+        setIsAuthenticated(false);
         localStorage.removeItem('stockbud_access_token');
         await storage.delete('stockbud_cached_user');
     };
@@ -92,6 +114,7 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await authAPI.register(name, email, password);
             setUser(response.data.user);
+            setIsAuthenticated(true);
             await storage.set('stockbud_cached_user', response.data.user);
             return { success: true };
         } catch (error) {
@@ -129,14 +152,14 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateProfile,
         completeOnboarding,
-        isAuthenticated: !!user,
+        isAuthenticated,
         loading,
         refreshUser: checkAuth
     };
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 };

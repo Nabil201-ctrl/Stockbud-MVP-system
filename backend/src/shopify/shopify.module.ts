@@ -7,11 +7,12 @@ import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
 import { ReportsModule } from '../reports/reports.module';
 import { SocialStoresModule } from '../social-stores/social-stores.module';
+import { AuthModule } from '../auth/auth.module';
 import { ShopifySyncService } from './shopify-sync.service';
 
 @Global()
 @Module({
-    imports: [HttpModule, ConfigModule, UsersModule, forwardRef(() => ReportsModule), forwardRef(() => SocialStoresModule)],
+    imports: [HttpModule, ConfigModule, UsersModule, forwardRef(() => ReportsModule), forwardRef(() => SocialStoresModule), forwardRef(() => AuthModule)],
     controllers: [ShopifyController],
     providers: [ShopifyService, ShopifyGateway, ShopifySyncService],
     exports: [ShopifyService, ShopifySyncService],

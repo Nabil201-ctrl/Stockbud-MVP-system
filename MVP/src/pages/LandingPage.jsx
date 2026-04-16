@@ -14,7 +14,7 @@ const LandingPage = () => {
     const { isAuthenticated, loading: authLoading } = useAuth();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    if (!authLoading && isAuthenticated) {
+    if (isAuthenticated) {
         return <Navigate to="/dashboard" replace />;
     }
 

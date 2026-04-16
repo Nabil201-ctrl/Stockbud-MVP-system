@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, Navigate } from 'react-router-dom';
+import { useNavigate, Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import { Chrome, Mail, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
@@ -7,6 +7,7 @@ import Slogo from '../../assets/Slogo.png';
 
 const Login = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { loginLocal, isAuthenticated, loading: authLoading } = useAuth();
     const { showNotification } = useNotification();
     const [email, setEmail] = useState('');
@@ -15,7 +16,7 @@ const Login = () => {
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    if (!authLoading && isAuthenticated) {
+    if (isAuthenticated) {
         return <Navigate to="/dashboard" replace />;
     }
 
@@ -56,6 +57,12 @@ const Login = () => {
                         </h1>
                         <p className="text-slate-500 dark:text-slate-400">Streamline your business with AI</p>
                     </div>
+
+                    {location.state?.message && (
+                        <div className="mb-6 p-4 rounded-2xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-sm font-medium border border-green-100 dark:border-green-900/50 animate-in fade-in slide-in-from-top-4 duration-500">
+                            {location.state.message}
+                        </div>
+                    )}
 
                     <button
                         onClick={handleGoogleLogin}

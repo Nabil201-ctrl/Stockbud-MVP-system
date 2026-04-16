@@ -5,7 +5,7 @@ import {
     BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://api.stockbud.xyz';
 
 export function TokenUsage() {
     const [loading, setLoading] = useState(true);

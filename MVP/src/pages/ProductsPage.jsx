@@ -125,10 +125,17 @@ const ProductsPage = () => {
       }
 
       // Construct params object
-      const params = { first: ITEMS_PER_PAGE };
+      const params = {};
       if (cursor) {
-        if (direction === 'next') params.after = cursor;
-        else params.before = cursor;
+        if (direction === 'next') {
+          params.first = ITEMS_PER_PAGE;
+          params.after = cursor;
+        } else {
+          params.last = ITEMS_PER_PAGE;
+          params.before = cursor;
+        }
+      } else {
+        params.first = ITEMS_PER_PAGE;
       }
 
       const res = await storesAPI.getShopifyProducts(params);

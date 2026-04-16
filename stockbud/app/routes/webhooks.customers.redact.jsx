@@ -6,7 +6,7 @@ export const action = async ({ request }) => {
     console.log(`[GDPR] Received CUSTOMERS_REDACT for ${shop}`);
 
     try {
-        const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
+        const backendUrl = process.env.STOCKBUD_BACKEND_URL || "https://api.stockbud.xyz";
         await fetch(`${backendUrl}/shopify/webhook/redact-customer`, {
             method: "POST",
             headers: {

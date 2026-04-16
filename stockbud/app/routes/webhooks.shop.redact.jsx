@@ -16,7 +16,7 @@ export const action = async ({ request }) => {
 
     // 2. Notify Backend to redact store data
     try {
-        const backendUrl = process.env.STOCKBUD_BACKEND_URL || "http://localhost:3000";
+        const backendUrl = process.env.STOCKBUD_BACKEND_URL || "https://api.stockbud.xyz";
         await fetch(`${backendUrl}/shopify/webhook/redact-shop`, {
             method: "POST",
             headers: {

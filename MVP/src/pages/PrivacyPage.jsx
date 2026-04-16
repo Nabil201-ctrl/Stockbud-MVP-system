@@ -75,7 +75,7 @@ const PrivacyPage = () => {
                                 <h3 className="text-xl font-bold">Contact Us</h3>
                             </div>
                             <p className="mb-4">If you have any questions about this Privacy Policy, please contact our data protection team:</p>
-                            <p className="font-bold text-blue-600 dark:text-blue-400">privacy@stockbud.xyz</p>
+                            <p className="font-bold text-blue-600 dark:text-blue-400">stockbud.01@gmail.com</p>
                         </div>
                     </div>
                 </div>

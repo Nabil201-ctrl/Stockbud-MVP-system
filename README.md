@@ -19,7 +19,7 @@ Copy and paste this into the "Test instructions" field:
 
 - **Master Review Code:** `STOCK-BUD-REVIEW`
 - **Reviewer Email:** tester@stockbud.xyz
-- **Password:** StockbudTester2026!
+- **Password:** Stockbud2026!
 
 **Connection Steps:**
 1. Open the Stockbud app on your test store.

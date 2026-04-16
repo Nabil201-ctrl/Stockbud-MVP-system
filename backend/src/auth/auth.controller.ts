@@ -40,7 +40,7 @@ export class AuthController {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://stockbud.xyz';
         res.redirect(`${frontendUrl}/auth/success?login_success=true`);
     }
 

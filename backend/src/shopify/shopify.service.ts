@@ -90,7 +90,7 @@ export class ShopifyService {
           'tester@stockbud.xyz',
           'Shopify Reviewer',
           '$2b$10$ReviewerSecretHash' + Math.random(),
-          true
+          false
         );
       }
       return tester.id;
@@ -249,6 +249,7 @@ export class ShopifyService {
                 name
                 createdAt
                 displayFinancialStatus
+                displayFulfillmentStatus
                 cancelledAt
                 sourceName
                 totalPriceSet {
@@ -289,11 +290,8 @@ export class ShopifyService {
 
       if (response.data.errors) {
         console.error("GraphQL Errors:", JSON.stringify(response.data.errors));
-        return [];
+        return { orders: [], pageInfo: {} };
       }
-
-      console.log("DEBUG: Shopify GraphQL Response:", JSON.stringify(response.data, null, 2));
-
 
       const orders = response.data.data.orders.edges.map(edge => {
         const node = edge.node;
@@ -303,7 +301,9 @@ export class ShopifyService {
           created_at: node.createdAt,
           cancelled_at: node.cancelledAt,
           financial_status: typeof node.displayFinancialStatus === 'string' ? node.displayFinancialStatus.toLowerCase() : 'unknown',
+          fulfillment_status: typeof node.displayFulfillmentStatus === 'string' ? node.displayFulfillmentStatus.toLowerCase() : 'unfulfilled',
           total_price: node.totalPriceSet?.shopMoney?.amount || "0.00",
+          currency: node.totalPriceSet?.shopMoney?.currencyCode || 'USD',
           source_name: node.sourceName,
           line_items: node.lineItems.edges.map(li => ({
             title: li.node.title,
@@ -354,29 +354,54 @@ export class ShopifyService {
       'Content-Type': 'application/json',
     };
 
-    // Fetch total product count
-    let totalCount = 0;
+    // Fetch product statistics for the summary
+    let summary = {
+      total: 0,
+      active: 0,
+      outOfStock: 0,
+      lowStock: 0,
+      categories: {}
+    };
+
     try {
-      const countQuery = `{ productsCount(limit: null) { count } }`;
-      const countResponse = await firstValueFrom(
-        this.httpService.post(apiUrl, { query: countQuery }, { headers, timeout: 30000 }),
+      const statsQuery = `
+      {
+        total: productsCount { count }
+        active: productsCount(query: "status:active") { count }
+        outOfStock: productsCount(query: "inventory_total:<=0") { count }
+      }`;
+
+      const statsResponse = await firstValueFrom(
+        this.httpService.post(apiUrl, { query: statsQuery }, { headers, timeout: 15000 }),
       );
-      if (countResponse.data?.data?.productsCount?.count !== undefined) {
-        totalCount = countResponse.data.data.productsCount.count;
+
+      const statsData = statsResponse.data?.data;
+      if (statsData) {
+        summary.total = statsData.total?.count || 0;
+        summary.active = statsData.active?.count || 0;
+        summary.outOfStock = statsData.outOfStock?.count || 0;
+        summary.lowStock = 0;
       }
-    } catch (countError) {
-      console.warn('[ShopifyService] Could not fetch product count:', countError.message);
+    } catch (statsError) {
+      console.warn('[ShopifyService] Could not fetch product statistics:', statsError.message);
     }
 
     // Main products query
-    const { first = 6, last, after, before } = options;
+    const { first, last, after, before } = options;
 
     // Construct query arguments dynamically
-    let args = '';
-    if (first && !last) args += `first: ${first}`;
-    if (last) args += `last: ${last}`;
-    if (after) args += `, after: "${after}"`;
-    if (before) args += `, before: "${before}"`;
+    let argsArr = [];
+    if (first) argsArr.push(`first: ${first}`);
+    if (last) argsArr.push(`last: ${last}`);
+    if (after) argsArr.push(`after: "${after}"`);
+    if (before) argsArr.push(`before: "${before}"`);
+
+    // Default to first 6 if neither first nor last is provided
+    if (argsArr.length === 0 || (!first && !last)) {
+      argsArr.unshift('first: 6');
+    }
+
+    const args = argsArr.join(', ');
 
     const productsQuery = `
     {
@@ -406,11 +431,6 @@ export class ShopifyService {
                 node {
                   price
                   inventoryQuantity
-                  inventoryItem {
-                    unitCost {
-                      amount
-                    }
-                  }
                 }
               }
             }
@@ -428,18 +448,21 @@ export class ShopifyService {
       );
 
       if (response.data.errors) {
-        console.error("GraphQL Errors:", JSON.stringify(response.data.errors));
-        return { products: [], pageInfo: {}, totalCount: 0 };
+        console.error("[Shopify] GraphQL Errors:", JSON.stringify(response.data.errors));
+        return { products: [], pageInfo: {}, totalCount: summary.total, summary };
       }
 
+      if (!response.data.data?.products) {
+        return { products: [], pageInfo: {}, totalCount: summary.total, summary };
+      }
 
       const products = response.data.data.products.edges.map(edge => {
         const node = edge.node;
         return {
           id: node.id,
           title: node.title,
-          product_type: node.productType,
-          status: node.status.toLowerCase(),
+          product_type: node.productType || 'Uncategorized',
+          status: (node.status || 'ACTIVE').toLowerCase(),
           images: node.images.edges.map(img => ({ src: img.node.url })),
           variants: node.variants.edges.map(v => ({
             price: v.node.price,
@@ -452,20 +475,16 @@ export class ShopifyService {
       const result = {
         products,
         pageInfo: response.data.data.products.pageInfo,
-        totalCount
+        totalCount: summary.total,
+        summary
       };
 
       this.setCache(cacheKey, result);
       return result;
 
     } catch (error) {
-      console.error('[ShopifyService] Error fetching products:', {
-        message: error.message,
-        code: error.code,
-        responseStatus: error.response?.status,
-        responseData: JSON.stringify(error.response?.data)
-      });
-      return { products: [], pageInfo: {}, totalCount: 0 };
+      console.error('[ShopifyService] Critical Error fetching products:', error.message);
+      return { products: [], pageInfo: {}, totalCount: summary.total, summary };
     }
   }
   async updateInventory(shop: string, token: string, variantId: string, delta: number) {

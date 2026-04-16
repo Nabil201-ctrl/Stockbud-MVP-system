@@ -25,7 +25,7 @@ This system provides full observability across all StockBud microservices using 
 
 3.  **Access Metrics**:
     - **Prometheus UI**: [http://localhost:9090](http://localhost:9090)
-    - **Backend Metrics**: [http://localhost:3000/metrics](http://localhost:3000/metrics)
+    - **Backend Metrics**: [https://api.stockbud.xyz/metrics](https://api.stockbud.xyz/metrics)
     - **Image Metrics**: [http://localhost:3002/metrics](http://localhost:3002/metrics)
     - **Order Processor Metrics**: [http://localhost:3001/metrics](http://localhost:3001/metrics)
     - **Orders Microservice Metrics**: [http://localhost:3003/metrics](http://localhost:3003/metrics)

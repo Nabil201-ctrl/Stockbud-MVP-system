@@ -140,7 +140,7 @@ export class EmailService {
   }
 
   async sendAccountVerificationEmail(userEmail: string, userName: string, token: string): Promise<boolean> {
-    const verificationLink = `${this.configService.get<string>('FRONTEND_URL') || 'https://stockbud.xyz'}/auth/verify?token=${token}`;
+    const verificationLink = `${this.configService.get<string>('FRONTEND_URL') || 'http://localhost'}/auth/verify?token=${token}`;
     return this.sendEmail({
       to: [{ email: userEmail, name: userName }],
       subject: 'Verify Your StockBud Account',
@@ -188,7 +188,7 @@ export class EmailService {
             <p style="margin:0;color:#1e40af;font-size:14px;font-weight:600;"> Your report is available in the dashboard</p>
             <p style="margin:4px 0 0;color:#3b82f6;font-size:13px;">View detailed metrics, trend analysis, and strategic recommendations.</p>
           </div>
-          <p style="color:#6b7280;font-size:14px;">You can also view this report anytime in your <a href="https://stockbud.xyz/reports" style="color:#2563eb;">StockBud Dashboard</a>.</p>
+          <p style="color:#6b7280;font-size:14px;">You can also view this report anytime in your <a href="http://localhost/reports" style="color:#2563eb;">StockBud Dashboard</a>.</p>
         </td></tr>
         <!-- Footer -->
         <tr><td style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #e5e7eb;">
@@ -347,7 +347,7 @@ export class EmailService {
           <p style="color:#6b7280;font-size:15px;line-height:1.6;">We're thrilled to have you on board. StockBud is here to help you manage your inventory smarter and boost your store's performance.</p>
           <p style="color:#6b7280;font-size:15px;line-height:1.6;">You can now connect your Shopify store if you haven't already, and we'll start generating insights for you right away.</p>
           <div style="text-align:center;margin:32px 0;">
-            <a href="https://stockbud.xyz/dashboard" style="background:#059669;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">Go to Dashboard</a>
+            <a href="http://localhost/dashboard" style="background:#059669;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">Go to Dashboard</a>
           </div>
         </td></tr>
         <tr><td style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #e5e7eb;">
@@ -406,7 +406,7 @@ export class EmailService {
           <p style="color:#374151;font-size:16px;line-height:1.6;">Hi <strong>${userName}</strong>,</p>
           <p style="color:#6b7280;font-size:15px;line-height:1.6;">${message}</p>
           <div style="text-align:center;margin:32px 0;">
-            <a href="https://stockbud.xyz/dashboard" style="background:#2563eb;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">Open StockBud Dashboard</a>
+            <a href="http://localhost/dashboard" style="background:#2563eb;color:#ffffff;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block;">Open StockBud Dashboard</a>
           </div>
           <p style="color:#9ca3af;font-size:13px;text-align:center;">Working hard to make your business smarter.</p>
         </td></tr>

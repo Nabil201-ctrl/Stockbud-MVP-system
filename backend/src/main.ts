@@ -36,7 +36,7 @@ async function bootstrap() {
                 styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
                 fontSrc: ["'self'", "https://fonts.gstatic.com"],
                 imgSrc: ["'self'", "data:", "https:", "http:"],
-                connectSrc: ["'self'", "https://api.stockbud.xyz", "https://stockbud.xyz", "http://localhost:3000"],
+                connectSrc: ["'self'", "https://api.stockbud.xyz", "https://stockbud.xyz"],
                 upgradeInsecureRequests: [],
             },
         },
@@ -75,11 +75,10 @@ async function bootstrap() {
     app.enableCors({
         origin: (origin, callback) => {
             const allowedPatterns = [
-                /^http:\/\/localhost:\d+$/,
+                /^https:\/\/stockbud\.xyz$/,
+                /^https:\/\/api\.stockbud\.xyz$/,
                 /\.trycloudflare\.com$/,
                 /\.ngrok-free\.app$/,
-                /^https:\/\/www\.stockbud\.xyz$/,
-                /^https:\/\/stockbud\.xyz$/,
                 /^http:\/\/62\.171\.155\.58(:\d+)?$/,
                 /\.vercel\.app$/
             ];
@@ -107,6 +106,6 @@ async function bootstrap() {
     );
 
     await app.listen(3000, '0.0.0.0');
-    console.log('Backend is running on http://localhost:3000');
+    console.log('Backend is running on https://api.stockbud.xyz');
 }
 bootstrap();

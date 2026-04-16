@@ -6,16 +6,16 @@ This document outlines the steps for Shopify reviewers to test the integration b
 
 To test the full functionality, please use the following pre-configured test account on our external platform.
 
-- **Platform URL:** [https://app.stockbud.xyz](https://app.stockbud.xyz)
+- **Platform URL:** [https://stockbud.xyz](https://stockbud.xyz)
 - **Reviewer Pairing Code:** `STOCK-BUD-REVIEW`
 - **Reviewer Email:** `tester@stockbud.xyz`
-- **Password:** `StockbudTester2026!`
+- **Password:** `Stockbud2026!`
 
 ## 2. Step-by-Step Connection Instructions (Manual Pairing)
 
 We recommend using the **Manual Pairing** method to link the Shopify store to the test account provided above.
 
-1. **Access the Platform:** Log in to the [Stockbud Intelligence Platform](https://app.stockbud.xyz) using the credentials provided.
+1. **Access the Platform:** Log in to the [Stockbud Intelligence Platform](https://stockbud.xyz) using the credentials provided.
 2. **Generate Code:** Navigate to **Settings** (Sidebar) > **Stores** tab.
 3. **Pairing Code:** You can use the master review code: `STOCK-BUD-REVIEW`. (Alternatively, click "Pair Code" in the dashboard to generate a temporary one).
 4. **Open Shopify App:** In your Shopify Development Store, open the **Stockbud** app.

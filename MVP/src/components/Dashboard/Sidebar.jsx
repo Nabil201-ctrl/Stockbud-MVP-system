@@ -75,8 +75,8 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
           </div>
         </div>
 
-        <nav className="flex-1 p-4 overflow-y-auto flex flex-col">
-          <div className="mb-6 flex-1">
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <div className="mb-6">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -96,22 +96,12 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
                 <span className="font-medium">{item.label}</span>
               </NavLink>
             ))}
-
-            <button
-              onClick={logout}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-2 transition-colors ${isDarkMode
-                ? 'text-red-400 hover:bg-red-900/20'
-                : 'text-red-600 hover:bg-red-50'
-                }`}
-            >
-              <LogOut size={18} />
-              <span className="font-medium">{t('nav.logout')}</span>
-            </button>
           </div>
+        </nav>
 
-          { }
+        <div className={`p-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           {showFeedbackWidget && (
-            <div className="bg-blue-600 rounded-lg p-3 text-white">
+            <div className="bg-blue-600 rounded-lg p-3 text-white mb-4">
               <h4 className="text-xs font-medium mb-2 opacity-90">Help us improve</h4>
               <button
                 onClick={() => setIsFeedbackOpen(true)}
@@ -121,7 +111,18 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
               </button>
             </div>
           )}
-        </nav>
+
+          <button
+            onClick={logout}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors font-semibold ${isDarkMode
+              ? 'text-red-400 hover:bg-red-900/20'
+              : 'text-red-600 hover:bg-red-50'
+              }`}
+          >
+            <LogOut size={20} />
+            <span>{t('nav.logout')}</span>
+          </button>
+        </div>
       </div>
 
       <FeedbackModal
