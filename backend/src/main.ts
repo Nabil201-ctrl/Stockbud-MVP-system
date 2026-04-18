@@ -36,7 +36,7 @@ async function bootstrap() {
                 styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
                 fontSrc: ["'self'", "https://fonts.gstatic.com"],
                 imgSrc: ["'self'", "data:", "https:", "http:"],
-                connectSrc: ["'self'", "https://api.stockbud.xyz", "https://stockbud.xyz"],
+                connectSrc: ["'self'", "https://api.stockbud.xyz", "https://stockbud.xyz", "https://www.stockbud.xyz", "https://shopify.stockbud.xyz"],
                 upgradeInsecureRequests: [],
             },
         },
@@ -76,6 +76,8 @@ async function bootstrap() {
         origin: (origin, callback) => {
             const allowedPatterns = [
                 /^https:\/\/stockbud\.xyz$/,
+                /^https:\/\/www\.stockbud\.xyz$/,
+                /^https:\/\/shopify\.stockbud\.xyz$/,
                 /^https:\/\/api\.stockbud\.xyz$/,
                 /\.trycloudflare\.com$/,
                 /\.ngrok-free\.app$/,
