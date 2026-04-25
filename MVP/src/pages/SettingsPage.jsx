@@ -311,8 +311,8 @@ const SettingsPage = () => {
                         <AlertCircle size={24} />
                     </div>
                     <div>
-                        <h3 className="text-base font-bold text-amber-900 dark:text-amber-100 italic">Password Update Required</h3>
-                        <p className="text-sm text-amber-800 dark:text-amber-300">Your account was created via Shopify. For security, please set a password to access the Stockbud platform directly.</p>
+                        <h3 className="text-base font-bold text-amber-900 dark:text-amber-100 italic">Account Setup Required</h3>
+                        <p className="text-sm text-amber-800 dark:text-amber-300">Your account was created via Shopify. For security, please set a <strong>username</strong> and <strong>password</strong> to access the Stockbud platform directly.</p>
                     </div>
                 </div>
             )}
@@ -347,7 +347,7 @@ const SettingsPage = () => {
                     <form onSubmit={handleProfileUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-bold mb-2 dark:text-gray-300 tracking-tight">{t('settings.fullName')}</label>
+                                <label className="block text-sm font-bold mb-2 dark:text-gray-300 tracking-tight">Username / Full Name</label>
                                 <input type="text" value={profileData.name} onChange={e => setProfileData({ ...profileData, name: e.target.value })} className="w-full px-4 py-3 rounded-xl border dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none" />
                             </div>
                             <div>

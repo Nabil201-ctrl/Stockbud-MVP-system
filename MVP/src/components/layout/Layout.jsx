@@ -102,7 +102,7 @@ const Layout = ({ children }) => {
         if (user && !user.isOnboardingComplete) {
           try {
             await completeOnboarding();
-            navigate('/settings?tab=integrations');
+            // User stays on the dashboard after completing the tour
           } catch (error) {
             console.error('Failed to complete onboarding:', error);
           }

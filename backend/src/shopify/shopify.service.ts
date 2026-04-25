@@ -202,7 +202,7 @@ export class ShopifyService {
       const passwordHash = '$2b$10$NotARealPasswordHashForShopConnect' + Math.random();
       const verificationToken = Math.random().toString(36).substr(2, 15);
 
-      const newUser = await this.usersService.createUser(email, name, passwordHash, true, verificationToken);
+      const newUser = await this.usersService.createUser(email, name, passwordHash, true, verificationToken, true);
       await this.usersService.updateShopifyCredentials(newUser.id, dto.shop, dto.accessToken);
 
       // Send Welcome & Verification Email via Brevo

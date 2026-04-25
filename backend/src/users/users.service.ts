@@ -55,7 +55,7 @@ export class UsersService implements OnModuleInit {
         return user;
     }
 
-    async createUser(email: string, name: string, passwordHash: string, requiresPasswordChange: boolean = false, verificationToken?: string): Promise<User> {
+    async createUser(email: string, name: string, passwordHash: string, requiresPasswordChange: boolean = false, verificationToken?: string, isShopifyUser: boolean = false): Promise<User> {
         const existing = await this.findByEmail(email);
         if (existing) throw new ConflictException('User already exists');
 
@@ -68,7 +68,8 @@ export class UsersService implements OnModuleInit {
             lastTokenReset: String(Date.now()),
             requiresPasswordChange,
             verificationToken,
-            isVerified: false
+            isVerified: false,
+            isShopifyUser
         });
         return user;
     }
@@ -262,6 +263,7 @@ export class UsersService implements OnModuleInit {
         if (data.requiresPasswordChange !== undefined) payload.requiresPasswordChange = data.requiresPasswordChange;
         if ((data as any).isVerified !== undefined) payload.isVerified = (data as any).isVerified;
         if ((data as any).verificationToken !== undefined) payload.verificationToken = (data as any).verificationToken;
+        if ((data as any).isShopifyUser !== undefined) payload.isShopifyUser = (data as any).isShopifyUser;
 
         return await this.db.updateUser(userId, payload);
     }

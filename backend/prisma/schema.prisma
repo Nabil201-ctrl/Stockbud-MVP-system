@@ -28,6 +28,7 @@ model User {
   requiresPasswordChange Boolean        @default(false)
   isVerified            Boolean        @default(false)
   verificationToken     String?
+  isShopifyUser         Boolean        @default(false)
 
 
   hasFreeReports        Boolean        @default(false)

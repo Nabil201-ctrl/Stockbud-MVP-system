@@ -53,7 +53,6 @@ const LinkShop = () => {
         setConnecting(platformId);
 
         setTimeout(async () => {
-            await completeOnboarding();
             setSuccess(true);
             setTimeout(() => {
                 navigate('/dashboard');
@@ -62,8 +61,6 @@ const LinkShop = () => {
     };
 
     const handleSkipOrComplete = async () => {
-
-        await completeOnboarding();
         navigate('/dashboard');
     };
 

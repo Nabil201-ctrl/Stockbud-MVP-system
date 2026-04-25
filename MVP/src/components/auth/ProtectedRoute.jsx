@@ -24,19 +24,14 @@ const ProtectedRoute = ({ children }) => {
 
 
 
-    /* 
-    if (user && !user.isOnboardingComplete && !location.pathname.startsWith('/onboarding') && location.pathname !== '/get-started') {
-        return <Navigate to="/get-started" replace />;
+    if (user && !user.isOnboardingComplete && !location.pathname.startsWith('/onboarding') && location.pathname !== '/get-started' && location.pathname !== '/dashboard') {
+        return <Navigate to={user.isShopifyUser ? "/dashboard" : "/get-started"} replace />;
     }
-    */
 
-
-    /* 
     // Check for forced password change
     if (user && user.requiresPasswordChange && location.pathname !== '/settings') {
         return <Navigate to="/settings" state={{ activeTab: 'security', forcedPasswordChange: true }} replace />;
     }
-    */
 
     if (user && user.isOnboardingComplete && (location.pathname.startsWith('/onboarding') || location.pathname === '/get-started')) {
         return <Navigate to="/dashboard" replace />;

@@ -179,7 +179,10 @@ const UsersPage = () => {
                             {user.avatar}
                           </div>
                           <div>
-                            <div className="font-medium">{user.name}</div>
+                            <div className="font-medium flex items-center gap-2">
+                              {user.name}
+                              {user.isShopifyUser && <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-black tracking-tighter ring-1 ring-indigo-500/20">SHOPIFY</span>}
+                            </div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
                           </div>
                         </div>
