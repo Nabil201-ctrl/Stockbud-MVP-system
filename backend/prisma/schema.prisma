@@ -75,19 +75,28 @@ model ShopifyStore {
 model SocialStore {
   id           String      @id @default(uuid())
   name         String
-  type         String      @default("whatsapp")
+  type         String      @default("whatsapp") // "whatsapp", "instagram", "meta"
   contact      String
   description  String?
   visits       Int         @default(0)
   inquiries    Int         @default(0)
   dailyStats   Json        @default("[]")
   productsJson Json        @default("[]") @map("products") // Keep old field for migration if needed
+  
+  // Meta integration fields
+  metaBusinessId String?
+  metaPageId     String?
+  metaCatalogId  String?
+  accessToken    String?
+  refreshToken   String?
+
   createdAt    DateTime    @default(now())
 
   userId       String
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   products     Product[]
 }
+
 
 model Product {
   id              String         @id @default(uuid())

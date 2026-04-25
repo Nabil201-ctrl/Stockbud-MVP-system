@@ -153,8 +153,14 @@ export const storesAPI = {
         createProduct: (storeId, data) => api.post(`/social-stores/${storeId}/products`, data),
         updateProduct: (storeId, productId, data) => api.patch(`/social-stores/${storeId}/products/${productId}`, data),
         deleteProduct: (storeId, productId) => api.delete(`/social-stores/${storeId}/products/${productId}`),
+    },
+    meta: {
+        getBusinesses: (token) => api.get('/meta/businesses', { params: { token } }),
+        getCatalogs: (businessId, token) => api.get('/meta/catalogs', { params: { businessId, token } }),
+        connect: (data) => api.post('/meta/connect', data),
     }
 };
+
 
 export const dashboardAPI = {
     getStats: (range = 'month', filter = 'all', sortBy = 'newest') =>

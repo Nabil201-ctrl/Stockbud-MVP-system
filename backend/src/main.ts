@@ -36,7 +36,8 @@ async function bootstrap() {
                 styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
                 fontSrc: ["'self'", "https://fonts.gstatic.com"],
                 imgSrc: ["'self'", "data:", "https:", "http:"],
-                connectSrc: ["'self'", "https://api.stockbud.xyz", "https://stockbud.xyz", "https://www.stockbud.xyz", "https://shopify.stockbud.xyz"],
+                connectSrc: ["'self'", "https://api.stockbud.xyz", "https://stockbud.xyz", "https://www.stockbud.xyz", "https://shopify.stockbud.xyz", "http://localhost:3000", "http://localhost:5173"],
+
                 upgradeInsecureRequests: [],
             },
         },
@@ -82,8 +83,10 @@ async function bootstrap() {
                 /\.trycloudflare\.com$/,
                 /\.ngrok-free\.app$/,
                 /^http:\/\/62\.171\.155\.58(:\d+)?$/,
-                /\.vercel\.app$/
+                /\.vercel\.app$/,
+                /^http:\/\/localhost(:\d+)?$/
             ];
+
 
             if (!origin || allowedPatterns.some(pattern => pattern.test(origin))) {
                 callback(null, true);

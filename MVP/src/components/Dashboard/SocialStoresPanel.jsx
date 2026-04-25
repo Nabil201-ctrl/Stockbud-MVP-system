@@ -12,8 +12,11 @@ import {
     ExternalLink,
     Search,
     Filter,
-    Cloud
+    Cloud,
+    Facebook
 } from 'lucide-react';
+
+
 
 import { useAuth } from '../../context/AuthContext';
 import { storesAPI } from '../../services/api';
@@ -33,6 +36,14 @@ const SocialStoresPanel = ({ isDarkMode, user: userFromProps }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [storeStats, setStoreStats] = useState(null);
     const [statsLoading, setStatsLoading] = useState(false);
+    
+    // Meta connection state
+    const [metaToken, setMetaToken] = useState(null);
+    const [businesses, setBusinesses] = useState([]);
+    const [catalogs, setCatalogs] = useState([]);
+    const [metaLoading, setMetaLoading] = useState(false);
+    const [metaSelection, setMetaSelection] = useState({ businessId: '', catalogId: '', name: '' });
+
 
     const fetchStores = async () => {
         try {
@@ -77,7 +88,65 @@ const SocialStoresPanel = ({ isDarkMode, user: userFromProps }) => {
 
     useEffect(() => {
         fetchStores();
+        
+        // Check for Meta token in URL
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('meta_token');
+        if (token) {
+            setMetaToken(token);
+            fetchMetaBusinesses(token);
+            // Clear token from URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }, []);
+
+    const fetchMetaBusinesses = async (token) => {
+        setMetaLoading(true);
+        try {
+            const response = await storesAPI.meta.getBusinesses(token);
+            setBusinesses(response.data);
+        } catch (error) {
+            console.error("Failed to fetch Meta businesses", error);
+        } finally {
+            setMetaLoading(false);
+        }
+    };
+
+    const fetchMetaCatalogs = async (businessId) => {
+        setMetaLoading(true);
+        try {
+            const response = await storesAPI.meta.getCatalogs(businessId, metaToken);
+            setCatalogs(response.data);
+        } catch (error) {
+            console.error("Failed to fetch Meta catalogs", error);
+        } finally {
+            setMetaLoading(false);
+        }
+    };
+
+    const handleConnectMeta = async (e) => {
+        e.preventDefault();
+        setAddLoading(true);
+        try {
+            await storesAPI.meta.connect({
+                name: metaSelection.name || 'Meta Catalog',
+                businessId: metaSelection.businessId,
+                catalogId: metaSelection.catalogId,
+                accessToken: metaToken
+            });
+            await fetchStores();
+            await refreshUser();
+            setMetaToken(null);
+            setMetaSelection({ businessId: '', catalogId: '', name: '' });
+            alert("Meta Store connected and synced successfully!");
+        } catch (error) {
+            alert("Failed to connect Meta Store");
+        } finally {
+            setAddLoading(false);
+        }
+    };
+
+
 
     useEffect(() => {
         if (activeStoreId) {
@@ -134,15 +203,89 @@ const SocialStoresPanel = ({ isDarkMode, user: userFromProps }) => {
                         Manage products and inventory across Instagram and WhatsApp channels.
                     </p>
                 </div>
-                {!isAdding && (
-                    <button
-                        onClick={() => setIsAdding(true)}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20"
-                    >
-                        Connect Social Channel
-                    </button>
-                )}
-            </div>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <button
+                            onClick={() => setIsAdding(true)}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20"
+                        >
+                            Connect Social Channel
+                        </button>
+                        <button
+                            onClick={() => {
+                                const clientId = import.meta.env.VITE_META_APP_ID;
+                                // Use dynamic API URL from environment variables
+                                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+                                const redirectUri = `${apiUrl}/meta/auth/callback`;
+                                const scope = 'business_management,catalog_management,instagram_basic,instagram_manage_insights';
+
+                                window.location.href = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code`;
+                            }}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#1877F2] hover:bg-[#166fe5] text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20"
+                        >
+                            <Facebook size={16} />
+                            Connect Meta Store
+                        </button>
+                    </div>
+                </div>
+
+
+            {metaToken && (
+                <div className={`p-6 rounded-xl border ${isDarkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-blue-50 border-blue-200'} animate-in fade-in slide-in-from-top-4 duration-500`}>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-[#1877F2] rounded-lg text-white">
+                            <Facebook size={20} />
+                        </div>
+                        <div>
+                            <h4 className="font-bold dark:text-white">Configure Meta Connection</h4>
+                            <p className="text-xs text-gray-500">Select the business and catalog you want to sync.</p>
+                        </div>
+                    </div>
+                    
+                    <form onSubmit={handleConnectMeta} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Select Business</label>
+                                <select
+                                    required
+                                    value={metaSelection.businessId}
+                                    onChange={e => {
+                                        setMetaSelection({ ...metaSelection, businessId: e.target.value });
+                                        fetchMetaCatalogs(e.target.value);
+                                    }}
+                                    className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none dark:text-white"
+                                >
+                                    <option value="">Select a business...</option>
+                                    {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Select Catalog</label>
+                                <select
+                                    required
+                                    disabled={!metaSelection.businessId || metaLoading}
+                                    value={metaSelection.catalogId}
+                                    onChange={e => {
+                                        const cat = catalogs.find(c => c.id === e.target.value);
+                                        setMetaSelection({ ...metaSelection, catalogId: e.target.value, name: cat?.name || '' });
+                                    }}
+                                    className="w-full px-4 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none dark:text-white disabled:opacity-50"
+                                >
+                                    <option value="">{metaLoading ? 'Loading catalogs...' : 'Select a catalog...'}</option>
+                                    {catalogs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button type="button" onClick={() => setMetaToken(null)} className="px-4 py-2 text-sm text-gray-500">Cancel</button>
+                            <button type="submit" disabled={addLoading || !metaSelection.catalogId} className="bg-[#1877F2] text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95 transition-all">
+                                {addLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                                Finalize Connection
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
 
             {isAdding && (
                 <div className={`p-6 rounded-xl border ${isDarkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'} transition-all`}>
