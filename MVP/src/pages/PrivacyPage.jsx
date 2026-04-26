@@ -44,7 +44,9 @@ const PrivacyPage = () => {
                             <ul className="list-disc pl-6 space-y-2">
                                 <li><strong>Account Information:</strong> Name, email address, password.</li>
                                 <li><strong>Shopify Data:</strong> Store URL, access tokens, product catalog, order history, and customer metadata necessary for inventory synchronization.</li>
+                                <li><strong>Meta (Facebook/Instagram) Data:</strong> If you connect a Meta store, we collect your Meta Business ID, Catalog ID, and temporary access tokens to sync your product catalog and inventory.</li>
                                 <li><strong>Usage Data:</strong> Information about how you use the platform, including AI chat queries and report generation history.</li>
+
                             </ul>
                         </section>
 
@@ -55,9 +57,10 @@ const PrivacyPage = () => {
                             </div>
                             <p>Your data is used to provide and improve the Stockbud experience, specifically:</p>
                             <ul className="list-disc pl-6 space-y-2">
-                                <li><strong>Inventory Sync:</strong> Synchronizing stock levels between Shopify and Social Stores.</li>
+                                <li><strong>Inventory Sync:</strong> Synchronizing stock levels between Shopify and Social Stores (Meta, WhatsApp, Instagram).</li>
                                 <li><strong>AI Insights:</strong> Analyzing your sales data to provide stockout predictions and revenue trends.</li>
                                 <li><strong>Communication:</strong> Sending system alerts, security updates, and requested reports.</li>
+
                             </ul>
                         </section>
 

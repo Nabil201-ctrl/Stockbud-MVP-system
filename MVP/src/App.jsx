@@ -31,7 +31,10 @@ import AuthSuccess from './pages/AuthSuccess';
 
 import LandingPage from './pages/LandingPage';
 import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
+import DataDeletionPage from './pages/DataDeletionPage';
 import Verify from './pages/auth/Verify';
+
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 
@@ -67,6 +70,9 @@ function App() {
             { }
             <Route path="/" element={<LandingPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/delete-data" element={<DataDeletionPage />} />
+
 
 
             { }
