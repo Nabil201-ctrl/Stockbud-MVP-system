@@ -158,6 +158,12 @@ export const storesAPI = {
         getBusinesses: (token) => api.get('/meta/businesses', { params: { token } }),
         getCatalogs: (businessId, token) => api.get('/meta/catalogs', { params: { businessId, token } }),
         connect: (data) => api.post('/meta/connect', data),
+    },
+    scraper: {
+        getSites: () => api.get('/scraper/sites'),
+        createSite: (data) => api.post('/scraper/sites', data),
+        triggerScrape: (id) => api.post(`/scraper/sites/${id}/scrape`),
+        deleteSite: (id) => api.delete(`/scraper/sites/${id}`),
     }
 };
 

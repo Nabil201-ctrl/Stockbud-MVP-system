@@ -20,9 +20,18 @@ const LinkShop = () => {
 
     const platforms = [
         { id: 'shopify', name: 'Shopify', icon: ShoppingBag, color: 'bg-green-100 text-green-600 dark:bg-green-900/30' },
+        { id: 'standalone', name: 'Standalone Website', icon: Globe, color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30' },
         { id: 'instagram', name: 'Instagram', icon: Globe, color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30' },
         { id: 'whatsapp', name: 'Whatsapp', icon: Code, color: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300' },
     ];
+
+    const [standaloneData, setStandaloneData] = useState({
+        url: '',
+        name: '',
+        platform: 'generic',
+        username: '',
+        password: ''
+    });
 
     const handleGeneratePairingCode = async () => {
         setCodeLoading(true);
@@ -41,10 +50,10 @@ const LinkShop = () => {
     const handlePlatformSelect = (platformId) => {
         if (platformId === 'shopify') {
             setSelectedPlatform('shopify');
-
             handleGeneratePairingCode();
+        } else if (platformId === 'standalone') {
+            setSelectedPlatform('standalone');
         } else {
-
             handleConnect(platformId);
         }
     };
@@ -58,6 +67,22 @@ const LinkShop = () => {
                 navigate('/dashboard');
             }, 1000);
         }, 1000);
+    };
+
+    const handleStandaloneConnect = async (e) => {
+        e.preventDefault();
+        setConnecting('standalone');
+        try {
+            await storesAPI.scraper.createSite(standaloneData);
+            setSuccess(true);
+            setTimeout(() => {
+                navigate('/dashboard');
+            }, 1000);
+        } catch (error) {
+            console.error('Failed to connect standalone site:', error);
+            setCodeError('Failed to connect site. Please check the URL and try again.');
+            setConnecting(null);
+        }
     };
 
     const handleSkipOrComplete = async () => {
@@ -98,6 +123,92 @@ const LinkShop = () => {
             <div className="mt-8 text-sm text-gray-400">
                 Don't see your platform? <button className="text-blue-600 hover:underline">Contact Support</button>
             </div>
+        </div>
+    );
+
+    const renderStandaloneForm = () => (
+        <div className="flex flex-col items-center animate-in fade-in slide-in-from-right-4 duration-500 w-full">
+            <div className="w-full flex items-center justify-between mb-6">
+                <button
+                    onClick={() => setSelectedPlatform(null)}
+                    className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                    <ArrowLeft className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                </button>
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600">
+                        <Globe className="w-4 h-4" />
+                    </div>
+                    <span className="font-semibold dark:text-white">Connect Standalone Site</span>
+                </div>
+                <div className="w-9"></div>
+            </div>
+
+            <form onSubmit={handleStandaloneConnect} className="w-full space-y-4">
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Store Name</label>
+                    <input
+                        type="text"
+                        required
+                        placeholder="My Awesome Store"
+                        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                        value={standaloneData.name}
+                        onChange={(e) => setStandaloneData({ ...standaloneData, name: e.target.value })}
+                    />
+                </div>
+
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Website URL</label>
+                    <div className="relative">
+                        <LinkIcon className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                        <input
+                            type="url"
+                            required
+                            placeholder="https://mystore.com"
+                            className="w-full p-3 pl-10 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                            value={standaloneData.url}
+                            onChange={(e) => setStandaloneData({ ...standaloneData, url: e.target.value })}
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1">Platform</label>
+                    <select
+                        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all outline-none appearance-none"
+                        value={standaloneData.platform}
+                        onChange={(e) => setStandaloneData({ ...standaloneData, platform: e.target.value })}
+                    >
+                        <option value="generic">Auto-Detect (AI)</option>
+                        <option value="woocommerce">WooCommerce</option>
+                        <option value="shopify">Shopify (Public Scrape)</option>
+                        <option value="magento">Magento</option>
+                        <option value="prestashop">PrestaShop</option>
+                    </select>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={connecting === 'standalone'}
+                    className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all duration-200 shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                >
+                    {connecting === 'standalone' ? (
+                        <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Connecting...
+                        </>
+                    ) : (
+                        <>
+                            Connect Site
+                            <ArrowRight className="w-5 h-5" />
+                        </>
+                    )}
+                </button>
+
+                <p className="text-xs text-gray-400 text-center px-4">
+                    By connecting your site, you agree to allow Stockbud to scan your public catalog for inventory management.
+                </p>
+            </form>
         </div>
     );
 
@@ -181,7 +292,9 @@ const LinkShop = () => {
                 </div>
             ) : (
                 <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl p-8 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 transition-all duration-300">
-                    {selectedPlatform === 'shopify' ? renderShopifyForm() : renderPlatformList()}
+                    {selectedPlatform === 'shopify' ? renderShopifyForm() :
+                        selectedPlatform === 'standalone' ? renderStandaloneForm() :
+                            renderPlatformList()}
                 </div>
             )}
         </OnboardingLayout>

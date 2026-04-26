@@ -2,6 +2,9 @@
   "name": "stockbud-scraper-service",
   "version": "1.0.0",
   "description": "Stockbud Scraping Worker",
+  "license": "ISC",
+  "author": "Abubakar Nabil",
+  "type": "commonjs",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

@@ -24,7 +24,7 @@ import { SocialStoresModule } from './social-stores/social-stores.module';
 import { MetaModule } from './meta/meta.module';
 import { ScraperModule } from './scraper/scraper.module';
 import { AppLogger } from './common/logger';
-
+import { ScraperModule } from './scraper/scraper.module';
 
 import { HealthModule } from './health/health.module';
 
@@ -32,6 +32,7 @@ import { HealthModule } from './health/health.module';
 @Module({
     imports: [
         HealthModule,
+        ScraperModule,
         ThrottlerModule.forRoot([{
             ttl: 60000,
             limit: 100,
