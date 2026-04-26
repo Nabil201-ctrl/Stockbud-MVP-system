@@ -221,10 +221,12 @@ services:
 
   ollama:
     image: ollama/ollama:latest
-    container_name: ollama
+    container_name: stockbud-ollama
     restart: always
     environment:
       - VITE_API_URL=https://api.stockbud.xyz
+    volumes:
+      - ollama_data:/root/.ollama
     networks:
       - stockbud-network
 
@@ -237,22 +239,13 @@ services:
     env_file:
       - ./backend/scraper-service/.env
     environment:
-      - RABBITMQ_URL=amqp://stockbud-rabbitmq:5672
+      - RABBITMQ_URL=amqp://rabbitmq:5672
       - OLLAMA_URL=http://stockbud-ollama:11434
       - OLLAMA_MODEL=llama3
       - PORT=3005
     depends_on:
       - rabbitmq
       - ollama
-    networks:
-      - stockbud-network
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: stockbud-ollama
-    restart: always
-    volumes:
-      - ollama_data:/root/.ollama
     networks:
       - stockbud-network
 

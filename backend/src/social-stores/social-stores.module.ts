@@ -1,11 +1,11 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { SocialStoresService } from './social-stores.service';
 import { SocialStoresController } from './social-stores.controller';
-import { DatabaseModule } from '../database/database.module';
+import { PrismaModule } from '../database/prisma.module';
 import { ShopifyModule } from '../shopify/shopify.module';
 
 @Module({
-    imports: [DatabaseModule, forwardRef(() => ShopifyModule)],
+    imports: [PrismaModule, forwardRef(() => ShopifyModule)],
     providers: [SocialStoresService],
     controllers: [SocialStoresController],
     exports: [SocialStoresService]

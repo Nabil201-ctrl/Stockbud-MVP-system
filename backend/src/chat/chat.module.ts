@@ -4,10 +4,10 @@ import { ChatService } from './chat.service';
 import { UsersModule } from '../users/users.module';
 import { DashboardModule } from '../dashboard/dashboard.module';
 import { ReportsModule } from '../reports/reports.module';
-import { DatabaseModule } from '../database/database.module';
+import { PrismaModule } from '../database/prisma.module';
 
 @Module({
-    imports: [UsersModule, DashboardModule, ReportsModule, DatabaseModule],
+    imports: [UsersModule, DashboardModule, ReportsModule, PrismaModule],
     controllers: [ChatController],
     providers: [ChatService],
 })

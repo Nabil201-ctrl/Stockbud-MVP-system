@@ -6,10 +6,10 @@ import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
 
 
-import { DatabaseModule } from '../database/database.module';
+import { PrismaModule } from '../database/prisma.module';
 
 @Module({
-    imports: [ConfigModule, UsersModule, DatabaseModule],
+    imports: [ConfigModule, UsersModule, PrismaModule],
     controllers: [NotificationsController],
     providers: [NotificationsService, NotificationsGateway],
     exports: [NotificationsService, NotificationsGateway],

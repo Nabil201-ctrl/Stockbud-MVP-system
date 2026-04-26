@@ -1,15 +1,14 @@
 import { Module } from '@nestjs/common';
 import { MetaService } from './meta.service';
 import { MetaController } from './meta.controller';
-import { DatabaseModule } from '../database/database.module';
+import { PrismaModule } from '../database/prisma.module';
 import { UsersModule } from '../users/users.module';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
-  imports: [DatabaseModule, UsersModule, HttpModule],
+  imports: [PrismaModule, UsersModule, HttpModule],
   controllers: [MetaController],
   providers: [MetaService],
   exports: [MetaService],
 })
 export class MetaModule {}
-
