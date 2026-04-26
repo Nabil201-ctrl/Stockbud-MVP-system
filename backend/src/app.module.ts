@@ -22,6 +22,7 @@ import { ImageMicroserviceModule } from './image-microservice/image-microservice
 import { AdminModule } from './admin/admin.module';
 import { SocialStoresModule } from './social-stores/social-stores.module';
 import { MetaModule } from './meta/meta.module';
+import { ScraperModule } from './scraper/scraper.module';
 import { AppLogger } from './common/logger';
 
 
@@ -59,6 +60,7 @@ import { HealthModule } from './health/health.module';
         AdminModule,
         SocialStoresModule,
         MetaModule,
+        ScraperModule,
     ],
 
     providers: [

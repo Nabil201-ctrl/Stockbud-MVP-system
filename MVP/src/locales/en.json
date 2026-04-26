@@ -22,7 +22,8 @@
         "getStarted": "Get Started",
         "botChat": "Bot Chat",
         "botCustomization": "Bot Customization",
-        "reports": "Reports"
+        "reports": "Reports",
+        "monitoring": "Monitoring"
     },
     "dashboard": {
         "title": "Dashboard",

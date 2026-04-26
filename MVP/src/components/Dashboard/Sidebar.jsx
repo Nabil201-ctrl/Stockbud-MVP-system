@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Sliders, Clock, Users, TrendingUp, Package,
-  RefreshCw, Settings, FileText, Calendar, MessageSquare, LogOut
+  RefreshCw, Settings, FileText, Calendar, MessageSquare, LogOut,
+  Globe
 } from 'lucide-react';
 import FeedbackModal from './FeedbackModal';
 import FulLogo from '../../assets/FulLogo.png';
@@ -56,6 +57,7 @@ const Sidebar = ({ selectedDate, setSelectedDate, isCalendarOpen, isDarkMode, is
     { to: '/chat', icon: <MessageSquare size={18} />, label: t('nav.botChat') },
     { to: '/bot-customization', icon: <Sliders size={18} />, label: t('nav.botCustomization') },
     { to: '/products', icon: <Package size={18} />, label: t('nav.products') },
+    { to: '/scraper', icon: <Globe size={18} />, label: t('nav.monitoring') },
     { to: '/settings', icon: <Settings size={18} />, label: t('nav.settings') },
     { to: '/reports', icon: <FileText size={18} />, label: t('nav.reports') },
   ];

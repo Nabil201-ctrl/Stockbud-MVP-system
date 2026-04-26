@@ -144,6 +144,34 @@ services:
     networks:
       - stockbud-network
 
+  scraper-worker:
+    build:
+      context: ./backend/scraper-service
+      dockerfile: Dockerfile
+    container_name: stockbud-scraper-worker
+    restart: always
+    env_file:
+      - ./backend/scraper-service/.env
+    environment:
+      - RABBITMQ_URL=amqp://stockbud-rabbitmq:5672
+      - OLLAMA_URL=http://stockbud-ollama:11434
+      - OLLAMA_MODEL=llama3
+      - PORT=3005
+    depends_on:
+      - rabbitmq
+      - ollama
+    networks:
+      - stockbud-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: stockbud-ollama
+    restart: always
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - stockbud-network
+
 networks:
   stockbud-network:
     driver: bridge
@@ -152,3 +180,4 @@ volumes:
   rabbitmq_data:
   postgres_data:
   grafana_data:
+  ollama_data:

@@ -54,6 +54,7 @@ model User {
   products              Product[]      // New Relation
   syncHistory           SyncHistory[]  // New Relation
   traceRecords          TraceRecord[]  // New Relation (Auditing)
+  scrapeSites           ScrapeSite[]
 }
 
 model ShopifyStore {
@@ -96,7 +97,6 @@ model SocialStore {
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   products     Product[]
 }
-
 
 model Product {
   id              String         @id @default(uuid())
@@ -207,6 +207,59 @@ model Feedback {
   message   String
   status    String    @default("new")
   createdAt DateTime  @default(now())
+}
+
+model ScrapeSite {
+  id                String            @id @default(uuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url               String
+  loginUrl          String?
+  name              String
+  platform          String?           // e.g., "wordpress", "custom", "magento"
+  schedule          String            @default("0 8 * * *") // Cron expression for morning scrape
+  isActive          Boolean           @default(true)
+  lastScrapeAt      DateTime?
+  status            String            @default("idle") // "idle", "scraping", "failed"
+  
+  credentials       ScrapeCredential?
+  jobs              ScrapeJob[]
+  snapshots         ScrapeSnapshot[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model ScrapeCredential {
+  id                String            @id @default(uuid())
+  siteId            String            @unique
+  site              ScrapeSite        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  username          String?
+  password          String?           // Encrypted
+  cookies           Json?             // Session cookies if available
+  token             String?           // Auth token if available
+  updatedAt         DateTime          @updatedAt
+}
+
+model ScrapeJob {
+  id                String            @id @default(uuid())
+  siteId            String
+  site              ScrapeSite        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  status            String            @default("pending") // "pending", "processing", "completed", "failed"
+  type              String            @default("scheduled") // "scheduled", "manual", "retry"
+  errorMessage      String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime          @default(now())
+}
+
+model ScrapeSnapshot {
+  id                String            @id @default(uuid())
+  siteId            String
+  site              ScrapeSite        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  jobId             String?
+  data              Json              // List of products and their stats
+  diff              Json?             // Calculated difference from previous snapshot
+  createdAt         DateTime          @default(now())
 }
 
 

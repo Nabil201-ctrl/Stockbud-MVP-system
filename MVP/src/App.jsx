@@ -12,6 +12,7 @@ import ProductsPage from './pages/ProductsPage';
 import ChatPage from './pages/ChatPage';
 import SettingsPage from './pages/SettingsPage';
 import ReportsPage from './pages/ReportsPage';
+import ScraperPage from './pages/ScraperPage';
 import Layout from './components/layout/Layout';
 
 import GetStarted from './pages/onboarding/GetStarted';
@@ -99,6 +100,7 @@ function App() {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/scraper" element={<ScraperPage />} />
             </Route>
 
             { }
