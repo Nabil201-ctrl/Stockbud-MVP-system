@@ -97,6 +97,12 @@ const Layout = ({ children }) => {
           { element: '#chat-sidebar', popover: { title: 'Chat History', description: 'Access your previous conversations here.' } },
           { element: '#chat-input', popover: { title: 'Ask AI', description: 'Type your questions about your store data here.' } },
         ] : []),
+
+        ...(location.pathname === '/scraper' ? [
+          { element: '#monitor-header', popover: { title: 'External Monitoring', description: 'Monitor stock and prices on standalone e-commerce sites.' } },
+          { element: '#monitor-add-btn', popover: { title: 'Add Website', description: 'Connect a new standalone store to start monitoring.' } },
+          { element: '#monitor-sites-grid', popover: { title: 'Monitored Sites', description: 'View and manage all your connected external websites here.' } },
+        ] : []),
       ],
       onDestroyed: async () => {
         if (user && !user.isOnboardingComplete) {

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { 
-    GlobeAltIcon, 
-    PlusIcon, 
-    ArrowPathIcon, 
-    TrashIcon,
-    ExclamationCircleIcon,
-    CheckCircleIcon
-} from '@heroicons/react/24/outline';
+    Globe, 
+    Plus, 
+    RefreshCw, 
+    Trash2,
+    AlertCircle,
+    CheckCircle2
+} from 'lucide-react';
+import { storesAPI } from '../services/api';
 
 const ScraperPage = () => {
     const [sites, setSites] = useState([]);
@@ -19,7 +19,7 @@ const ScraperPage = () => {
         loginUrl: '',
         username: '',
         password: '',
-        platform: 'custom'
+        platform: 'generic'
     });
     const [submitting, setSubmitting] = useState(false);
 
@@ -29,10 +29,7 @@ const ScraperPage = () => {
 
     const fetchSites = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${import.meta.env.VITE_API_URL}/scraper/sites`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await storesAPI.scraper.getSites();
             setSites(res.data);
         } catch (err) {
             console.error('Failed to fetch sites', err);
@@ -45,12 +42,9 @@ const ScraperPage = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(`${import.meta.env.VITE_API_URL}/scraper/sites`, newSite, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await storesAPI.scraper.createSite(newSite);
             setShowAddModal(false);
-            setNewSite({ name: '', url: '', loginUrl: '', username: '', password: '', platform: 'custom' });
+            setNewSite({ name: '', url: '', loginUrl: '', username: '', password: '', platform: 'generic' });
             fetchSites();
         } catch (err) {
             console.error('Failed to add site', err);
@@ -61,10 +55,7 @@ const ScraperPage = () => {
 
     const triggerScrape = async (siteId) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(`${import.meta.env.VITE_API_URL}/scraper/sites/${siteId}/scrape`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await storesAPI.scraper.triggerScrape(siteId);
             alert('Scrape triggered successfully!');
             fetchSites();
         } catch (err) {
@@ -75,10 +66,7 @@ const ScraperPage = () => {
     const deleteSite = async (siteId) => {
         if (!window.confirm('Are you sure you want to delete this site?')) return;
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`${import.meta.env.VITE_API_URL}/scraper/sites/${siteId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await storesAPI.scraper.deleteSite(siteId);
             fetchSites();
         } catch (err) {
             console.error('Failed to delete site', err);
@@ -88,28 +76,29 @@ const ScraperPage = () => {
     return (
         <div className="p-6 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
-                <div>
+                <div id="monitor-header">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">External Monitoring</h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Monitor stock and prices on standalone e-commerce sites.</p>
                 </div>
                 <button 
+                    id="monitor-add-btn"
                     onClick={() => setShowAddModal(true)}
                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                 >
-                    <PlusIcon className="w-5 h-5" />
+                    <Plus className="w-5 h-5" />
                     Add Website
                 </button>
             </div>
 
             {loading ? (
                 <div className="flex justify-center py-20">
-                    <ArrowPathIcon className="w-10 h-10 text-indigo-500 animate-spin" />
+                    <RefreshCw className="w-10 h-10 text-indigo-500 animate-spin" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div id="monitor-sites-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {sites.length === 0 ? (
                         <div className="col-span-full text-center py-20 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-                            <GlobeAltIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                             <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300">No websites added yet</h3>
                             <p className="text-gray-400 mt-2">Connect your first standalone store to start monitoring.</p>
                         </div>
@@ -118,7 +107,7 @@ const ScraperPage = () => {
                             <div key={site.id} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-xl">
-                                        <GlobeAltIcon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                                        <Globe className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                                     </div>
                                     <div className="flex gap-2">
                                         <button 
@@ -126,14 +115,14 @@ const ScraperPage = () => {
                                             title="Scrape Now"
                                             className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                                         >
-                                            <ArrowPathIcon className="w-5 h-5" />
+                                            <RefreshCw className="w-5 h-5" />
                                         </button>
                                         <button 
                                             onClick={() => deleteSite(site.id)}
                                             title="Delete"
                                             className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                                         >
-                                            <TrashIcon className="w-5 h-5" />
+                                            <Trash2 className="w-5 h-5" />
                                         </button>
                                     </div>
                                 </div>
@@ -146,8 +135,8 @@ const ScraperPage = () => {
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500 dark:text-gray-400">Status</span>
                                         <span className={`flex items-center gap-1 font-medium ${site.status === 'failed' ? 'text-red-500' : 'text-green-500'}`}>
-                                            {site.status === 'failed' ? <ExclamationCircleIcon className="w-4 h-4" /> : <CheckCircleIcon className="w-4 h-4" />}
-                                            {site.status.charAt(0).toUpperCase() + site.status.slice(1)}
+                                            {site.status === 'failed' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                                            {(site.status || 'pending').charAt(0).toUpperCase() + (site.status || 'pending').slice(1)}
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-sm">
@@ -159,7 +148,7 @@ const ScraperPage = () => {
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500 dark:text-gray-400">Platform</span>
                                         <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400 uppercase font-bold">
-                                            {site.platform || 'Custom'}
+                                            {site.platform || 'Generic'}
                                         </span>
                                     </div>
                                 </div>
@@ -229,7 +218,7 @@ const ScraperPage = () => {
                                     disabled={submitting}
                                     className="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2"
                                 >
-                                    {submitting && <ArrowPathIcon className="w-5 h-5 animate-spin" />}
+                                    {submitting && <RefreshCw className="w-5 h-5 animate-spin" />}
                                     {submitting ? 'Saving...' : 'Add Website'}
                                 </button>
                             </div>

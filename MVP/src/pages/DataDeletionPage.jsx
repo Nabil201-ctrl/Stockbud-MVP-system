@@ -39,7 +39,7 @@ const DataDeletionPage = () => {
                                 <ShieldAlert className="text-red-500" />
                                 <h2>Requesting Data Deletion</h2>
                             </div>
-                            <p>At Stockbud, we respect your privacy and provide simple ways to delete your data. You can request the removal of your account, connected Shopify stores, or Meta (Facebook/Instagram) business connections.</p>
+                            <p>At Stockbud, we respect your privacy and provide simple ways to delete your data. You can request the removal of your account, connected Shopify stores, Meta (Facebook/Instagram) business connections, or External Monitoring data.</p>
                         </section>
 
                         <section className="space-y-6 mt-12">
@@ -49,8 +49,8 @@ const DataDeletionPage = () => {
                             </div>
                             <p>You can remove specific store connections directly from your dashboard:</p>
                             <ul className="list-disc pl-6 space-y-2">
-                                <li>Navigate to <strong>Settings</strong> > <strong>Stores</strong>.</li>
-                                <li>Find the store or social channel you wish to remove.</li>
+                                <li>Navigate to <strong>Settings</strong> {' > '} <strong>Stores</strong> (or the External Monitoring page).</li>
+                                <li>Find the store, social channel, or monitored site you wish to remove.</li>
                                 <li>Click the <strong>Trash</strong> icon to delete the connection and associated cached data.</li>
                             </ul>
                         </section>
@@ -61,7 +61,7 @@ const DataDeletionPage = () => {
                                 <h2>2. Full Account Deletion</h2>
                             </div>
                             <p>To completely delete your Stockbud account and all associated data from our servers, please send an email from your registered email address to:</p>
-                            <p className="font-bold text-2xl text-blue-600 dark:text-blue-400 text-center py-4">stockbud.01@gmail.com</p>
+                            <p className="font-bold text-2xl text-blue-600 dark:text-blue-400 text-center py-4">support@stockbud.xyz</p>
                             <p>Please include "Data Deletion Request" in the subject line. We will process your request and purge all your data within 7 business days.</p>
                         </section>
 

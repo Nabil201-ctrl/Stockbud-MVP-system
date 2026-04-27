@@ -31,7 +31,7 @@ const PrivacyPage = () => {
                             <Shield size={32} />
                         </div>
                         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Privacy Policy</h1>
-                        <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-slate-600'}`}>Last updated: April 15, 2026</p>
+                        <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-slate-600'}`}>Last updated: April 27, 2026</p>
                     </div>
 
                     <div className={`prose prose-blue max-w-none ${isDarkMode ? 'prose-invert' : ''}`}>
@@ -45,6 +45,7 @@ const PrivacyPage = () => {
                                 <li><strong>Account Information:</strong> Name, email address, password.</li>
                                 <li><strong>Shopify Data:</strong> Store URL, access tokens, product catalog, order history, and customer metadata necessary for inventory synchronization.</li>
                                 <li><strong>Meta (Facebook/Instagram) Data:</strong> If you connect a Meta store, we collect your Meta Business ID, Catalog ID, and temporary access tokens to sync your product catalog and inventory.</li>
+                                <li><strong>External Monitoring:</strong> If you use our scraping/monitoring features, we store the target URLs and any credentials you explicitly provide to access those sites.</li>
                                 <li><strong>Usage Data:</strong> Information about how you use the platform, including AI chat queries and report generation history.</li>
 
                             </ul>
@@ -78,7 +79,7 @@ const PrivacyPage = () => {
                                 <h3 className="text-xl font-bold">Contact Us</h3>
                             </div>
                             <p className="mb-4">If you have any questions about this Privacy Policy, please contact our data protection team:</p>
-                            <p className="font-bold text-blue-600 dark:text-blue-400">stockbud.01@gmail.com</p>
+                            <p className="font-bold text-blue-600 dark:text-blue-400">support@stockbud.xyz</p>
                         </div>
                     </div>
                 </div>

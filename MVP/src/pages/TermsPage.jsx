@@ -30,7 +30,7 @@ const TermsPage = () => {
                             <Gavel size={32} />
                         </div>
                         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Terms of Service</h1>
-                        <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-slate-600'}`}>Last updated: April 25, 2026</p>
+                        <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-slate-600'}`}>Last updated: April 27, 2026</p>
                     </div>
 
                     <div className={`prose prose-blue max-w-none ${isDarkMode ? 'prose-invert' : ''}`}>
@@ -65,10 +65,18 @@ const TermsPage = () => {
                             <p>You agree not to use Stockbud for any unlawful purposes or to conduct any activities that would harm our platform or other users. This includes attempts to reverse-engineer our AI models or bypass security controls.</p>
                         </section>
 
+                        <section className="space-y-6 mt-12">
+                            <div className="flex items-center gap-3 text-2xl font-bold">
+                                <AlertTriangle className="text-orange-500" />
+                                <h2 className="text-2xl font-bold">5. External Monitoring</h2>
+                            </div>
+                            <p>By using the external monitoring/scraping feature, you affirm that you have the right and explicit permission to monitor the requested websites. Stockbud is not responsible for any violations of third-party terms of service resulting from your use of this feature.</p>
+                        </section>
+
                         <div className={`p-8 rounded-2xl border ${isDarkMode ? 'bg-blue-900/10 border-blue-900/50' : 'bg-blue-50 border-blue-100'} mt-16`}>
                             <h3 className="text-xl font-bold mb-4">Questions?</h3>
                             <p className="mb-4">For questions regarding our terms, please contact:</p>
-                            <p className="font-bold text-blue-600 dark:text-blue-400">stockbud.01@gmail.com</p>
+                            <p className="font-bold text-blue-600 dark:text-blue-400">support@stockbud.xyz</p>
                         </div>
                     </div>
                 </div>

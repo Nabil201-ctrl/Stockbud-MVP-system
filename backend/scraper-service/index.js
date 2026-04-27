@@ -29,7 +29,7 @@ async function extractWithAI(html) {
         - inventory (number)
 
         HTML content:
-        ${html.substring(0, 15000)}
+        ${html.substring(0, 45000)}
     `;
 
     // Try Ollama first if configured
@@ -87,10 +87,21 @@ async function runScrape(payload) {
             // Generic login attempt - in production this would be site-specific or AI-driven
             // For MVP, we'll try to find common selectors
             try {
-                await page.fill('input[type="text"], input[type="email"], input[name="username"]', username);
-                await page.fill('input[type="password"]', password);
-                await page.click('button[type="submit"], input[type="submit"]');
-                await page.waitForNavigation({ timeout: 10000 });
+                // Wait a bit for the form to be ready
+                await page.waitForSelector('input[type="password"]', { timeout: 5000 }).catch(() => {});
+                
+                // Fill credentials
+                const userField = await page.$('input[type="email"], input[type="text"], input[name="username"]');
+                if (userField) await userField.fill(username);
+                
+                const passField = await page.$('input[type="password"]');
+                if (passField) await passField.fill(password);
+                
+                // Click and wait for navigation
+                await Promise.all([
+                    page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => logger.warn('Network idle timeout during login')),
+                    page.click('button[type="submit"], input[type="submit"], button:has-text("Log in"), button:has-text("Sign in")').catch(() => logger.warn('Could not find generic login button'))
+                ]);
             } catch (loginErr) {
                 logger.warn(`Initial login attempt failed, trying to proceed: ${loginErr.message}`);
             }
@@ -98,16 +109,59 @@ async function runScrape(payload) {
 
         logger.info(`Navigating to ${url}`);
         await page.goto(url);
-        await page.waitForTimeout(5000); // Wait for content to load
+        
+        let allProducts = [];
+        let hasNextPage = true;
+        let pageCount = 0;
+        const maxPages = 5; // Prevent infinite loops
 
-        const content = await page.content();
-        const products = await extractWithAI(content);
+        while (hasNextPage && pageCount < maxPages) {
+            pageCount++;
+            logger.info(`Scraping page ${pageCount} of ${url}`);
+            
+            await page.waitForTimeout(5000); // Wait for content to load
 
-        logger.info(`Extracted ${products.length} products`);
+            // Prune HTML to remove bulky tags and extract body
+            const content = await page.evaluate(() => {
+                document.querySelectorAll('script, style, svg, iframe, noscript, link, meta, header, footer').forEach(el => el.remove());
+                return document.body.innerHTML;
+            });
+
+            const products = await extractWithAI(content);
+            if (products && products.length > 0) {
+                allProducts = allProducts.concat(products);
+                logger.info(`Extracted ${products.length} products from page ${pageCount}`);
+            } else {
+                logger.warn(`No products found on page ${pageCount}`);
+            }
+
+            // Attempt to find and click a "Next" button
+            try {
+                const nextButton = await page.$('a:has-text("Next"), a.next, .pagination-next, [aria-label="Next"], a:text-is("»"), a:text-is(">")');
+                
+                if (nextButton) {
+                    const isDisabled = await nextButton.evaluate(node => node.hasAttribute('disabled') || node.classList.contains('disabled'));
+                    if (!isDisabled) {
+                        logger.info('Navigating to next page...');
+                        await nextButton.click();
+                        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+                    } else {
+                        hasNextPage = false;
+                    }
+                } else {
+                    hasNextPage = false;
+                }
+            } catch (navError) {
+                logger.warn(`Pagination failed or reached end: ${navError.message}`);
+                hasNextPage = false;
+            }
+        }
+
+        logger.info(`Extracted a total of ${allProducts.length} products across ${pageCount} pages`);
 
         // Send results back to backend (via API or another queue)
         // For now, we'll just log them and assume there's a callback mechanism
-        return { success: true, products };
+        return { success: true, products: allProducts };
 
     } catch (error) {
         logger.error(`Scrape failed for job ${jobId}:`, error.message);

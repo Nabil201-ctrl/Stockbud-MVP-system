@@ -13,18 +13,55 @@ class GenericAIScraper extends BaseScraper {
     async scrape(url) {
         this.logger.info(`Generic AI scraping: ${url}`);
         await this.page.goto(url);
-        await this.page.waitForTimeout(5000); // Wait for content
-        
-        const html = await this.page.content();
-        let products = await this.extractProducts(html);
+        let allProducts = [];
+        let hasNextPage = true;
+        let pageCount = 0;
+        const maxPages = 5; // Prevent infinite loops
 
-        // If AI returned nothing, try a different approach (e.g. looking for lists)
-        if (!products || products.length === 0) {
-            this.logger.warn("AI returned no products, trying to identify product area...");
-            // We could add more complex logic here, like scrolling or clicking "Load More"
+        while (hasNextPage && pageCount < maxPages) {
+            pageCount++;
+            this.logger.info(`Scraping page ${pageCount} of ${url}`);
+            
+            await this.page.waitForTimeout(5000); // Wait for content
+            
+            // Prune HTML
+            const html = await this.page.evaluate(() => {
+                document.querySelectorAll('script, style, svg, iframe, noscript, link, meta, header, footer').forEach(el => el.remove());
+                return document.body.innerHTML;
+            });
+            
+            let products = await this.extractProducts(html);
+
+            if (products && products.length > 0) {
+                allProducts = allProducts.concat(products);
+                this.logger.info(`Extracted ${products.length} products from page ${pageCount}`);
+            } else {
+                this.logger.warn(`No products found on page ${pageCount}`);
+            }
+
+            // Attempt to find and click a "Next" button
+            try {
+                const nextButton = await this.page.$('a:has-text("Next"), a.next, .pagination-next, [aria-label="Next"], a:text-is("»"), a:text-is(">")');
+                
+                if (nextButton) {
+                    const isDisabled = await nextButton.evaluate(node => node.hasAttribute('disabled') || node.classList.contains('disabled'));
+                    if (!isDisabled) {
+                        this.logger.info('Navigating to next page...');
+                        await nextButton.click();
+                        await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+                    } else {
+                        hasNextPage = false;
+                    }
+                } else {
+                    hasNextPage = false;
+                }
+            } catch (navError) {
+                this.logger.warn(`Pagination failed or reached end: ${navError.message}`);
+                hasNextPage = false;
+            }
         }
 
-        return products || [];
+        return allProducts;
     }
 
     async extractProducts(html) {
@@ -38,7 +75,7 @@ class GenericAIScraper extends BaseScraper {
             - inventory (number or 0)
 
             HTML content:
-            ${html.substring(0, 15000)}
+            ${html.substring(0, 45000)}
         `;
 
         // Use Ollama (Centralized in Base if we wanted, but keeping here for specific override)

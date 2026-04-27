@@ -19,6 +19,8 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   const menuRef = useRef(null);
   const shopMenuRef = useRef(null);
   const notificationRef = useRef(null);
+  const langMenuRef = useRef(null);
+  const [showLangMenu, setShowLangMenu] = useState(false);
 
   const fetchNotifications = async () => {
     try {
@@ -45,6 +47,9 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
       }
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
+      }
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target)) {
+        setShowLangMenu(false);
       }
     };
 
@@ -109,7 +114,7 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
   const activeStore = allStores.find(s => s.id === user?.activeShopId);
 
   return (
-    <div id="app-header" className={`px-6 py-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} border-b sticky top-0 z-10`}>
+    <div id="app-header" className={`px-6 py-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'} border-b sticky top-0 z-30`}>
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4 flex-1">
           <button className="lg:hidden" onClick={toggleSidebar}>
@@ -197,21 +202,49 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
             {user?.plan || 'Free'} PLAN
           </div>
 
-          <button
-            onClick={toggleLanguage}
-            className={`p-2 rounded-lg flex items-center gap-1 ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-slate-100 text-slate-600'}`}
-            title={language === 'en' ? 'Switch to French' : 'Passer en anglais'}
-          >
-            <Globe size={20} />
-            <span className="text-sm font-medium uppercase hidden sm:inline">{language}</span>
-          </button>
+          <div className="relative" ref={langMenuRef}>
+            <button
+              onClick={() => setShowLangMenu(!showLangMenu)}
+              className={`p-2 rounded-lg flex items-center gap-1.5 transition-all ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-slate-100 text-slate-600'}`}
+              title={t('header.changeLanguage') || 'Change Language'}
+            >
+              <Globe size={18} className="text-blue-500" />
+              <span className="text-xs font-bold uppercase hidden sm:inline">{language}</span>
+              <ChevronDown size={12} className={`transition-transform duration-200 ${showLangMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showLangMenu && (
+              <div className={`absolute right-0 mt-2 w-40 rounded-xl shadow-xl border overflow-hidden z-50 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
+                <div className="py-1">
+                  <button
+                    onClick={() => { changeLanguage('en'); setShowLangMenu(false); }}
+                    className={`w-full flex items-center justify-between px-4 py-2.5 text-sm ${language === 'en' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  >
+                    <span>English</span>
+                    {language === 'en' && <Check size={14} />}
+                  </button>
+                  <button
+                    onClick={() => { changeLanguage('fr'); setShowLangMenu(false); }}
+                    className={`w-full flex items-center justify-between px-4 py-2.5 text-sm ${language === 'fr' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  >
+                    <span>Français</span>
+                    {language === 'fr' && <Check size={14} />}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={startTour}
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-slate-100 text-slate-600'}`}
+            className={`group relative flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 ${isDarkMode ? 'bg-indigo-900/30 text-indigo-300 hover:bg-indigo-900/50' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
             title={t('header.startTour') || 'Start Tour'}
           >
-            <HelpCircle size={20} />
+            <div className="relative">
+              <HelpCircle size={18} />
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-500 rounded-full animate-ping"></span>
+            </div>
+            <span className="text-xs font-bold hidden lg:inline">{t('header.startTour') || 'Start Tour'}</span>
           </button>
 
           <button
