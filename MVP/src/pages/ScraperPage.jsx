@@ -17,8 +17,6 @@ const ScraperPage = () => {
         name: '',
         url: '',
         loginUrl: '',
-        username: '',
-        password: '',
         platform: 'generic'
     });
     const [submitting, setSubmitting] = useState(false);
@@ -44,7 +42,7 @@ const ScraperPage = () => {
         try {
             await storesAPI.scraper.createSite(newSite);
             setShowAddModal(false);
-            setNewSite({ name: '', url: '', loginUrl: '', username: '', password: '', platform: 'generic' });
+            setNewSite({ name: '', url: '', loginUrl: '', platform: 'generic' });
             fetchSites();
         } catch (err) {
             console.error('Failed to add site', err);
@@ -185,25 +183,15 @@ const ScraperPage = () => {
                                     placeholder="https://example.com/admin"
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
-                                    <input 
-                                        type="text"
-                                        value={newSite.username}
-                                        onChange={e => setNewSite({...newSite, username: e.target.value})}
-                                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
-                                    <input 
-                                        type="password"
-                                        value={newSite.password}
-                                        onChange={e => setNewSite({...newSite, password: e.target.value})}
-                                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                    />
-                                </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Login URL (Optional)</label>
+                                <input 
+                                    type="url"
+                                    value={newSite.loginUrl}
+                                    onChange={e => setNewSite({...newSite, loginUrl: e.target.value})}
+                                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                    placeholder="https://example.com/login"
+                                />
                             </div>
                             <div className="flex gap-3 mt-8">
                                 <button 

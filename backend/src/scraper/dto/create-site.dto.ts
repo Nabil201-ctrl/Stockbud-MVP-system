@@ -11,13 +11,6 @@ export class CreateSiteDto {
     @IsOptional()
     loginUrl?: string;
 
-    @IsString()
-    @IsOptional()
-    username?: string;
-
-    @IsString()
-    @IsOptional()
-    password?: string;
 
     @IsString()
     @IsOptional()

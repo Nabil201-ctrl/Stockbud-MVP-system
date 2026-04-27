@@ -46,8 +46,13 @@ services:
       - db
       - cache
       - rabbitmq
+      - smtp
     volumes:
       - ./Stockbud-MVP-system/backend/data:/app/data
+    environment:
+      - SMTP_HOST=smtp
+      - SMTP_PORT=25
+      - SMTP_SECURE=false
 
   image-service:
     build: ./Stockbud-MVP-system/backend/image-service
@@ -248,6 +253,13 @@ services:
       - ollama
     networks:
       - stockbud-network
+
+  smtp:
+    image: namshi/smtp
+    container_name: stockbud-smtp
+    restart: always
+    ports:
+      - "25:25"
 
 networks:
   stockbud-network:
