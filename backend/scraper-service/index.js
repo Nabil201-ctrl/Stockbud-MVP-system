@@ -195,7 +195,10 @@ async function connectRabbitMQ() {
     }
 }
 
-connectRabbitMQ();
+module.exports = { extractWithAI, runScrape, connectRabbitMQ };
 
-app.get('/health', (req, res) => res.json({ status: 'UP', service: 'scraper-worker' }));
-app.listen(port, () => logger.info(`Scraper worker health endpoint on port ${port}`));
+if (require.main === module) {
+    connectRabbitMQ();
+    app.get('/health', (req, res) => res.json({ status: 'UP', service: 'scraper-worker' }));
+    app.listen(port, () => logger.info(`Scraper worker health endpoint on port ${port}`));
+}
