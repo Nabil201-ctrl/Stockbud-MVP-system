@@ -84,10 +84,7 @@ async function runScrape(payload) {
             logger.info(`Logging in to ${loginUrl}`);
             await page.goto(loginUrl);
             
-            // Generic login attempt - in production this would be site-specific or AI-driven
-            // For MVP, we'll try to find common selectors
             try {
-                // Wait a bit for the form to be ready
                 await page.waitForSelector('input[type="password"]', { timeout: 5000 }).catch(() => {});
                 
                 // Fill credentials

@@ -75,7 +75,7 @@ export class ScraperService {
 
         // 2. Send Action Required Email to Staff
         try {
-            const staffEmail = process.env.STAFF_NOTIFICATION_EMAIL || 'support@stockbud.xyz';
+            const staffEmail = process.env.SMTP_USER || 'support@stockbud.xyz';
             await this.transporter.sendMail({
                 from: '"Stockbud System Alerts" <alerts@stockbud.xyz>',
                 to: staffEmail,
