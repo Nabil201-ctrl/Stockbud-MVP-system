@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   nginx:
     image: nginx:alpine
@@ -228,8 +226,15 @@ services:
     image: ollama/ollama:latest
     container_name: stockbud-ollama
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 4G
     environment:
       - VITE_API_URL=https://api.stockbud.xyz
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_NUM_PARALLEL=2
     volumes:
       - ollama_data:/root/.ollama
     networks:
@@ -241,12 +246,16 @@ services:
       dockerfile: Dockerfile
     container_name: stockbud-scraper-worker
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
     env_file:
       - ./backend/scraper-service/.env
     environment:
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - OLLAMA_URL=http://stockbud-ollama:11434
-      - OLLAMA_MODEL=llama3
+      - OLLAMA_MODEL=qwen2:1.5b
       - PORT=3005
     depends_on:
       - rabbitmq

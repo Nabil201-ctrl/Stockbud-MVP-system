@@ -22,3 +22,7 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:3003']
     metrics_path: '/metrics'
+
+  - job_name: 'mail'
+    static_configs:
+      - targets: ['mail-exporter:9154']

@@ -17,6 +17,6 @@ primary_region = 'lhr'
   processes = ['app']
 
 [[vm]]
-  memory = '2gb'
+  memory = '4gb'
   cpus = 1
-  memory_mb = 2048
+  memory_mb = 4096

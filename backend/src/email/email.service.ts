@@ -1,28 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
-  private readonly apiKey: string;
+  private transporter: nodemailer.Transporter;
   private readonly senderEmail: string;
   private readonly senderName: string;
-  private readonly apiUrl = 'https://api.brevo.com/v3/smtp/email';
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
   ) {
-    this.apiKey = this.configService.get<string>('BREVO_API_KEY');
-    this.senderEmail = this.configService.get<string>('BREVO_SENDER_EMAIL');
-    this.senderName = this.configService.get<string>('BREVO_SENDER_NAME');
+    this.senderEmail = this.configService.get<string>('SMTP_SENDER_EMAIL') || 'stockbud@stockbud.xyz';
+    this.senderName = this.configService.get<string>('SMTP_SENDER_NAME') || 'Stockbud';
 
-    if (!this.apiKey) {
-      console.warn('[EmailService] BREVO_API_KEY not set. Email sending will be disabled.');
-    } else {
-      console.log('[EmailService] Brevo email service initialized.');
-    }
+    const host = this.configService.get<string>('SMTP_HOST') || 'mail';
+    const port = this.configService.get<number>('SMTP_PORT') || 25;
+
+    this.transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      ignoreTLS: port === 25, // Internal relay usually doesn't use TLS
+      auth: this.configService.get('SMTP_USER') ? {
+        user: this.configService.get<string>('SMTP_USER'),
+        pass: this.configService.get<string>('SMTP_PASS'),
+      } : undefined,
+    });
+
+    console.log(`[EmailService] SMTP service initialized at ${host}:${port}.`);
   }
 
   async sendEmail(options: {
@@ -31,54 +37,34 @@ export class EmailService {
     htmlContent: string;
     attachment?: { name: string; content: string };
   }): Promise<boolean> {
-    if (!this.apiKey) {
-      console.warn('[EmailService] Skipping email — BREVO_API_KEY not configured.');
-      return false;
-    }
-
-    const payload: any = {
-      sender: {
+    const mailOptions: nodemailer.SendMailOptions = {
+      from: {
         name: this.senderName,
-        email: this.senderEmail,
+        address: this.senderEmail,
       },
       to: options.to.map(t => ({
-        email: t.email,
-        name: t.name || t.email,
+        name: t.name || '',
+        address: t.email,
       })),
       subject: options.subject,
-      htmlContent: options.htmlContent,
+      html: options.htmlContent,
     };
 
-
     if (options.attachment) {
-      payload.attachment = [
+      mailOptions.attachments = [
         {
-          name: options.attachment.name,
-          content: options.attachment.content,
+          filename: options.attachment.name,
+          content: Buffer.from(options.attachment.content, 'base64'),
         },
       ];
     }
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.post(this.apiUrl, payload, {
-          headers: {
-            'api-key': this.apiKey,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          timeout: 30000,
-        }),
-      );
-
-      console.log(`[EmailService] Email sent successfully to ${options.to.map(t => t.email).join(', ')}. MessageId: ${response.data?.messageId}`);
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log(`[EmailService] Email sent successfully. MessageId: ${info.messageId}`);
       return true;
     } catch (error) {
-      console.error('[EmailService] Failed to send email:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data,
-      });
+      console.error('[EmailService] Failed to send email:', error.message);
       return false;
     }
   }

@@ -3,6 +3,8 @@ const { chromium } = require('playwright');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const express = require('express');
 const pino = require('pino');
+const axios = require('axios');
+const http = require('http');
 require('dotenv').config();
 
 const logger = pino({
@@ -13,38 +15,50 @@ const logger = pino({
     }
 });
 
+// Create a persistent axios instance for better performance
+const ollamaClient = axios.create({
+    baseURL: process.env.OLLAMA_URL || 'http://ollama:11434',
+    httpAgent: new http.Agent({ keepAlive: true, keepAliveMsecs: 1000, maxSockets: 100 }),
+    timeout: 60000
+});
+
 const app = express();
 const port = process.env.PORT || 3005;
 
 const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
-const axios = require('axios');
 
 async function extractWithAI(html) {
-    const prompt = `
-        Extract product information from the following HTML content of an e-commerce admin panel.
-        Return the data as a JSON array of objects with the following keys:
-        - name (string)
-        - sku (string)
-        - price (number)
-        - inventory (number)
-
-        HTML content:
-        ${html.substring(0, 45000)}
-    `;
+    const prompt = `Extract product data as JSON array: [{"name": "...", "sku": "...", "price": 0, "inventory": 0}]. HTML: ${html.substring(0, 30000)}`;
 
     // Try Ollama first if configured
     if (process.env.OLLAMA_URL) {
         try {
             logger.info(`Using Ollama for extraction at ${process.env.OLLAMA_URL}`);
-            const response = await axios.post(`${process.env.OLLAMA_URL}/api/generate`, {
-                model: process.env.OLLAMA_MODEL || "llama3",
+            const response = await ollamaClient.post('/api/generate', {
+                model: process.env.OLLAMA_MODEL || "qwen2:1.5b",
                 prompt: prompt,
                 stream: false,
-                format: "json"
+                format: "json",
+                options: {
+                    num_thread: 4,
+                    num_ctx: 16384,
+                    num_predict: 1024,
+                    temperature: 0.1,
+                    top_k: 20,
+                    top_p: 0.9
+                },
+                keep_alive: "60m" 
             });
             
             const resultText = response.data.response;
-            return JSON.parse(resultText);
+            const parsed = JSON.parse(resultText);
+            
+            // Handle cases where AI wraps the array in an object
+            if (Array.isArray(parsed)) return parsed;
+            if (parsed.data && Array.isArray(parsed.data)) return parsed.data;
+            if (parsed.products && Array.isArray(parsed.products)) return parsed.products;
+            
+            return [];
         } catch (ollamaError) {
             logger.error('Ollama extraction failed, falling back if possible:', ollamaError.message);
         }
@@ -116,11 +130,24 @@ async function runScrape(payload) {
             pageCount++;
             logger.info(`Scraping page ${pageCount} of ${url}`);
             
-            await page.waitForTimeout(5000); // Wait for content to load
+            // Dynamic wait for product data elements
+            await page.waitForSelector('tr, .product, .item, li, [role="row"]', { timeout: 10000 }).catch(() => {});
 
-            // Prune HTML to remove bulky tags and extract body
+            // Prune HTML more aggressively to reduce payload
             const content = await page.evaluate(() => {
-                document.querySelectorAll('script, style, svg, iframe, noscript, link, meta, header, footer').forEach(el => el.remove());
+                // Remove all non-essential elements
+                const toRemove = [
+                    'script', 'style', 'svg', 'iframe', 'noscript', 'link', 'meta', 
+                    'header', 'footer', 'nav', 'aside', '.ads', '#ads', '.sidebar'
+                ];
+                toRemove.forEach(tag => {
+                    document.querySelectorAll(tag).forEach(el => el.remove());
+                });
+                
+                // Get the main content area if it exists
+                const main = document.querySelector('main, #content, .content, .main-content, #main');
+                if (main) return main.innerHTML;
+                
                 return document.body.innerHTML;
             });
 

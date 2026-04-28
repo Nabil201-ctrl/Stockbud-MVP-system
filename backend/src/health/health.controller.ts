@@ -15,8 +15,8 @@ export class HealthController {
     @HealthCheck()
     check() {
         return this.health.check([
-            () => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024),
-            () => this.memory.checkRSS('memory_rss', 150 * 1024 * 1024),
+            () => this.memory.checkHeap('memory_heap', 1024 * 1024 * 1024),
+            () => this.memory.checkRSS('memory_rss', 2048 * 1024 * 1024),
             () => this.disk.checkStorage('storage', { path: '/', thresholdPercent: 0.9 }),
             () => this.microservice.pingCheck('rabbitmq', {
                 transport: Transport.RMQ,

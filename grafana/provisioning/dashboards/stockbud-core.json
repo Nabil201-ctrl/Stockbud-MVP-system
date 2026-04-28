@@ -179,6 +179,50 @@
                     "legendFormat": "Event Loop Lag (s)"
                 }
             ]
+        },
+        {
+            "title": "Local AI Resource Consumption",
+            "type": "timeseries",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(ollama_prompt_tokens_total[15m])) by (model)",
+                    "legendFormat": "{{model}} Input Tokens"
+                },
+                {
+                    "expr": "sum(rate(ollama_completion_tokens_total[15m])) by (model)",
+                    "legendFormat": "{{model}} Output Tokens"
+                }
+            ]
+        },
+        {
+            "title": "Local AI Latency",
+            "type": "timeseries",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(ollama_request_duration_seconds_bucket[5m])) by (le, model))",
+                    "legendFormat": "{{model}} P95 Latency (s)"
+                }
+            ]
         }
     ],
     "schemaVersion": 42,
