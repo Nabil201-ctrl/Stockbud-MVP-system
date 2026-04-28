@@ -18,7 +18,7 @@ services:
       - shopify-app
 
   order-processor:
-    build: ./Stockbud-MVP-system/backend/order-processor
+    build: ./backend/order-processor
     restart: always
     deploy:
       replicas: 2
@@ -26,12 +26,12 @@ services:
         limits:
           memory: 512M
     env_file:
-      - ./Stockbud-MVP-system/backend/order-processor/.env
+      - ./backend/order-processor/.env
     depends_on:
       - rabbitmq
 
   backend:
-    build: ./Stockbud-MVP-system/backend
+    build: ./backend
     restart: always
     deploy:
       replicas: 2
@@ -39,21 +39,21 @@ services:
         limits:
           memory: 4G
     env_file:
-      - ./Stockbud-MVP-system/backend/.env
+      - ./backend/.env
     depends_on:
       - db
       - cache
       - rabbitmq
       - smtp
     volumes:
-      - ./Stockbud-MVP-system/backend/data:/app/data
+      - ./backend/data:/app/data
     environment:
       - SMTP_HOST=smtp
       - SMTP_PORT=25
       - SMTP_SECURE=false
 
   image-service:
-    build: ./Stockbud-MVP-system/backend/image-service
+    build: ./backend/image-service
     restart: always
     deploy:
       replicas: 2
@@ -61,12 +61,12 @@ services:
         limits:
           memory: 1G
     env_file:
-      - ./Stockbud-MVP-system/backend/image-service/.env
+      - ./backend/image-service/.env
     depends_on:
       - rabbitmq
 
   shopify-app:
-    build: ./Stockbud-MVP-system/stockbud
+    build: ./stockbud
     restart: always
     deploy:
       replicas: 2
@@ -74,7 +74,7 @@ services:
         limits:
           memory: 1G
     env_file:
-      - ./Stockbud-MVP-system/stockbud/.env
+      - ./stockbud/.env
     environment:
       - STOCKBUD_BACKEND_URL=https://api.stockbud.xyz
       - DATABASE_URL=postgresql://user:password@db:5432/mydb?schema=shopify_app

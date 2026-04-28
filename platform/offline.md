@@ -1,10 +1,10 @@
-# Stockbud MVP - Offline Capability & Session Handling Implementation
+# Stockbud - Offline Capability & Session Handling Implementation
 
-This document outlines the implementation of smooth session handling and offline access features for the Stockbud MVP platform.
+This document outlines the implementation of smooth session handling and offline access features for the Stockbud platform.
 
 ## 1. Robust PWA API Caching
 *   **Intelligent Network Strategy:** Updated `vite.config.js` with a `NetworkFirst` strategy for all `/api/` routes. This ensures the app always tries to fetch the latest data but seamlessly falls back to the browser's Service Worker cache if the server is unreachable.
-*   **Environment Agnostic:** Improved the URL matching pattern to work across local, staging, and production environments without manual configuration.
+*   **Environment Agnostic:** Improved the URL matching pattern to work across loccal, staging, and production environments without manual configuration.
 
 ## 2. Persistent Auth Session
 *   **IndexedDB Migration:** Moved the cached user session from `localStorage` to a more reliable `IndexedDB` store using the centralized `storage` utility.

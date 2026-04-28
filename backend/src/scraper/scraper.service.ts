@@ -18,7 +18,7 @@ export class ScraperService {
         @Inject('SCRAPER_SERVICE') private client: ClientProxy,
     ) {
         // Initialize simple Nodemailer transport
-        // Using environment variables or fallback values for MVP
+        // Using environment variables or fallback values for Platform
         const smtpConfig: any = {
             host: process.env.SMTP_HOST || 'smtp.gmail.com',
             port: parseInt(process.env.SMTP_PORT) || 587,

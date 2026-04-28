@@ -1,10 +1,10 @@
-# Stockbud MVP System
+# Stockbud System
 
 Unified Retail Intelligence for Shopify and Social Stores.
 
 ## Project Structure
 - **/stockbud**: Shopify App (Built with Remix/React Router)
-- **/MVP**: Main platform frontend (React/Vite)
+- **/platform**: Main platform frontend (React/Vite)
 - **/backend**: Core API and sync engine (NestJS)
 
 ## Shopify Partner Dashboard Setup

@@ -400,7 +400,7 @@ const LandingPage = () => {
                     <div className="flex items-center gap-8">
                         <button onClick={() => navigate('/privacy')} className="hover:text-blue-500 transition-colors">Privacy Policy</button>
                         <button onClick={() => navigate('/privacy')} className="hover:text-blue-500 transition-colors">Terms of Service</button>
-                        <button onClick={() => window.open('https://github.com/Nabil201-ctrl/Stockbud-MVP-system', '_blank')} className="hover:text-blue-500 transition-colors">GitHub</button>
+                        <button onClick={() => window.open('https://github.com/Nabil201-ctrl/Stockbud', '_blank')} className="hover:text-blue-500 transition-colors">GitHub</button>
                     </div>
                 </div>
             </footer>

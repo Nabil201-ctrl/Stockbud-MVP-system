@@ -24,7 +24,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['logo.png', 'pwa-192x192.png', 'pwa-512x512.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Stockbud MVP',
+        name: 'Stockbud',
         short_name: 'Stockbud',
         description: 'Your intelligent shop companion',
         theme_color: '#ffffff',

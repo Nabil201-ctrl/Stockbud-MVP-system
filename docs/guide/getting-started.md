@@ -12,8 +12,8 @@ Welcome to Stockbud! This guide will help you set up your environment and connec
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Nabil201-ctrl/Stockbud-MVP-system.git
-   cd Stockbud-MVP-system
+   git clone https://github.com/Nabil201-ctrl/Stockbud.git
+   cd Stockbud
    ```
 
 2. Start the development environment:

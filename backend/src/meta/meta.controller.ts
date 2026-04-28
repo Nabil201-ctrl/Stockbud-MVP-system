@@ -30,13 +30,13 @@ export class MetaController {
 
       // We need to know which user this is.
       // Usually, we pass a 'state' parameter in OAuth to link the session.
-      // For MVP, we might just use the current logged-in user if we can.
+      // For the platform, we might just use the current logged-in user if we can.
       // But this is a redirect, so we lose the context unless we use cookies or state.
       
       // Let's assume the user is redirected back to the frontend with the token
       // or we handle it here and redirect with a success message.
       
-      // To make it simple for MVP, we'll redirect back to frontend with the token
+      // To make it simple for the platform, we'll redirect back to frontend with the token
       // and let the frontend save it via a POST request.
       res.redirect(`${frontendUrl}/settings?meta_token=${accessToken}`);
     } catch (error) {

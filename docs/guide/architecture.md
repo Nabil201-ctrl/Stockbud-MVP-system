@@ -17,7 +17,7 @@ graph TD
 ## Key Components
 
 ### 1. The Backend OS (NestJS)
-The core API that manages orchestration, authentication, and the JSON-based persistence layer (for MVP) or PostgreSQL (for Production).
+The core API that manages orchestration, authentication, and the JSON-based persistence layer (for Platform) or PostgreSQL (for Production).
 
 ### 2. Shopify Integration (Remix/React Router)
 A dedicated app that runs within the Shopify Admin, handling OAuth and real-time catalog syncing.
