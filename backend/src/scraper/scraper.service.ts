@@ -2,38 +2,20 @@ import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { EncryptionService } from '../common/encryption.service';
 import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { AddCredentialsDto } from './dto/add-credentials.dto';
 import { ClientProxy } from '@nestjs/microservices';
-import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class ScraperService {
-    private transporter: nodemailer.Transporter;
-
     constructor(
         private prisma: PrismaService,
         private encryptionService: EncryptionService,
         private emailService: EmailService,
+        private configService: ConfigService,
         @Inject('SCRAPER_SERVICE') private client: ClientProxy,
-    ) {
-        // Initialize simple Nodemailer transport
-        // Using environment variables or fallback values for Platform
-        const smtpConfig: any = {
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMTP_PORT) || 587,
-            secure: process.env.SMTP_SECURE === 'true',
-        };
-
-        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-            smtpConfig.auth = {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            };
-        }
-
-        this.transporter = nodemailer.createTransport(smtpConfig);
-    }
+    ) { }
 
     async createSite(userId: string, dto: CreateSiteDto) {
         const { name, url, loginUrl, schedule, platform } = dto;
@@ -56,7 +38,8 @@ export class ScraperService {
             }
         });
 
-        // 1. Send Verification Email to User using the normal email service (Brevo)
+        // Step 1: Notify the USER (via Brevo API)
+        // Let them know their request was received and is being processed.
         if (user && user.email) {
             try {
                 const title = 'Website Monitoring Setup Started';
@@ -67,31 +50,39 @@ export class ScraperService {
                     to: [{ email: user.email, name: user.name || '' }],
                     subject: title,
                     htmlContent: htmlContent
+                    // useScraperTransporter is NOT set → uses Brevo API
                 });
             } catch (err) {
-                console.error('Failed to send verification email to user:', err.message);
+                console.error('Failed to send confirmation email to user:', err.message);
             }
         }
 
-        // 2. Send Action Required Email to Staff
+        // Step 2: Notify the EMPLOYEE (via Gmail SMTP)
+        // Sent FROM SCRAPER_GMAIL_USER → TO STAFF_NOTIFICATION_EMAIL.
         try {
-            const staffEmail = process.env.SMTP_USER || 'support@stockbud.xyz';
-            await this.transporter.sendMail({
-                from: '"Stockbud System Alerts" <alerts@stockbud.xyz>',
-                to: staffEmail,
-                subject: `ACTION REQUIRED: New Site Monitoring Requested - ${name}`,
-                html: `
+            const subject = `ACTION REQUIRED: New Site Monitoring Requested - ${name}`;
+            const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost';
+            const html = `
                     <h2>New Monitoring Request</h2>
+                    <p>A user has requested monitoring for a new site. Please follow these steps:</p>
+                    <ol>
+                        <li>Visit the <strong>Target URL</strong> or <strong>Login URL</strong> below.</li>
+                        <li><strong>Create a new account</strong> on that platform using our internal credentials.</li>
+                        <li>Once the account is ready, click the <strong>Verify Site Link</strong> below to feed the credentials back into Stockbud.</li>
+                    </ol>
+                    <hr/>
                     <p><strong>User:</strong> ${user?.email || userId}</p>
                     <p><strong>Site Name:</strong> ${name}</p>
-                    <p><strong>Target URL:</strong> ${url}</p>
-                    <p><strong>Login URL:</strong> ${loginUrl || 'Not provided'}</p>
-                    <p><strong>Action Required:</strong> Please manually create an account/credentials for this site, add them to the database for this site ID (<code>${site.id}</code>), and move it to the next stage so the AI model can handle the rest.</p>
-                    <p>Click here to provide the credentials: <a href="${process.env.FRONTEND_URL || 'http://localhost'}/scraper/verify/${site.id}">Verify Site Link</a></p>
-                `
-            });
+                    <p><strong>Target URL:</strong> <a href="${url}">${url}</a></p>
+                    <p><strong>Login URL:</strong> <a href="${loginUrl || '#'}">${loginUrl || 'Not provided'}</a></p>
+                    <p><strong>Site ID:</strong> <code>${site.id}</code></p>
+                    <br/>
+                    <p><strong>Action Link:</strong> <a href="${frontendUrl}/scraper/verify/${site.id}" style="background-color: #2563eb; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">Verify Site & Feed Credentials</a></p>
+                `;
+
+            await this.emailService.sendStaffAlert(subject, html);
         } catch (err) {
-            console.error('Failed to send notification email to staff:', err.message);
+            console.error('Failed to send staff alert email:', err.message);
         }
 
         return site;

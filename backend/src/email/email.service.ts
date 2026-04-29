@@ -1,44 +1,86 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { BrevoClient, Brevo } from '@getbrevo/brevo';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private readonly logger = new Logger(EmailService.name);
+  private scraperTransporter: nodemailer.Transporter;
+  private brevoClient: BrevoClient;
   private readonly senderEmail: string;
   private readonly senderName: string;
+  private readonly brevoApiKey: string;
 
   constructor(
     private readonly configService: ConfigService,
   ) {
-    this.senderEmail = this.configService.get<string>('SMTP_SENDER_EMAIL') || 'stockbud@stockbud.xyz';
-    this.senderName = this.configService.get<string>('SMTP_SENDER_NAME') || 'Stockbud';
+    this.senderEmail = this.configService.get<string>('BREVO_SENDER_EMAIL') || 'stockbud@stockbud.xyz';
+    this.senderName = this.configService.get<string>('BREVO_SENDER_NAME') || 'Stockbud';
 
-    const host = this.configService.get<string>('SMTP_HOST') || 'mail';
-    const port = this.configService.get<number>('SMTP_PORT') || 25;
+    // ── Brevo Send API (via SDK v4) ──────────────────────
+    this.brevoApiKey = (this.configService.get<string>('BREVO_API_KEY') || '').trim();
+    this.brevoClient = new BrevoClient({ apiKey: this.brevoApiKey });
 
-    this.transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      ignoreTLS: port === 25, // Internal relay usually doesn't use TLS
-      auth: this.configService.get('SMTP_USER') ? {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASS'),
-      } : undefined,
+    // ── Gmail SMTP (Staff Alerting) ─────────────────────────
+    // When a user submits a new site for monitoring, the scraper service
+    // uses THIS Gmail account (SCRAPER_GMAIL_USER) as the SENDER to
+    // email the EMPLOYEE at STAFF_NOTIFICATION_EMAIL.
+    // The employee then logs into the platform, creates credentials,
+    // and approves the monitoring request.
+    //
+    // SCRAPER_GMAIL_PASS must be a 16-char Gmail App Password (no spaces).
+    const gmailPass = this.configService.get<string>('SCRAPER_GMAIL_PASS');
+    this.scraperTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: this.configService.get<string>('SCRAPER_GMAIL_USER'),
+        pass: gmailPass ? gmailPass.replace(/\s/g, '') : '',
+      }
     });
 
-    console.log(`[EmailService] SMTP service initialized at ${host}:${port}.`);
+    this.logger.log('Initialized — Brevo SDK (users) + Gmail SMTP (staff alerts).');
   }
+
 
   async sendEmail(options: {
     to: { email: string; name?: string }[];
     subject: string;
     htmlContent: string;
     attachment?: { name: string; content: string };
+    from?: { name: string; email: string };
+    useScraperTransporter?: boolean;
   }): Promise<boolean> {
+    if (options.useScraperTransporter) {
+      return this.sendViaGmail(options);
+    } else {
+      return this.sendViaBrevoApi(options);
+    }
+  }
+
+  /**
+   * Sends an alert to the staff email using the Gmail SMTP transporter.
+   * This is used for internal notifications like new site monitoring requests.
+   */
+  async sendStaffAlert(subject: string, htmlContent: string): Promise<boolean> {
+    const staffEmail = this.configService.get<string>('STAFF_NOTIFICATION_EMAIL') || 'support@stockbud.xyz';
+    const senderGmail = this.configService.get<string>('SCRAPER_GMAIL_USER') || 'stockbud.01@gmail.com';
+
+    return this.sendEmail({
+      to: [{ email: staffEmail, name: 'Stockbud Staff' }],
+      subject: subject,
+      htmlContent: htmlContent,
+      from: { name: 'Stockbud System Alerts', email: senderGmail },
+      useScraperTransporter: true
+    }); 
+  }
+
+  private async sendViaGmail(options: any): Promise<boolean> {
     const mailOptions: nodemailer.SendMailOptions = {
-      from: {
+      from: options.from ? {
+        name: options.from.name,
+        address: options.from.email,
+      } : {
         name: this.senderName,
         address: this.senderEmail,
       },
@@ -60,11 +102,41 @@ export class EmailService {
     }
 
     try {
-      const info = await this.transporter.sendMail(mailOptions);
-      console.log(`[EmailService] Email sent successfully. MessageId: ${info.messageId}`);
+      const info = await this.scraperTransporter.sendMail(mailOptions);
+      this.logger.log(`Gmail sent successfully. MessageId: ${info.messageId}`);
       return true;
     } catch (error) {
-      console.error('[EmailService] Failed to send email:', error.message);
+      this.logger.error(`Failed to send Gmail SMTP: ${error.message}`, error.stack);
+      return false;
+    }
+  }
+
+  private async sendViaBrevoApi(options: any): Promise<boolean> {
+    try {
+      const emailRequest: Brevo.SendTransacEmailRequest = {
+        subject: options.subject,
+        htmlContent: options.htmlContent,
+        sender: options.from
+          ? { name: options.from.name, email: options.from.email }
+          : { name: this.senderName, email: this.senderEmail },
+        to: options.to.map(t => ({ email: t.email, name: t.name })),
+      };
+
+      if (options.attachment) {
+        emailRequest.attachment = [
+          {
+            name: options.attachment.name,
+            content: options.attachment.content,
+          },
+        ];
+      }
+
+      await this.brevoClient.transactionalEmails.sendTransacEmail(emailRequest);
+      this.logger.log(`Brevo email sent successfully to ${options.to[0]?.email}`);
+      return true;
+    } catch (error) {
+      const errorMessage = error.response?.body?.message || error.message || 'Unknown error';
+      this.logger.error(`Failed to send Brevo API email: ${errorMessage}`, error.stack);
       return false;
     }
   }

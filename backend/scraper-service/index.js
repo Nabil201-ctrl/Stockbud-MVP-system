@@ -23,7 +23,7 @@ const ollamaClient = axios.create({
 });
 
 const app = express();
-const port = process.env.PORT || 3005;
+const port = process.env.PORT || 3006;
 
 const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 

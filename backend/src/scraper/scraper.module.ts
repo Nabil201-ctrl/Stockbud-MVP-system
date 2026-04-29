@@ -1,28 +1,35 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { ScraperController } from './scraper.controller';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScraperService } from './scraper.service';
-import { PrismaService } from '../database/prisma.service';
-import { EncryptionService } from '../common/encryption.service';
+import { ScraperController } from './scraper.controller';
+import { PrismaModule } from '../database/prisma.module';
+import { EncryptionModule } from '../common/encryption.module';
 
 @Module({
     imports: [
-        ClientsModule.register([
+        PrismaModule,
+        EncryptionModule,
+        ClientsModule.registerAsync([
             {
                 name: 'SCRAPER_SERVICE',
-                transport: Transport.RMQ,
-                options: {
-                    urls: [process.env.RABBITMQ_URL || 'amqp://rabbitmq:5672'],
-                    queue: 'scraper_queue',
-                    queueOptions: {
-                        durable: false,
+                imports: [ConfigModule],
+                useFactory: async (configService: ConfigService) => ({
+                    transport: Transport.RMQ,
+                    options: {
+                        urls: [configService.get<string>('RABBITMQ_URL') || 'amqp://localhost:5672'],
+                        queue: 'scraper_queue',
+                        queueOptions: {
+                            durable: false,
+                        },
                     },
-                },
+                }),
+                inject: [ConfigService],
             },
         ]),
     ],
+    providers: [ScraperService],
     controllers: [ScraperController],
-    providers: [ScraperService, EncryptionService],
     exports: [ScraperService],
 })
-export class ScraperModule {}
+export class ScraperModule { }
