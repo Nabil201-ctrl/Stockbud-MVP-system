@@ -13,6 +13,7 @@ const VerifySitePage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitting(true);
+        console.log(`[VerifySitePage] Submitting verification for ID: ${id}`, credentials);
         try {
             await storesAPI.scraper.verifySite(id, credentials);
             setSuccess(true);

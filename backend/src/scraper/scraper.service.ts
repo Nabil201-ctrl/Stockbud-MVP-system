@@ -38,6 +38,8 @@ export class ScraperService {
             }
         });
 
+        console.log(`[ScraperService] Site created with ID: ${site.id}`);
+
         // Step 1: Notify the USER (via Brevo API)
         // Let them know their request was received and is being processed.
         if (user && user.email) {
@@ -131,31 +133,43 @@ export class ScraperService {
 
     async verifySite(siteId: string, dto: AddCredentialsDto) {
         const { username, password } = dto;
+        const cleanId = siteId.trim().replace(/\/$/, '');
+        console.log(`[ScraperService] Verifying site: ${cleanId}`);
 
         const site = await this.prisma.scrapeSite.findUnique({
-            where: { id: siteId },
+            where: { id: cleanId },
         });
 
         if (!site) {
+            const allSites = await this.prisma.scrapeSite.findMany({ select: { id: true } });
+            const allIds = allSites.map(s => s.id).join(', ');
+            console.error(`[ScraperService] Site not found: ${cleanId}. Available IDs: ${allIds}`);
             throw new NotFoundException('Site not found');
         }
 
         const updatedSite = await this.prisma.scrapeSite.update({
-            where: { id: siteId },
+            where: { id: cleanId },
             data: {
                 status: 'idle', // Ready to be scraped
                 credentials: {
-                    create: {
-                        username,
-                        password: this.encryptionService.encrypt(password),
+                    upsert: {
+                        create: {
+                            username,
+                            password: this.encryptionService.encrypt(password),
+                        },
+                        update: {
+                            username,
+                            password: this.encryptionService.encrypt(password),
+                        }
                     }
                 }
-            }
+            },
+            include: { credentials: true }
         });
 
         // Trigger the first scrape now that credentials are provided
         try {
-            await this.triggerScrape(site.userId, site.id);
+            await this.triggerScrape(site.userId, cleanId);
         } catch (error) {
             console.error('Failed to automatically trigger scrape after verification', error);
         }
@@ -213,5 +227,10 @@ export class ScraperService {
         return this.prisma.scrapeSite.delete({
             where: { id: siteId }
         });
+    }
+
+    // DEBUG ONLY: Remove before production
+    async debugGetAllSites() {
+        return this.prisma.scrapeSite.findMany();
     }
 }

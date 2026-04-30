@@ -120,24 +120,24 @@ const Header = ({ isDarkMode, toggleTheme, toggleSidebar, startTour }) => {
           <button className="lg:hidden" onClick={toggleSidebar}>
             <Menu size={24} />
           </button>
-          <div className="hidden md:flex items-center relative" ref={shopMenuRef}>
+          <div className="flex items-center relative" ref={shopMenuRef}>
             {(allStores.length > 0) ? (
               <>
                 <button
                   id="shop-selector"
                   onClick={() => setShowShopMenu(!showShopMenu)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors border ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                  className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all border ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-slate-200 hover:bg-slate-50'} active:scale-95`}
                 >
-                  <div className={`p-1 rounded-md ${activeStore?.isSocial
+                  <div className={`p-1 rounded-md flex-shrink-0 ${activeStore?.isSocial
                     ? (isDarkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-600')
                     : (isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-600')
                     }`}>
-                    {activeStore?.isSocial ? <Store size={16} /> : <ShoppingBag size={16} />}
+                    {activeStore?.isSocial ? <Store size={14} className="sm:w-4 sm:h-4" /> : <ShoppingBag size={14} className="sm:w-4 sm:h-4" />}
                   </div>
-                  <span className={`text-sm font-medium max-w-[150px] truncate ${isDarkMode ? 'text-gray-200' : 'text-slate-700'}`}>
+                  <span className={`text-xs sm:text-sm font-bold truncate max-w-[80px] xs:max-w-[120px] sm:max-w-[150px] ${isDarkMode ? 'text-gray-200' : 'text-slate-700'}`}>
                     {activeStore ? (activeStore.name || activeStore.shop?.replace('.myshopify.com', '') || activeStore.type) : t('header.selectStore') || 'Select Store'}
                   </span>
-                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${showShopMenu ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={14} className={`text-gray-400 transition-transform flex-shrink-0 ${showShopMenu ? 'rotate-180' : ''}`} />
                 </button>
                 {showShopMenu && (
                   <div className={`absolute top-full left-0 mt-2 w-64 rounded-xl shadow-xl border overflow-hidden z-50 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>

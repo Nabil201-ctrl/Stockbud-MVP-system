@@ -317,24 +317,30 @@ const SettingsPage = () => {
                 </div>
             )}
 
-            <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 -mx-3 px-3 sm:mx-0 sm:px-0">
-                <nav className="flex space-x-4 sm:space-x-8">
-                    {[
-                        { id: 'profile', icon: User, label: 'Profile' },
-                        { id: 'security', icon: Lock, label: 'Security' },
-                        { id: 'usage', icon: Zap, label: 'Plan' },
-                        { id: 'integrations', icon: ShoppingBag, label: 'Stores' },
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`pb-3 px-1 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all ${activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
-                        >
-                            <tab.icon size={14} />
-                            <span className="hidden xs:inline">{tab.label}</span>
-                        </button>
-                    ))}
-                </nav>
+            <div className="border-b border-gray-200 dark:border-gray-700 -mx-3 px-3 sm:mx-0 sm:px-0">
+                <div className="overflow-x-auto scrollbar-none flex scroll-smooth">
+                    <nav className="flex space-x-6 sm:space-x-10 min-w-max pb-px">
+                        {[
+                            { id: 'profile', icon: User, label: 'Profile' },
+                            { id: 'security', icon: Lock, label: 'Security' },
+                            { id: 'usage', icon: Zap, label: 'Plan' },
+                            { id: 'integrations', icon: ShoppingBag, label: 'Stores' },
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`pb-4 px-1 border-b-2 font-black text-xs sm:text-sm flex items-center gap-2 transition-all relative ${activeTab === tab.id
+                                    ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                                    : 'border-transparent text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+                                    }`}
+                            >
+                                <tab.icon size={16} />
+                                <span>{tab.label}</span>
+                                {activeTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full shadow-[0_-2px_10px_rgba(37,99,235,0.4)]"></div>}
+                            </button>
+                        ))}
+                    </nav>
+                </div>
             </div>
 
             {/* Profile Tab */}

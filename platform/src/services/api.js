@@ -164,7 +164,7 @@ export const storesAPI = {
         createSite: (data) => api.post('/scraper/sites', data),
         triggerScrape: (id) => api.post(`/scraper/sites/${id}/scrape`),
         deleteSite: (id) => api.delete(`/scraper/sites/${id}`),
-        verifySite: (id, data) => api.post(`/scraper/sites/${id}/verify`, data),
+        verifySite: (id, data) => api.post(`/scraper/verify/${id}`, data),
     }
 };
 

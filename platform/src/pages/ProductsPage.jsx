@@ -474,8 +474,7 @@ const ProductsPage = () => {
               </div>
             </div>
 
-            <div id="products-table" className="overflow-x-auto relative">
-              { }
+            <div id="products-table" className="relative">
               {paginationLoading && (
                 <div className="absolute inset-0 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
                   <div className="flex items-center gap-3">
@@ -496,85 +495,205 @@ const ProductsPage = () => {
                   </p>
                 </div>
               ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                      <th className="text-left py-3 px-4 font-medium">{t('products.product')}</th>
-                      <th className="text-left py-3 px-4 font-medium">{t('products.category')}</th>
-                      <th className="text-left py-3 px-4 font-medium">{t('products.price')}</th>
-                      <th className="text-left py-3 px-4 font-medium">{t('products.stock')}</th>
-                      <th className="text-left py-3 px-4 font-medium">Revenue</th>
-                      <th className="text-left py-3 px-4 font-medium">Threshold</th>
-                      <th className="text-left py-3 px-4 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <>
+                  {/* Table for Desktop/Tablet */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                          <th className="text-left py-3 px-4 font-medium">{t('products.product')}</th>
+                          <th className="text-left py-3 px-4 font-medium">{t('products.category')}</th>
+                          <th className="text-left py-3 px-4 font-medium">{t('products.price')}</th>
+                          <th className="text-left py-3 px-4 font-medium">{t('products.stock')}</th>
+                          <th className="text-left py-3 px-4 font-medium">Revenue</th>
+                          <th className="text-left py-3 px-4 font-medium">Threshold</th>
+                          <th className="text-left py-3 px-4 font-medium"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProducts.map((product) => (
+                          <tr key={product.id} className={`border-b ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} transition-colors`}>
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                  {product.image.startsWith('http') ? (
+                                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <span className="text-2xl">{product.image}</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-medium">{product.name}</div>
+                                  <div className={`text-xs px-2 py-1 rounded-full inline-block ${product.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                    product.status === 'low' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                    }`}>
+                                    {product.status === 'active' ? t('products.inStock') : product.status === 'low' ? t('products.lowStock') : t('products.outOfStock')}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className={`px-3 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                {product.category}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 font-medium">
+                              {product.currency ? `${product.currency} ` : '$'}
+                              {product.price.toLocaleString()}
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-24 h-2 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                                  }`}>
+                                  <div
+                                    className={`h-2 rounded-full ${product.stock > 50 ? 'bg-green-500' :
+                                      product.stock > 10 ? 'bg-yellow-500' : 'bg-red-500'
+                                      }`}
+                                    style={{ width: `${Math.min((product.stock / maxStock) * 100, 100)}%` }}
+                                  ></div>
+                                </div>
+                                <span>{product.stock}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 font-medium text-green-600 dark:text-green-400">
+                              {activeCurrency} {(product.revenue || 0).toLocaleString()}
+                            </td>
+                            <td className="py-4 px-4">
+                              <div className={`text-sm ${thresholds[product.id] !== undefined && product.stock <= thresholds[product.id] ? 'text-red-500 font-bold' : ''}`}>
+                                {thresholds[product.id] !== undefined ? thresholds[product.id] : 'Not Set'}
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {user?.socialStores?.some(s => s.id === user.activeShopId) && (
+                                  <div className="flex items-center gap-1 border-r pr-2 border-gray-100 dark:border-gray-700">
+                                    <button
+                                      onClick={() => {
+                                        setImageFile(null);
+                                        setImagePreview(product.image);
+                                        setProductToEdit(product);
+                                      }}
+                                      className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500 transition-colors"
+                                      title="Edit Product"
+                                    >
+                                      <Edit size={16} />
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (window.confirm('Are you sure you want to delete this product?')) {
+                                          try {
+                                            await storesAPI.socialStores.deleteProduct(user.activeShopId, product.id);
+                                            await fetchProducts();
+                                          } catch (err) { alert('Failed to delete product') }
+                                        }
+                                      }}
+                                      className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 transition-colors"
+                                      title="Delete Product"
+                                    >
+                                      <Trash size={16} />
+                                    </button>
+                                  </div>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setShowThresholdModal(product);
+                                    setThresholdInput(thresholds[product.id] !== undefined ? thresholds[product.id].toString() : '');
+                                  }}
+                                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-indigo-500"
+                                  title="Set Inventory Alert"
+                                >
+                                  <Bell size={16} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setShowOrderModal(product);
+                                    setOrderQuantity(1);
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-black shadow-sm active:scale-95 transition-all ml-1"
+                                >
+                                  <ShoppingBag size={14} />
+                                  <span className="hidden xl:inline">QUICK SELL</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Cards for Mobile */}
+                  <div className="md:hidden space-y-4">
                     {filteredProducts.map((product) => (
-                      <tr key={product.id} className={`border-b ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'} transition-colors`}>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
-                              {product.image.startsWith('http') ? (
-                                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-2xl">{product.image}</span>
-                              )}
-                            </div>
-                            <div>
-                              <div className="font-medium">{product.name}</div>
-                              <div className={`text-xs px-2 py-1 rounded-full inline-block ${product.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                product.status === 'low' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                  'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      <div key={product.id} className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} shadow-sm transition-all hover:shadow-md`}>
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {product.image.startsWith('http') ? (
+                              <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-3xl">{product.image}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-lg truncate dark:text-white">{product.name}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                                {product.category}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${product.status === 'active' ? 'bg-green-100 text-green-700' :
+                                product.status === 'low' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
                                 }`}>
                                 {product.status === 'active' ? t('products.inStock') : product.status === 'low' ? t('products.lowStock') : t('products.outOfStock')}
-                              </div>
+                              </span>
                             </div>
                           </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
-                            }`}>
-                            {product.category}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 font-medium">
-                          {product.currency ? `${product.currency} ` : '$'}
-                          {product.price.toLocaleString()}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-24 h-2 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
-                              }`}>
-                              <div
-                                className={`h-2 rounded-full ${product.stock > 50 ? 'bg-green-500' :
-                                  product.stock > 10 ? 'bg-yellow-500' : 'bg-red-500'
-                                  }`}
-                                style={{ width: `${Math.min((product.stock / maxStock) * 100, 100)}%` }}
-                              ></div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('products.price')}</div>
+                            <div className="text-base font-bold dark:text-white">
+                              {product.currency ? `${product.currency} ` : '$'}
+                              {product.price.toLocaleString()}
                             </div>
-                            <span>{product.stock}</span>
                           </div>
-                        </td>
-                        <td className="py-4 px-4 font-medium text-green-600 dark:text-green-400">
-                          {activeCurrency} {(product.revenue || 0).toLocaleString()}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className={`text-sm ${thresholds[product.id] !== undefined && product.stock <= thresholds[product.id] ? 'text-red-500 font-bold' : ''}`}>
-                            {thresholds[product.id] !== undefined ? thresholds[product.id] : 'Not Set'}
+                          <div className="text-right">
+                            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Revenue</div>
+                            <div className="text-base font-bold text-green-600 dark:text-green-400">
+                              {activeCurrency} {(product.revenue || 0).toLocaleString()}
+                            </div>
                           </div>
-                        </td>
-                        <td className="py-4 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        </div>
+
+                        <div className="mb-4">
+                          <div className="flex justify-between items-center mb-1">
+                            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('products.stock')}</div>
+                            <div className="text-xs font-bold dark:text-gray-300">{product.stock} units</div>
+                          </div>
+                          <div className={`w-full h-1.5 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                            <div
+                              className={`h-1.5 rounded-full ${product.stock > 50 ? 'bg-green-500' :
+                                product.stock > 10 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                              style={{ width: `${Math.min((product.stock / maxStock) * 100, 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                          <div className="flex gap-2">
                             {user?.socialStores?.some(s => s.id === user.activeShopId) && (
-                              <div className="flex items-center gap-1 border-r pr-2 border-gray-100 dark:border-gray-700">
+                              <>
                                 <button
                                   onClick={() => {
                                     setImageFile(null);
                                     setImagePreview(product.image);
                                     setProductToEdit(product);
                                   }}
-                                  className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500 transition-colors"
-                                  title="Edit Product"
+                                  className="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl"
                                 >
                                   <Edit size={16} />
                                 </button>
@@ -587,41 +706,40 @@ const ProductsPage = () => {
                                       } catch (err) { alert('Failed to delete product') }
                                     }
                                   }}
-                                  className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 transition-colors"
-                                  title="Delete Product"
+                                  className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl"
                                 >
                                   <Trash size={16} />
                                 </button>
-                              </div>
+                              </>
                             )}
                             <button
                               onClick={() => {
                                 setShowThresholdModal(product);
                                 setThresholdInput(thresholds[product.id] !== undefined ? thresholds[product.id].toString() : '');
                               }}
-                              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-indigo-500"
-                              title="Set Inventory Alert"
+                              className="p-2.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl"
                             >
                               <Bell size={16} />
                             </button>
-                            <button
-                              onClick={() => {
-                                setShowOrderModal(product);
-                                setOrderQuantity(1);
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-black shadow-sm active:scale-95 transition-all ml-1"
-                            >
-                              <ShoppingBag size={14} />
-                              <span className="hidden xl:inline">QUICK SELL</span>
-                            </button>
                           </div>
-                        </td>
-                      </tr>
+                          <button
+                            onClick={() => {
+                              setShowOrderModal(product);
+                              setOrderQuantity(1);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-green-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-green-500/20 active:scale-95 transition-all"
+                          >
+                            <ShoppingBag size={16} />
+                            QUICK SELL
+                          </button>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </>
               )}
             </div>
+
 
             {/* Pagination Controls */}
             <div className={`px-3 sm:px-6 py-3 sm:py-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between flex-wrap gap-2`}>

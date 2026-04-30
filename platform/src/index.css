@@ -303,3 +303,34 @@ iframe[name="paystack-checkout-iframe"] {
 .dark .driver-popover.driverjs-theme button.driver-popover-next-btn:hover {
   background-color: #2563eb;
 }
+
+/* Scrollbar hiding utility */
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Custom breakpoints if needed */
+@media (max-width: 380px) {
+  .xs-hidden {
+    display: none !important;
+  }
+}
+
+/* Premium card hover effects */
+.hover-premium {
+  @apply transition-all duration-300;
+}
+
+.hover-premium:hover {
+  @apply -translate-y-1 shadow-xl;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.dark .hover-premium:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+}

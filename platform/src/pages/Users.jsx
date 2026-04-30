@@ -158,7 +158,8 @@ const UsersPage = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Table for Desktop/Tablet */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -175,15 +176,15 @@ const UsersPage = () => {
                     <tr key={user.id} className={`border-b ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'}`}>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} flex items-center justify-center font-medium`}>
+                          <div className={`w-10 h-10 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} flex items-center justify-center font-medium flex-shrink-0`}>
                             {user.avatar}
                           </div>
-                          <div>
-                            <div className="font-medium flex items-center gap-2">
+                          <div className="min-w-0">
+                            <div className="font-medium flex items-center gap-2 truncate">
                               {user.name}
                               {user.isShopifyUser && <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-black tracking-tighter ring-1 ring-indigo-500/20">SHOPIFY</span>}
                             </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
                           </div>
                         </div>
                       </td>
@@ -226,6 +227,65 @@ const UsersPage = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Cards for Mobile */}
+            <div className="md:hidden space-y-4">
+              {userData.map((user) => (
+                <div key={user.id} className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-100'} shadow-sm`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-full ${isDarkMode ? 'bg-gray-700' : 'bg-white'} flex items-center justify-center font-bold text-lg shadow-sm flex-shrink-0`}>
+                        {user.avatar}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold flex items-center gap-2 truncate dark:text-white">
+                          {user.name}
+                          {user.isShopifyUser && <span className="text-[8px] bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded font-black tracking-tighter">SHOPIFY</span>}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
+                      </div>
+                    </div>
+                    <button className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
+                      <MoreVertical size={18} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                      <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">{t('users.status')}</div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${user.status === 'active'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                        }`}>
+                        {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                      </span>
+                    </div>
+                    <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                      <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">{t('users.plan')}</div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${user.plan === 'Premium' ? 'bg-purple-100 text-purple-700' :
+                        user.plan === 'Pro' ? 'bg-blue-100 text-blue-700' :
+                          user.plan === 'Enterprise' ? 'bg-orange-100 text-orange-700' :
+                            'bg-gray-100 text-gray-600'
+                        }`}>
+                        {user.plan}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Globe size={12} />
+                      <span>{user.location}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar size={12} />
+                      <span>{user.lastActive}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
 
             { }
             <div className="flex items-center justify-between mt-6">
