@@ -20,9 +20,8 @@ const VerifySitePage = () => {
             globalThis.dispatchEvent(new CustomEvent('app:notification', {
                 detail: { message: 'Site verified and scraper triggered successfully!', type: 'success' }
             }));
-            setTimeout(() => {
-                navigate('/dashboard');
-            }, 3000);
+            // No redirect to dashboard for employees
+            console.log('Verification successful');
         } catch (err) {
             console.error(err);
             globalThis.dispatchEvent(new CustomEvent('app:notification', {
@@ -45,10 +44,10 @@ const VerifySitePage = () => {
                         The credentials have been securely stored and the AI scraper has been triggered.
                     </p>
                     <button 
-                        onClick={() => navigate('/dashboard')}
+                        onClick={() => navigate('/')}
                         className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-4 py-3 font-medium transition-colors"
                     >
-                        Return to Dashboard
+                        Back to Home
                     </button>
                 </div>
             </div>

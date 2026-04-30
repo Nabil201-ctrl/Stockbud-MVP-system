@@ -102,8 +102,9 @@ function App() {
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/scraper" element={<ScraperPage />} />
-              <Route path="/scraper/verify/:id" element={<VerifySitePage />} />
             </Route>
+
+            <Route path="/scraper/verify/:id" element={<VerifySitePage />} />
 
             { }
           </Routes >
