@@ -31,7 +31,7 @@ const productsExtracted = new client.Counter({
 });
 
 const scrapeDuration = new client.Histogram({
-    name: 'scraper_job_duration_seconds',
+    name: 'scraper_extraction_duration_seconds',
     help: 'Total duration of a scrape job in seconds',
     labelNames: ['platform']
 });

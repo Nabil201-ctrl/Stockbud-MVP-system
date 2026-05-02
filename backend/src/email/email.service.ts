@@ -24,23 +24,26 @@ export class EmailService {
     this.brevoClient = new BrevoClient({ apiKey: this.brevoApiKey });
 
     // ── Gmail SMTP (Staff Alerting) ─────────────────────────
-    // When a user submits a new site for monitoring, the scraper service
-    // uses THIS Gmail account (SCRAPER_GMAIL_USER) as the SENDER to
-    // email the EMPLOYEE at STAFF_NOTIFICATION_EMAIL.
-    // The employee then logs into the platform, creates credentials,
-    // and approves the monitoring request.
-    //
-    // SCRAPER_GMAIL_PASS must be a 16-char Gmail App Password (no spaces).
+    const gmailUser = this.configService.get<string>('SCRAPER_GMAIL_USER');
     const gmailPass = this.configService.get<string>('SCRAPER_GMAIL_PASS');
-    this.scraperTransporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: this.configService.get<string>('SCRAPER_GMAIL_USER'),
-        pass: gmailPass ? gmailPass.replace(/\s/g, '') : '',
-      }
-    });
 
-    this.logger.log('Initialized — Brevo SDK (users) + Gmail SMTP (staff alerts).');
+    if (gmailUser && gmailPass) {
+      this.logger.log(`Initializing Gmail SMTP with user: ${gmailUser}`);
+      this.scraperTransporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // use SSL
+        auth: {
+          user: gmailUser,
+          pass: gmailPass.replace(/\s/g, ''),
+        },
+      });
+      this.logger.log('Gmail SMTP (staff alerts) initialized successfully.');
+    } else {
+      this.logger.warn(`Gmail SMTP credentials missing. Staff alerts will fail. User: ${gmailUser ? 'OK' : 'MISSING'}, Pass: ${gmailPass ? 'OK' : 'MISSING'}`);
+    }
+
+    this.logger.log('Initialized — Brevo SDK (users) + Email System.');
   }
 
 
@@ -53,6 +56,10 @@ export class EmailService {
     useScraperTransporter?: boolean;
   }): Promise<boolean> {
     if (options.useScraperTransporter) {
+      if (!this.scraperTransporter) {
+        this.logger.error('Cannot send Gmail SMTP: Transporter not initialized (missing credentials).');
+        return false;
+      }
       return this.sendViaGmail(options);
     } else {
       return this.sendViaBrevoApi(options);

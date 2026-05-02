@@ -98,7 +98,19 @@ class GenericAIScraper extends BaseScraper {
         
         // Gemini Fallback
         if (this.genAI) {
-            // ... (Gemini logic from previous version)
+            try {
+                this.logger.info('Ollama failed or unavailable, falling back to Gemini...');
+                const model = this.genAI.getGenerativeModel({ 
+                    model: "gemini-1.5-flash",
+                    generationConfig: { responseMimeType: "application/json" }
+                });
+
+                const result = await model.generateContent(prompt);
+                const resultText = result.response.text();
+                return JSON.parse(resultText);
+            } catch (geminiError) {
+                this.logger.error('Gemini extraction fallback failed:', geminiError.message);
+            }
         }
 
         return [];
