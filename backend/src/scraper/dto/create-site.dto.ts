@@ -19,4 +19,12 @@ export class CreateSiteDto {
     @IsString()
     @IsOptional()
     platform?: string;
+
+    @IsString()
+    @IsOptional()
+    targetStoreId?: string;
+
+    @IsString()
+    @IsOptional()
+    targetStoreType?: string;
 }

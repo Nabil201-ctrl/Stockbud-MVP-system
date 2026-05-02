@@ -1,14 +1,20 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request, SetMetadata } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, SetMetadata } from '@nestjs/common';
 import { ScraperService } from './scraper.service';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { AddCredentialsDto } from './dto/add-credentials.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { EventPattern, Payload } from '@nestjs/microservices';
 
 const Public = () => SetMetadata('isPublic', true);
 
 @Controller('scraper')
 export class ScraperController {
     constructor(private readonly scraperService: ScraperService) { }
+
+    @EventPattern('scrape_result')
+    async handleScrapeResult(@Payload() data: any) {
+        return this.scraperService.handleScrapeResult(data);
+    }
 
     @UseGuards(JwtAuthGuard)
     @Post('sites')
@@ -40,6 +46,12 @@ export class ScraperController {
     @Post('sites/:id/scrape')
     async triggerScrape(@Request() req, @Param('id') id: string) {
         return this.scraperService.triggerScrape(req.user.id, id);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Patch('sites/:id')
+    async updateSite(@Request() req, @Param('id') id: string, @Body() dto: Partial<CreateSiteDto>) {
+        return this.scraperService.updateSite(req.user.id, id, dto);
     }
 
     @UseGuards(JwtAuthGuard)

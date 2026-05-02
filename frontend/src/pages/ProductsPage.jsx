@@ -1,49 +1,93 @@
-
-import React, { useState } from 'react';
-import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Package, TrendingUp, DollarSign, ShoppingCart, Star, Eye, Tag, Filter, Search, MoreVertical, Loader2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import axios from 'axios';
 
 const ProductsPage = () => {
   const { isDarkMode } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [productStats, setProductStats] = useState({
+    total: 0,
+    active: 0,
+    outOfStock: 0,
+    lowStock: 0,
+    totalRevenue: 0,
+    avgRating: 0
+  });
 
-  const productStats = {
-    total: 156,
-    active: 128,
-    outOfStock: 12,
-    lowStock: 16,
-    totalRevenue: 125642.89,
-    avgRating: 4.2
-  };
+  const [products, setProducts] = useState([]);
 
-  const products = [
-    { id: 1, name: 'Premium Headphones', category: 'Electronics', price: 299.99, stock: 45, revenue: 24500, rating: 4.5, status: 'active', image: '' },
-    { id: 2, name: 'Wireless Mouse', category: 'Electronics', price: 49.99, stock: 120, revenue: 18400, rating: 4.3, status: 'active', image: '' },
-    { id: 3, name: 'Office Chair', category: 'Furniture', price: 349.99, stock: 8, revenue: 31200, rating: 4.7, status: 'low', image: '' },
-    { id: 4, name: 'Desk Lamp', category: 'Home', price: 39.99, stock: 0, revenue: 8900, rating: 4.0, status: 'out', image: '' },
-    { id: 5, name: 'Notebook Set', category: 'Stationery', price: 24.99, stock: 200, revenue: 12400, rating: 4.2, status: 'active', image: '' },
-    { id: 6, name: 'Coffee Mug', category: 'Home', price: 19.99, stock: 150, revenue: 9800, rating: 4.1, status: 'active', image: '' }
-  ];
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/products`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
 
-  const categories = [
-    { name: 'All Products', count: 156 },
-    { name: 'Electronics', count: 42 },
-    { name: 'Home & Garden', count: 38 },
-    { name: 'Furniture', count: 24 },
-    { name: 'Clothing', count: 32 },
-    { name: 'Stationery', count: 20 }
-  ];
+        if (response.data) {
+          setProducts(response.data.data || []);
+          setProductStats(response.data.stats || productStats);
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('Failed to load products. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const derivedCategories = products.reduce((acc, product) => {
+    const cat = product.category || 'Uncategorized';
+    const existing = acc.find(c => c.name === cat);
+    if (existing) {
+      existing.count++;
+    } else {
+      acc.push({ name: cat, count: 1 });
+    }
+    return acc;
+  }, [{ name: 'All Products', count: products.length }]);
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = category === 'all' || category === 'all products' || p.category.toLowerCase() === category.toLowerCase();
+    return matchesSearch && matchesCategory;
+  });
+
+  if (loading) {
+    return (
+      <div className={`flex items-center justify-center min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-lg font-medium">Loading your products...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`p-6 min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className="max-w-7xl mx-auto">
-        {}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
+        
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">Product Management</h1>
             <p className="text-gray-500 dark:text-gray-400">
-              Manage your product catalog and inventory
+              Manage your product catalog from all sources (Shopify, Scraped, Social)
             </p>
           </div>
           <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2">
@@ -55,10 +99,10 @@ const ProductsPage = () => {
         {}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
-            { icon: <Package size={24} />, label: 'Total Products', value: productStats.total, change: '+12%', color: 'bg-blue-500' },
-            { icon: <DollarSign size={24} />, label: 'Total Revenue', value: `$${productStats.totalRevenue.toLocaleString()}`, change: '+8.5%', color: 'bg-green-500' },
-            { icon: <ShoppingCart size={24} />, label: 'Active Products', value: productStats.active, change: '+3.2%', color: 'bg-purple-500' },
-            { icon: <Star size={24} />, label: 'Avg Rating', value: productStats.avgRating, change: '+0.2', color: 'bg-orange-500' }
+            { icon: <Package size={24} />, label: 'Total Products', value: productStats.total, change: '', color: 'bg-blue-500' },
+            { icon: <DollarSign size={24} />, label: 'Total Revenue', value: `$${productStats.totalRevenue.toLocaleString()}`, change: '', color: 'bg-green-500' },
+            { icon: <ShoppingCart size={24} />, label: 'Active Products', value: productStats.active, change: '', color: 'bg-purple-500' },
+            { icon: <Star size={24} />, label: 'Avg Rating', value: productStats.avgRating.toFixed(1), change: '', color: 'bg-orange-500' }
           ].map((stat, idx) => (
             <div key={idx} className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <div className="flex items-center justify-between mb-4">
@@ -67,7 +111,6 @@ const ProductsPage = () => {
                     {stat.icon}
                   </div>
                 </div>
-                <span className="text-green-600 dark:text-green-400 font-medium">{stat.change}</span>
               </div>
               <div className="text-2xl font-bold mb-1">{stat.value}</div>
               <div className="text-gray-500 dark:text-gray-400 text-sm">{stat.label}</div>
@@ -103,23 +146,24 @@ const ProductsPage = () => {
                 <thead>
                   <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                     <th className="text-left py-3 px-4 font-medium">Product</th>
-                    <th className="text-left py-3 px-4 font-medium">Category</th>
+                    <th className="text-left py-3 px-4 font-medium">Source</th>
                     <th className="text-left py-3 px-4 font-medium">Price</th>
                     <th className="text-left py-3 px-4 font-medium">Stock</th>
                     <th className="text-left py-3 px-4 font-medium">Revenue</th>
-                    <th className="text-left py-3 px-4 font-medium">Rating</th>
                     <th className="text-left py-3 px-4 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
+                  {filteredProducts.map((product) => (
                     <tr key={product.id} className={`border-b ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-200 hover:bg-gray-50'}`}>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="text-2xl">{product.image}</div>
+                          <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center overflow-hidden">
+                            {product.image ? <img src={product.image} alt="" className="w-full h-full object-cover" /> : <Package size={20} className="text-gray-400" />}
+                          </div>
                           <div>
                             <div className="font-medium">{product.name}</div>
-                            <div className={`text-xs px-2 py-1 rounded-full inline-block ${
+                            <div className={`text-[10px] px-2 py-0.5 rounded-full inline-block ${
                               product.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                               product.status === 'low' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
                               'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
@@ -130,11 +174,14 @@ const ProductsPage = () => {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <span className={`px-3 py-1 rounded-full text-xs ${
-                          isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
+                        <span className={`px-3 py-1 rounded-full text-[10px] capitalize font-semibold ${
+                          product.source === 'shopify' ? 'bg-green-100 text-green-700' : 
+                          product.source === 'website' ? 'bg-blue-100 text-blue-700' :
+                          'bg-purple-100 text-purple-700'
                         }`}>
-                          {product.category}
+                          {product.source}
                         </span>
+                        <div className="text-[10px] text-gray-400 mt-1">{product.storeName}</div>
                       </td>
                       <td className="py-4 px-4 font-medium">${product.price}</td>
                       <td className="py-4 px-4">
@@ -156,13 +203,7 @@ const ProductsPage = () => {
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                           <DollarSign size={14} />
-                          <span>${product.revenue.toLocaleString()}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <Star size={14} className="text-yellow-500" />
-                          <span>{product.rating}</span>
+                          <span>${(product.revenue || 0).toLocaleString()}</span>
                         </div>
                       </td>
                       <td className="py-4 px-4">
@@ -183,7 +224,7 @@ const ProductsPage = () => {
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">Categories</h3>
               <div className="space-y-3">
-                {categories.map((cat) => (
+                {derivedCategories.map((cat) => (
                   <button
                     key={cat.name}
                     onClick={() => setCategory(cat.name.toLowerCase())}
@@ -193,7 +234,7 @@ const ProductsPage = () => {
                         : isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'
                     } border`}
                   >
-                    <span>{cat.name}</span>
+                    <span className="capitalize">{cat.name}</span>
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       isDarkMode ? 'bg-gray-600' : 'bg-gray-200'
                     }`}>
@@ -222,7 +263,7 @@ const ProductsPage = () => {
                       <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div
                           className={`${item.color} h-2 rounded-full`}
-                          style={{ width: `${(item.count / productStats.total) * 100}%` }}
+                          style={{ width: `${productStats.total > 0 ? (item.count / productStats.total) * 100 : 0}%` }}
                         ></div>
                       </div>
                       <span className="font-medium w-10 text-right">{item.count}</span>
@@ -234,25 +275,21 @@ const ProductsPage = () => {
 
             {}
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-4">Top Performing</h3>
+              <h3 className="text-lg font-semibold mb-4">Inventory Sources</h3>
               <div className="space-y-4">
-                {products.slice(0, 3).map((product, idx) => (
-                  <div key={product.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
-                    <div className="flex items-center gap-3">
-                      <div className="text-xl">{product.image}</div>
-                      <div>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          ${product.revenue.toLocaleString()} revenue
-                        </div>
+                {Array.from(new Set(products.map(p => p.source))).map((source, idx) => {
+                  const count = products.filter(p => p.source === source).length;
+                  return (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+                      <div className="flex items-center gap-3">
+                        <div className="capitalize font-medium">{source}</div>
                       </div>
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-xs">
+                        {count} items
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Star size={14} className="text-yellow-500" />
-                      <span>{product.rating}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

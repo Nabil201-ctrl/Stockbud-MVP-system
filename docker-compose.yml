@@ -263,6 +263,23 @@ services:
     networks:
       - stockbud-network
 
+  meta-app:
+    build:
+      context: ./meta_app
+      dockerfile: Dockerfile
+    container_name: stockbud-meta-app
+    restart: always
+    ports:
+      - "3006:3006"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    env_file:
+      - ./meta_app/.env
+    networks:
+      - stockbud-network
+
   smtp:
     image: namshi/smtp
     container_name: stockbud-smtp

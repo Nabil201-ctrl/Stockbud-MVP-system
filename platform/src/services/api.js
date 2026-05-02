@@ -162,6 +162,7 @@ export const storesAPI = {
     scraper: {
         getSites: () => api.get('/scraper/sites'),
         createSite: (data) => api.post('/scraper/sites', data),
+        updateSite: (id, data) => api.patch(`/scraper/sites/${id}`, data),
         triggerScrape: (id) => api.post(`/scraper/sites/${id}/scrape`),
         deleteSite: (id) => api.delete(`/scraper/sites/${id}`),
         verifySite: (id, data) => api.post(`/scraper/verify/${id}`, data),

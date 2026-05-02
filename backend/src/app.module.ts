@@ -24,8 +24,8 @@ import { SocialStoresModule } from './social-stores/social-stores.module';
 import { MetaModule } from './meta/meta.module';
 import { ScraperModule } from './scraper/scraper.module';
 import { AppLogger } from './common/logger';
-
 import { HealthModule } from './health/health.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 
 @Module({
@@ -60,6 +60,7 @@ import { HealthModule } from './health/health.module';
         SocialStoresModule,
         MetaModule,
         ScraperModule,
+        MonitoringModule,
     ],
 
     providers: [

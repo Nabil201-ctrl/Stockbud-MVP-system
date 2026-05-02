@@ -225,6 +225,10 @@ model ScrapeSite {
   credentials       ScrapeCredential?
   jobs              ScrapeJob[]
   snapshots         ScrapeSnapshot[]
+
+  targetStoreId     String?           // Optional: link to a specific Shopify or Social store
+  targetStoreType   String?           // "shopify" or "social"
+
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 }

@@ -1,12 +1,14 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import { ProductsService } from './products.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('products')
 export class ProductsController {
     constructor(private readonly productsService: ProductsService) { }
 
+    @UseGuards(JwtAuthGuard)
     @Get()
-    findAll() {
-        return this.productsService.findAll();
+    async findAll(@Request() req) {
+        return this.productsService.findAll(req.user.id);
     }
 }

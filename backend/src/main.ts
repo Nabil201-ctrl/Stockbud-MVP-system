@@ -68,6 +68,15 @@ async function bootstrap() {
         },
     });
 
+    app.connectMicroservice<MicroserviceOptions>({
+        transport: Transport.RMQ,
+        options: {
+            urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+            queue: 'scraper_results',
+            queueOptions: { durable: false },
+        },
+    });
+
     await app.startAllMicroservices();
     logger.log('PostgreSQL Database connected successfully');
     logger.log('RabbitMQ Microservice transport started');

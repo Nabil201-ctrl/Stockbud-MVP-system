@@ -5,7 +5,9 @@ import { useTheme } from '../context/ThemeContext';
 import { storage } from '../utils/db';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useNotification } from '../context/NotificationContext';
 import { storesAPI, dashboardAPI, imageAPI, ordersAPI } from '../services/api';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -13,8 +15,10 @@ const ProductsPage = () => {
   const { isDarkMode } = useTheme();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { showNotification } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // stores product for deletion
 
 
   const [products, setProducts] = useState([]);
@@ -581,14 +585,7 @@ const ProductsPage = () => {
                                       <Edit size={16} />
                                     </button>
                                     <button
-                                      onClick={async () => {
-                                        if (window.confirm('Are you sure you want to delete this product?')) {
-                                          try {
-                                            await storesAPI.socialStores.deleteProduct(user.activeShopId, product.id);
-                                            await fetchProducts();
-                                          } catch (err) { alert('Failed to delete product') }
-                                        }
-                                      }}
+                                      onClick={() => setShowDeleteConfirm(product)}
                                       className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 transition-colors"
                                       title="Delete Product"
                                     >
@@ -698,14 +695,7 @@ const ProductsPage = () => {
                                   <Edit size={16} />
                                 </button>
                                 <button
-                                  onClick={async () => {
-                                    if (window.confirm('Are you sure you want to delete this product?')) {
-                                      try {
-                                        await storesAPI.socialStores.deleteProduct(user.activeShopId, product.id);
-                                        await fetchProducts();
-                                      } catch (err) { alert('Failed to delete product') }
-                                    }
-                                  }}
+                                  onClick={() => setShowDeleteConfirm(product)}
                                   className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl"
                                 >
                                   <Trash size={16} />
@@ -963,9 +953,10 @@ const ProductsPage = () => {
                   try {
                     await storesAPI.socialStores.createProduct(user.activeShopId, data);
                     await fetchProducts();
+                    showNotification("Product added successfully", "success");
                     closeModals();
                   } catch (err) {
-                    alert("Failed to add product");
+                    showNotification("Failed to add product", "error");
                   }
                 }}
                 className="p-6 space-y-4"
@@ -1044,9 +1035,10 @@ const ProductsPage = () => {
                   try {
                     await storesAPI.socialStores.updateProduct(user.activeShopId, productToEdit.id, data);
                     await fetchProducts();
+                    showNotification("Product updated successfully", "success");
                     closeModals();
                   } catch (err) {
-                    alert("Failed to update product");
+                    showNotification("Failed to update product", "error");
                   }
                 }}
                 className="p-6 space-y-4"
@@ -1164,12 +1156,12 @@ const ProductsPage = () => {
                         });
                         setShowOrderModal(null);
                         await fetchProducts();
-                        alert("Order created and inventory updated!");
-                      } catch (err) {
-                        alert("Failed to create order");
-                      } finally {
+                        showNotification("Order created and inventory updated!", "success");
+                    } catch (err) {
+                        showNotification("Failed to create order", "error");
+                    } finally {
                         setCreatingOrder(false);
-                      }
+                    }
                     }}
                     className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold shadow-xl shadow-green-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
                   >
@@ -1181,6 +1173,23 @@ const ProductsPage = () => {
           </div>
         )
       }
+      <ConfirmModal 
+        isOpen={!!showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(null)}
+        onConfirm={async () => {
+          try {
+            await storesAPI.socialStores.deleteProduct(user.activeShopId, showDeleteConfirm.id);
+            await fetchProducts();
+            showNotification('Product deleted successfully', 'success');
+          } catch (err) {
+            showNotification('Failed to delete product', 'error');
+          }
+        }}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${showDeleteConfirm?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        type="danger"
+      />
     </div >
   );
 };

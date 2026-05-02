@@ -89,7 +89,7 @@ async function runScrape(payload) {
     const { jobId, url, loginUrl, username, password } = payload;
     logger.info(`Starting scrape job ${jobId} for ${url}`);
 
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({ headless: true, channel: 'chrome' });
     const context = await browser.newContext();
     const page = await context.newPage();
 
@@ -200,20 +200,37 @@ async function connectRabbitMQ() {
         const rabbitUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
         const connection = await amqp.connect(rabbitUrl);
         const channel = await connection.createChannel();
+        
         await channel.assertQueue('scraper_queue', { durable: false });
+        await channel.assertQueue('scraper_results', { durable: false });
 
         logger.info('Connected to RabbitMQ, waiting for messages...');
 
         channel.consume('scraper_queue', async (msg) => {
             if (msg !== null) {
                 const payload = JSON.parse(msg.content.toString());
-                const result = await runScrape(payload.data || payload);
+                const jobData = payload.data || payload;
+                const result = await runScrape(jobData);
                 
                 // Acknowledge message
                 channel.ack(msg);
 
-                // Here we would typically push the result to a results queue or call a webhook
-                logger.info(`Job ${payload.jobId} completed. Result: ${result.success}`);
+                // Send result back to backend
+                const resultPayload = {
+                    jobId: jobData.jobId,
+                    siteId: jobData.siteId,
+                    success: result.success,
+                    products: result.products,
+                    error: result.error,
+                    timestamp: new Date().toISOString()
+                };
+
+                channel.sendToQueue('scraper_results', Buffer.from(JSON.stringify({
+                    pattern: 'scrape_result',
+                    data: resultPayload
+                })));
+
+                logger.info(`Job ${jobData.jobId} completed. Result sent to scraper_results.`);
             }
         });
     } catch (error) {

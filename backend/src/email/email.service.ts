@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BrevoClient, Brevo } from '@getbrevo/brevo';
 import * as nodemailer from 'nodemailer';
+import axios from 'axios';
 
 @Injectable()
 export class EmailService {
@@ -113,29 +114,33 @@ export class EmailService {
 
   private async sendViaBrevoApi(options: any): Promise<boolean> {
     try {
-      const emailRequest: Brevo.SendTransacEmailRequest = {
+      const payload = {
         subject: options.subject,
         htmlContent: options.htmlContent,
         sender: options.from
           ? { name: options.from.name, email: options.from.email }
           : { name: this.senderName, email: this.senderEmail },
-        to: options.to.map(t => ({ email: t.email, name: t.name })),
-      };
-
-      if (options.attachment) {
-        emailRequest.attachment = [
+        to: options.to.map((t: any) => ({ email: t.email, name: t.name })),
+        attachment: options.attachment ? [
           {
             name: options.attachment.name,
             content: options.attachment.content,
-          },
-        ];
-      }
+          }
+        ] : undefined
+      };
 
-      await this.brevoClient.transactionalEmails.sendTransacEmail(emailRequest);
+      await axios.post('https://api.brevo.com/v3/smtp/email', payload, {
+        headers: {
+          'accept': 'application/json',
+          'api-key': this.brevoApiKey,
+          'content-type': 'application/json'
+        }
+      });
+
       this.logger.log(`Brevo email sent successfully to ${options.to[0]?.email}`);
       return true;
-    } catch (error) {
-      const errorMessage = error.response?.body?.message || error.message || 'Unknown error';
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
       this.logger.error(`Failed to send Brevo API email: ${errorMessage}`, error.stack);
       return false;
     }

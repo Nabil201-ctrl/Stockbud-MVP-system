@@ -31,6 +31,8 @@ export class ScraperService {
                 loginUrl,
                 schedule: schedule || '0 8 * * *',
                 platform,
+                targetStoreId: dto.targetStoreId,
+                targetStoreType: dto.targetStoreType,
                 status: 'pending' // Indicates verification is ongoing
             },
             include: {
@@ -215,6 +217,21 @@ export class ScraperService {
         return { success: true, jobId: job.id };
     }
 
+    async updateSite(userId: string, siteId: string, dto: Partial<CreateSiteDto>) {
+        const site = await this.prisma.scrapeSite.findFirst({
+            where: { id: siteId, userId }
+        });
+
+        if (!site) {
+            throw new NotFoundException('Site not found');
+        }
+
+        return this.prisma.scrapeSite.update({
+            where: { id: siteId },
+            data: dto
+        });
+    }
+
     async deleteSite(userId: string, siteId: string) {
         const site = await this.prisma.scrapeSite.findFirst({
             where: { id: siteId, userId }
@@ -227,6 +244,133 @@ export class ScraperService {
         return this.prisma.scrapeSite.delete({
             where: { id: siteId }
         });
+    }
+
+    async handleScrapeResult(payload: any) {
+        const { jobId, siteId, success, products, error } = payload;
+        console.log(`[ScraperService] Handling result for job ${jobId}, success: ${success}`);
+
+        const site = await this.prisma.scrapeSite.findUnique({
+            where: { id: siteId },
+            include: { user: true }
+        });
+
+        if (!site) {
+            console.error(`[ScraperService] Site not found for result: ${siteId}`);
+            return;
+        }
+
+        // 1. Update ScrapeJob
+        await this.prisma.scrapeJob.update({
+            where: { id: jobId },
+            data: {
+                status: success ? 'completed' : 'failed',
+                errorMessage: error || null,
+                completedAt: new Date()
+            }
+        });
+
+        if (!success || !products) {
+            await this.prisma.scrapeSite.update({
+                where: { id: siteId },
+                data: { status: 'failed' }
+            });
+            return;
+        }
+
+        // 2. Determine the target store
+        let storeId = site.targetStoreId;
+        let storeType = site.targetStoreType;
+
+        // Fallback: If no target store is set, use/create a 'website' store
+        if (!storeId) {
+            let store = await this.prisma.socialStore.findFirst({
+                where: {
+                    userId: site.userId,
+                    name: site.name,
+                    type: 'website'
+                }
+            });
+
+            if (!store) {
+                store = await this.prisma.socialStore.create({
+                    data: {
+                        userId: site.userId,
+                        name: site.name,
+                        type: 'website',
+                        contact: site.url,
+                        description: `Scraped from ${site.url}`
+                    }
+                });
+            }
+            storeId = store.id;
+            storeType = 'social';
+        }
+
+        // 3. Save products
+        const savedProducts = [];
+        for (const pData of products) {
+            // Try to find existing product by SKU or Title in this specific store
+            const existing = await this.prisma.product.findFirst({
+                where: {
+                    userId: site.userId,
+                    OR: [
+                        { socialStoreId: storeType === 'social' ? storeId : undefined },
+                        { shopifyStoreId: storeType === 'shopify' ? storeId : undefined }
+                    ],
+                    title: pData.name
+                }
+            });
+
+            const productData: any = {
+                userId: site.userId,
+                title: pData.name,
+                price: parseFloat(pData.price) || 0,
+                inventory: parseInt(pData.inventory) || 0,
+                source: storeType === 'shopify' ? 'shopify' : (site.platform || 'website'),
+                status: 'active',
+                images: pData.image ? [{ src: pData.image }] : (existing?.images as any[] || [])
+            };
+
+            if (storeType === 'shopify') {
+                productData.shopifyStoreId = storeId;
+            } else {
+                productData.socialStoreId = storeId;
+            }
+
+            if (existing) {
+                const updated = await this.prisma.product.update({
+                    where: { id: existing.id },
+                    data: productData
+                });
+                savedProducts.push(updated);
+            } else {
+                const created = await this.prisma.product.create({
+                    data: productData
+                });
+                savedProducts.push(created);
+            }
+        }
+
+        // 4. Create ScrapeSnapshot
+        await this.prisma.scrapeSnapshot.create({
+            data: {
+                siteId: siteId,
+                jobId: jobId,
+                data: products
+            }
+        });
+
+        // 5. Update site status
+        await this.prisma.scrapeSite.update({
+            where: { id: siteId },
+            data: {
+                status: 'idle',
+                lastScrapeAt: new Date()
+            }
+        });
+
+        console.log(`[ScraperService] Successfully processed ${savedProducts.length} products for site ${site.name}`);
     }
 
     // DEBUG ONLY: Remove before production

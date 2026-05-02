@@ -6,11 +6,14 @@ import { useLanguage } from '../context/LanguageContext';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { storage } from '../utils/db';
 import { reportsAPI } from '../services/api';
+import { useNotification } from '../context/NotificationContext';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 const ReportsPage = () => {
     const { isDarkMode } = useTheme();
     const { user } = useAuth();
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
@@ -18,6 +21,7 @@ const ReportsPage = () => {
     const [stats, setStats] = useState(null);
     const [selectedType, setSelectedType] = useState('sales');
     const [previewReport, setPreviewReport] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
     const [activeTab, setActiveTab] = useState('all');
 
     const currencySymbol = React.useMemo(() => {
@@ -78,10 +82,10 @@ const ReportsPage = () => {
             await fetchReports();
         } catch (error) {
             if (error.response?.status === 403) {
-                alert('Upgrade to the Beginner or Pro plan to generate ' + selectedType + ' reports.');
+                showNotification('Upgrade to the Beginner or Pro plan to generate ' + selectedType + ' reports.', 'warning');
             } else {
                 console.error('Report generation error:', error);
-                alert(error.response?.data?.message || `Error: ${error.message}`);
+                showNotification(error.response?.data?.message || `Error: ${error.message}`, 'error');
             }
         } finally {
             setGenerating(false);
@@ -93,27 +97,27 @@ const ReportsPage = () => {
         try {
             await reportsAPI.instantReview();
             await fetchReports();
-            alert('Your instant review is being generated! It will be emailed to you shortly.');
+            showNotification('Your instant review is being generated! It will be emailed to you shortly.', 'success');
         } catch (error) {
             if (error.response?.status === 403) {
-                alert('Upgrade to the Beginner or Pro plan to generate Instant Reviews.');
+                showNotification('Upgrade to the Beginner or Pro plan to generate Instant Reviews.', 'warning');
             } else {
                 console.error('Instant review error:', error);
-                alert(error.response?.data?.message || `Error: ${error.message}`);
+                showNotification(error.response?.data?.message || `Error: ${error.message}`, 'error');
             }
         } finally {
             setInstantGenerating(false);
         }
     };
 
-    const handleDeleteReport = async (reportId) => {
-        if (!window.confirm('Delete this report?')) return;
-
+    const handleDelete = async (id) => {
         try {
-            await reportsAPI.delete(reportId);
-            setReports(reports.filter(r => r.id !== reportId));
+            await reportsAPI.delete(id);
+            await fetchReports();
+            showNotification('Report deleted successfully', 'success');
+            setShowDeleteConfirm(null);
         } catch (error) {
-            alert(`Error: ${error.message}`);
+            showNotification(`Error: ${error.message}`, 'error');
         }
     };
 
@@ -331,7 +335,6 @@ const ReportsPage = () => {
 
     return (
         <div className="p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 min-h-full transition-all duration-300">
-            { }
             <div className="space-y-3" id="reports-header">
                 <div>
                     <h1 className="text-xl sm:text-2xl font-bold dark:text-white">{t('reports.title')}</h1>
@@ -361,7 +364,6 @@ const ReportsPage = () => {
                 </div>
             </div>
 
-            { }
             <div className={`rounded-xl border-2 border-dashed p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${isDarkMode ? 'border-purple-700 bg-purple-900/10' : 'border-purple-300 bg-purple-50'
                 }`}>
                 <div className="flex items-start sm:items-center gap-3 sm:gap-4">
@@ -389,7 +391,6 @@ const ReportsPage = () => {
                 </button>
             </div>
 
-            { }
             {stats && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" id="reports-stats-grid">
                     <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
@@ -442,7 +443,6 @@ const ReportsPage = () => {
                 </div>
             )}
 
-            { }
             <div className="flex items-center gap-1 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
                 {[
                     { id: 'all', label: 'All' },
@@ -465,7 +465,6 @@ const ReportsPage = () => {
                 ))}
             </div>
 
-            { }
             <div className={`rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`} id="reports-list">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h2 className="text-lg font-semibold dark:text-white">{t('reports.generated')}</h2>
@@ -494,14 +493,11 @@ const ReportsPage = () => {
                                 key={report.id}
                                 className={`p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
                             >
-                                { }
                                 <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-                                    { }
                                     <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                                         {getTypeIcon(report.type)}
                                     </div>
 
-                                    { }
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                             <h3 className="font-medium dark:text-white text-sm sm:text-base truncate max-w-[180px] sm:max-w-none">{report.title}</h3>
@@ -526,7 +522,6 @@ const ReportsPage = () => {
                                         </div>
                                     </div>
 
-                                    { }
                                     <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                                         {report.status === 'generating' ? (
                                             <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-sm">
@@ -556,7 +551,7 @@ const ReportsPage = () => {
                                             </>
                                         )}
                                         <button
-                                            onClick={() => handleDeleteReport(report.id)}
+                                            onClick={() => setShowDeleteConfirm(report)}
                                             className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 transition-colors"
                                         >
                                             <Trash2 size={16} />
@@ -564,7 +559,6 @@ const ReportsPage = () => {
                                     </div>
                                 </div>
 
-                                { }
                                 <div className="flex sm:hidden items-center gap-2 mt-2.5 ml-10">
                                     {report.status === 'generating' ? (
                                         <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-xs">
@@ -594,7 +588,7 @@ const ReportsPage = () => {
                                         </>
                                     )}
                                     <button
-                                        onClick={() => handleDeleteReport(report.id)}
+                                        onClick={() => setShowDeleteConfirm(report)}
                                         className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 transition-colors ml-auto"
                                     >
                                         <Trash2 size={14} />
@@ -606,7 +600,6 @@ const ReportsPage = () => {
                 )}
             </div>
 
-            { }
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-200'}`}>
                     <div className="flex items-start gap-3">
@@ -643,11 +636,9 @@ const ReportsPage = () => {
                 </div>
             </div>
 
-            { }
             {previewReport && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-sm">
                     <div className={`w-full sm:max-w-5xl xl:max-w-7xl h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl shadow-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                        { }
                         <div className={`flex items-center justify-between p-3 sm:p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                 <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
@@ -669,12 +660,10 @@ const ReportsPage = () => {
                             </button>
                         </div>
 
-                        { }
                         <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
                             {renderPreviewContent(previewReport)}
                         </div>
 
-                        { }
                         <div className={`flex items-center justify-end gap-2 sm:gap-3 p-3 sm:p-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                             <button
                                 onClick={() => setPreviewReport(null)}
@@ -697,6 +686,16 @@ const ReportsPage = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={!!showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(null)}
+                onConfirm={() => handleDelete(showDeleteConfirm.id)}
+                title="Delete Report"
+                message={`Are you sure you want to delete this report? This action cannot be undone.`}
+                confirmText="Delete"
+                type="danger"
+            />
         </div>
     );
 };
