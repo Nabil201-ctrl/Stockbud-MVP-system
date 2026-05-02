@@ -1,10 +1,9 @@
 const amqp = require('amqplib');
 const { chromium } = require('playwright');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const express = require('express');
 const pino = require('pino');
-const axios = require('axios');
-const http = require('http');
+const client = require('prom-client');
+const Scrapers = require('./scrapers');
 require('dotenv').config();
 
 const logger = pino({
@@ -15,180 +14,75 @@ const logger = pino({
     }
 });
 
-// Create a persistent axios instance for better performance
-const ollamaClient = axios.create({
-    baseURL: process.env.OLLAMA_URL || 'http://ollama:11434',
-    httpAgent: new http.Agent({ keepAlive: true, keepAliveMsecs: 1000, maxSockets: 100 }),
-    timeout: 60000
+// Prometheus Metrics
+const collectDefaultMetrics = client.collectDefaultMetrics;
+collectDefaultMetrics({ register: client.register });
+
+const jobsProcessed = new client.Counter({
+    name: 'scraper_jobs_total',
+    help: 'Total number of scrape jobs processed',
+    labelNames: ['status', 'platform']
+});
+
+const productsExtracted = new client.Counter({
+    name: 'scraper_products_extracted_total',
+    help: 'Total number of products extracted',
+    labelNames: ['platform']
+});
+
+const scrapeDuration = new client.Histogram({
+    name: 'scraper_job_duration_seconds',
+    help: 'Total duration of a scrape job in seconds',
+    labelNames: ['platform']
 });
 
 const app = express();
-const port = process.env.PORT || 3006;
-
-const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
-
-async function extractWithAI(html) {
-    const prompt = `Extract product data as JSON array: [{"name": "...", "sku": "...", "price": 0, "inventory": 0}]. HTML: ${html.substring(0, 30000)}`;
-
-    // Try Ollama first if configured
-    if (process.env.OLLAMA_URL) {
-        try {
-            logger.info(`Using Ollama for extraction at ${process.env.OLLAMA_URL}`);
-            const response = await ollamaClient.post('/api/generate', {
-                model: process.env.OLLAMA_MODEL || "qwen2:1.5b",
-                prompt: prompt,
-                stream: false,
-                format: "json",
-                options: {
-                    num_thread: 4,
-                    num_ctx: 16384,
-                    num_predict: 1024,
-                    temperature: 0.1,
-                    top_k: 20,
-                    top_p: 0.9
-                },
-                keep_alive: "60m" 
-            });
-            
-            const resultText = response.data.response;
-            const parsed = JSON.parse(resultText);
-            
-            // Handle cases where AI wraps the array in an object
-            if (Array.isArray(parsed)) return parsed;
-            if (parsed.data && Array.isArray(parsed.data)) return parsed.data;
-            if (parsed.products && Array.isArray(parsed.products)) return parsed.products;
-            
-            return [];
-        } catch (ollamaError) {
-            logger.error('Ollama extraction failed, falling back if possible:', ollamaError.message);
-        }
-    }
-
-    // Fallback to Gemini
-    if (genAI) {
-        try {
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
-            
-            const jsonMatch = text.match(/\[.*\]/s);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
-            }
-            return JSON.parse(text);
-        } catch (geminiError) {
-            logger.error('Gemini extraction failed:', geminiError.message);
-        }
-    }
-
-    return [];
-}
+const port = process.env.PORT || 3005;
 
 async function runScrape(payload) {
-    const { jobId, url, loginUrl, username, password } = payload;
-    logger.info(`Starting scrape job ${jobId} for ${url}`);
+    const { jobId, url, loginUrl, username, password, platform } = payload;
+    const sitePlatform = (platform || 'generic').toLowerCase();
+    
+    logger.info(`Starting scrape job ${jobId} for ${url} (Platform: ${sitePlatform})`);
+    const jobStartTime = Date.now();
 
-    const browser = await chromium.launch({ headless: true, channel: 'chrome' });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
+    const browser = await chromium.launch({ 
+        headless: true, 
+        args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+    });
+    
     try {
+        const context = await browser.newContext();
+        const page = await context.newPage();
+
+        // Select scraper
+        const ScraperClass = Scrapers[sitePlatform] || Scrapers.generic;
+        const scraper = new ScraperClass(page, logger, {
+            ollamaUrl: process.env.OLLAMA_URL,
+            ollamaModel: process.env.OLLAMA_MODEL,
+            geminiApiKey: process.env.GEMINI_API_KEY
+        });
+
+        // Handle login if credentials provided
         if (loginUrl && username && password) {
-            logger.info(`Logging in to ${loginUrl}`);
-            await page.goto(loginUrl);
-            
-            try {
-                await page.waitForSelector('input[type="password"]', { timeout: 5000 }).catch(() => {});
-                
-                // Fill credentials
-                const userField = await page.$('input[type="email"], input[type="text"], input[name="username"]');
-                if (userField) await userField.fill(username);
-                
-                const passField = await page.$('input[type="password"]');
-                if (passField) await passField.fill(password);
-                
-                // Click and wait for navigation
-                await Promise.all([
-                    page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => logger.warn('Network idle timeout during login')),
-                    page.click('button[type="submit"], input[type="submit"], button:has-text("Log in"), button:has-text("Sign in")').catch(() => logger.warn('Could not find generic login button'))
-                ]);
-            } catch (loginErr) {
-                logger.warn(`Initial login attempt failed, trying to proceed: ${loginErr.message}`);
-            }
+            await scraper.login(loginUrl, username, password);
         }
 
-        logger.info(`Navigating to ${url}`);
-        await page.goto(url);
+        // Run scrape
+        const products = await scraper.scrape(url);
         
-        let allProducts = [];
-        let hasNextPage = true;
-        let pageCount = 0;
-        const maxPages = 5; // Prevent infinite loops
+        const duration = (Date.now() - jobStartTime) / 1000;
+        scrapeDuration.observe({ platform: sitePlatform }, duration);
+        jobsProcessed.inc({ status: 'success', platform: sitePlatform });
+        productsExtracted.inc({ platform: sitePlatform }, products.length);
 
-        while (hasNextPage && pageCount < maxPages) {
-            pageCount++;
-            logger.info(`Scraping page ${pageCount} of ${url}`);
-            
-            // Dynamic wait for product data elements
-            await page.waitForSelector('tr, .product, .item, li, [role="row"]', { timeout: 10000 }).catch(() => {});
+        logger.info(`Job ${jobId} finished. Extracted ${products.length} products in ${duration}s`);
 
-            // Prune HTML more aggressively to reduce payload
-            const content = await page.evaluate(() => {
-                // Remove all non-essential elements
-                const toRemove = [
-                    'script', 'style', 'svg', 'iframe', 'noscript', 'link', 'meta', 
-                    'header', 'footer', 'nav', 'aside', '.ads', '#ads', '.sidebar'
-                ];
-                toRemove.forEach(tag => {
-                    document.querySelectorAll(tag).forEach(el => el.remove());
-                });
-                
-                // Get the main content area if it exists
-                const main = document.querySelector('main, #content, .content, .main-content, #main');
-                if (main) return main.innerHTML;
-                
-                return document.body.innerHTML;
-            });
-
-            const products = await extractWithAI(content);
-            if (products && products.length > 0) {
-                allProducts = allProducts.concat(products);
-                logger.info(`Extracted ${products.length} products from page ${pageCount}`);
-            } else {
-                logger.warn(`No products found on page ${pageCount}`);
-            }
-
-            // Attempt to find and click a "Next" button
-            try {
-                const nextButton = await page.$('a:has-text("Next"), a.next, .pagination-next, [aria-label="Next"], a:text-is("»"), a:text-is(">")');
-                
-                if (nextButton) {
-                    const isDisabled = await nextButton.evaluate(node => node.hasAttribute('disabled') || node.classList.contains('disabled'));
-                    if (!isDisabled) {
-                        logger.info('Navigating to next page...');
-                        await nextButton.click();
-                        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-                    } else {
-                        hasNextPage = false;
-                    }
-                } else {
-                    hasNextPage = false;
-                }
-            } catch (navError) {
-                logger.warn(`Pagination failed or reached end: ${navError.message}`);
-                hasNextPage = false;
-            }
-        }
-
-        logger.info(`Extracted a total of ${allProducts.length} products across ${pageCount} pages`);
-
-        // Send results back to backend (via API or another queue)
-        // For now, we'll just log them and assume there's a callback mechanism
-        return { success: true, products: allProducts };
+        return { success: true, products };
 
     } catch (error) {
         logger.error(`Scrape failed for job ${jobId}:`, error.message);
+        jobsProcessed.inc({ status: 'failure', platform: sitePlatform });
         return { success: false, error: error.message };
     } finally {
         await browser.close();
@@ -208,29 +102,33 @@ async function connectRabbitMQ() {
 
         channel.consume('scraper_queue', async (msg) => {
             if (msg !== null) {
-                const payload = JSON.parse(msg.content.toString());
-                const jobData = payload.data || payload;
-                const result = await runScrape(jobData);
-                
-                // Acknowledge message
-                channel.ack(msg);
+                try {
+                    const content = JSON.parse(msg.content.toString());
+                    const jobData = content.data || content;
+                    
+                    const result = await runScrape(jobData);
+                    
+                    channel.ack(msg);
 
-                // Send result back to backend
-                const resultPayload = {
-                    jobId: jobData.jobId,
-                    siteId: jobData.siteId,
-                    success: result.success,
-                    products: result.products,
-                    error: result.error,
-                    timestamp: new Date().toISOString()
-                };
+                    const resultPayload = {
+                        jobId: jobData.jobId,
+                        siteId: jobData.siteId,
+                        success: result.success,
+                        products: result.products,
+                        error: result.error,
+                        timestamp: new Date().toISOString()
+                    };
 
-                channel.sendToQueue('scraper_results', Buffer.from(JSON.stringify({
-                    pattern: 'scrape_result',
-                    data: resultPayload
-                })));
+                    channel.sendToQueue('scraper_results', Buffer.from(JSON.stringify({
+                        pattern: 'scrape_result',
+                        data: resultPayload
+                    })));
 
-                logger.info(`Job ${jobData.jobId} completed. Result sent to scraper_results.`);
+                    logger.info(`Job ${jobData.jobId} result sent to scraper_results.`);
+                } catch (err) {
+                    logger.error('Error processing message:', err.message);
+                    channel.nack(msg, false, false); // Don't requeue if it's a parsing error
+                }
             }
         });
     } catch (error) {
@@ -239,10 +137,19 @@ async function connectRabbitMQ() {
     }
 }
 
-module.exports = { extractWithAI, runScrape, connectRabbitMQ };
-
 if (require.main === module) {
     connectRabbitMQ();
+    
+    app.get('/metrics', async (req, res) => {
+        try {
+            res.set('Content-Type', client.register.contentType);
+            res.end(await client.register.metrics());
+        } catch (ex) {
+            res.status(500).end(ex);
+        }
+    });
+
     app.get('/health', (req, res) => res.json({ status: 'UP', service: 'scraper-worker' }));
-    app.listen(port, () => logger.info(`Scraper worker health endpoint on port ${port}`));
+    app.listen(port, '0.0.0.0', () => logger.info(`Scraper worker health and metrics on port ${port}`));
 }
+

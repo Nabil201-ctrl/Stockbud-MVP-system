@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { HealthCheckService, HealthCheck, MicroserviceHealthIndicator, MemoryHealthIndicator, DiskHealthIndicator } from '@nestjs/terminus';
+import { HealthCheckService, HealthCheck, MicroserviceHealthIndicator, MemoryHealthIndicator, DiskHealthIndicator, HttpHealthIndicator } from '@nestjs/terminus';
 import { Transport } from '@nestjs/microservices';
 
 @Controller('health')
@@ -9,6 +9,7 @@ export class HealthController {
         private microservice: MicroserviceHealthIndicator,
         private memory: MemoryHealthIndicator,
         private disk: DiskHealthIndicator,
+        private http: HttpHealthIndicator,
     ) { }
 
     @Get()
@@ -24,6 +25,7 @@ export class HealthController {
                     urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
                 },
             }),
+            () => this.http.pingCheck('scraper_service', 'http://scraper-worker:3005/health'),
         ]);
     }
 }

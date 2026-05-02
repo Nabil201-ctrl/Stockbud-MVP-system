@@ -1,5 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
+import { HttpModule } from '@nestjs/axios';
 import { PrometheusModule, makeCounterProvider, makeSummaryProvider } from '@willsoto/nestjs-prometheus';
 import { HealthController } from './health.controller';
 import { MetricsInterceptor } from './metrics.interceptor';
@@ -35,6 +36,7 @@ const reportsGeneratedTotalProvider = makeCounterProvider({
 @Module({
     imports: [
         TerminusModule,
+        HttpModule,
         PrometheusModule.register({
             path: '/metrics',
             defaultMetrics: {

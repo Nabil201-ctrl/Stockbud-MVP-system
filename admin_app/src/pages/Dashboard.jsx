@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, TrendingUp, Zap, Check, X } from 'lucide-react';
+import { Users, TrendingUp, Zap, Check, X, Server } from 'lucide-react';
 import { Layout } from '../components/Layout';
 
 export const Dashboard = () => {
     const [users, setUsers] = useState([]);
     const [chartData, setChartData] = useState([]);
     const [stats, setStats] = useState({ total: 0, newToday: 0, totalSignIns: 0, signInsToday: 0 });
+    const [scraperHealth, setScraperHealth] = useState('Checking...');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -55,7 +56,30 @@ export const Dashboard = () => {
                 console.error('Failed to fetch users', error);
             }
         };
+
+        const fetchHealth = async () => {
+            try {
+                const response = await axios.get('https://api.stockbud.xyz/health');
+                const status = response.data?.details?.scraper_service?.status;
+                setScraperHealth(status === 'up' ? 'Alive' : 'Down');
+            } catch (error) {
+                const status = error.response?.data?.details?.scraper_service?.status;
+                if (status === 'up') {
+                    setScraperHealth('Alive');
+                } else if (status === 'down') {
+                    setScraperHealth('Down');
+                } else {
+                    setScraperHealth('Down');
+                }
+            }
+        };
+
         fetchData();
+        fetchHealth();
+        
+        // Optional: poll health every 30 seconds
+        const healthInterval = setInterval(fetchHealth, 30000);
+        return () => clearInterval(healthInterval);
     }, []);
 
     const toggleFreeReports = async (userId, currentStatus) => {
@@ -81,9 +105,27 @@ export const Dashboard = () => {
 
     return (
         <Layout>
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-800">DashboardOverview</h1>
-                <p className="text-gray-600">Welcome back, Admin</p>
+            <div className="flex justify-between items-center mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+                    <p className="text-gray-600">Welcome back, Admin</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-600 flex items-center gap-1"><Server size={16} /> Scraper Service:</span>
+                    {scraperHealth === 'Alive' ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            <Check size={14} /> Alive
+                        </span>
+                    ) : scraperHealth === 'Down' ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                            <X size={14} /> Down
+                        </span>
+                    ) : (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                            Checking...
+                        </span>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
