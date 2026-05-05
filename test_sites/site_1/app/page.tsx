@@ -38,16 +38,30 @@ const MOCK_PRODUCTS = [
 ];
 
 async function getProducts() {
+  const URL = "https://dummyjson.com/products?limit=32";
   try {
-    const res = await fetch("https://dummyjson.com/products?limit=32", {
+    const res = await fetch(URL, {
       next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(5000) // 5s timeout
+      signal: AbortSignal.timeout(10000) // 10s timeout for stability
     });
-    if (!res.ok) return MOCK_PRODUCTS;
+    
+    if (!res.ok) {
+      console.warn(`[API] Fetch returned status ${res.status}. Falling back to mock data.`);
+      return MOCK_PRODUCTS;
+    }
+    
     const data = await res.json();
     return data.products && data.products.length > 0 ? data.products : MOCK_PRODUCTS;
-  } catch (error) {
-    console.error("Fetch failed, using mock data", error);
+  } catch (error: any) {
+    // Suppress verbose error logs during build if we have mock fallback
+    const causeCode = error.cause?.code;
+    const isTimeout = error.name === 'TimeoutError' || causeCode === 'ETIMEDOUT';
+    
+    if (isTimeout) {
+      console.warn("[API] Connection timed out. Using mock data for build stability.");
+    } else {
+      console.warn(`[API] Fetch failed (${causeCode || error.name}). Using mock data.`);
+    }
     return MOCK_PRODUCTS;
   }
 }
