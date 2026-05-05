@@ -20,7 +20,6 @@ export class ScraperService {
     async createSite(userId: string, dto: CreateSiteDto) {
         const { name, url, loginUrl, schedule, platform } = dto;
 
-        // Ensure user exists to get their email
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
         const site = await this.prisma.scrapeSite.create({
@@ -33,7 +32,7 @@ export class ScraperService {
                 platform,
                 targetStoreId: dto.targetStoreId,
                 targetStoreType: dto.targetStoreType,
-                status: 'pending' // Indicates verification is ongoing
+                status: 'pending'
             },
             include: {
                 credentials: true
@@ -42,8 +41,6 @@ export class ScraperService {
 
         console.log(`[ScraperService] Site created with ID: ${site.id}`);
 
-        // Step 1: Notify the USER (via Brevo API)
-        // Let them know their request was received and is being processed.
         if (user && user.email) {
             try {
                 const title = 'Website Monitoring Setup Started';
@@ -54,15 +51,12 @@ export class ScraperService {
                     to: [{ email: user.email, name: user.name || '' }],
                     subject: title,
                     htmlContent: htmlContent
-                    // useScraperTransporter is NOT set → uses Brevo API
                 });
             } catch (err) {
                 console.error('Failed to send confirmation email to user:', err.message);
             }
         }
 
-        // Step 2: Notify the EMPLOYEE (via Gmail SMTP)
-        // Sent FROM SCRAPER_GMAIL_USER → TO STAFF_NOTIFICATION_EMAIL.
         try {
             const subject = `ACTION REQUIRED: New Site Monitoring Requested - ${name}`;
             const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost';
@@ -152,7 +146,7 @@ export class ScraperService {
         const updatedSite = await this.prisma.scrapeSite.update({
             where: { id: cleanId },
             data: {
-                status: 'idle', // Ready to be scraped
+                status: 'idle',
                 credentials: {
                     upsert: {
                         create: {
@@ -169,7 +163,6 @@ export class ScraperService {
             include: { credentials: true }
         });
 
-        // Trigger the first scrape now that credentials are provided
         try {
             await this.triggerScrape(site.userId, cleanId);
         } catch (error) {
@@ -197,7 +190,6 @@ export class ScraperService {
             }
         });
 
-        // Decrypt password before sending to worker
         const decryptedPassword = site.credentials?.password 
             ? this.encryptionService.decrypt(site.credentials.password) 
             : null;
@@ -260,7 +252,6 @@ export class ScraperService {
             return;
         }
 
-        // 1. Update ScrapeJob
         await this.prisma.scrapeJob.update({
             where: { id: jobId },
             data: {
@@ -278,11 +269,10 @@ export class ScraperService {
             return;
         }
 
-        // 2. Determine the target store
-        let storeId = site.targetStoreId;
-        let storeType = site.targetStoreType;
+        const siteData = site as any;
+        let storeId = siteData.targetStoreId;
+        let storeType = siteData.targetStoreType;
 
-        // Fallback: If no target store is set, use/create a 'website' store
         if (!storeId) {
             let store = await this.prisma.socialStore.findFirst({
                 where: {
@@ -307,10 +297,8 @@ export class ScraperService {
             storeType = 'social';
         }
 
-        // 3. Save products
         const savedProducts = [];
         for (const pData of products) {
-            // Try to find existing product by SKU or Title in this specific store
             const existing = await this.prisma.product.findFirst({
                 where: {
                     userId: site.userId,
@@ -352,7 +340,6 @@ export class ScraperService {
             }
         }
 
-        // 4. Create ScrapeSnapshot
         await this.prisma.scrapeSnapshot.create({
             data: {
                 siteId: siteId,
@@ -361,7 +348,6 @@ export class ScraperService {
             }
         });
 
-        // 5. Update site status
         await this.prisma.scrapeSite.update({
             where: { id: siteId },
             data: {
@@ -373,7 +359,6 @@ export class ScraperService {
         console.log(`[ScraperService] Successfully processed ${savedProducts.length} products for site ${site.name}`);
     }
 
-    // DEBUG ONLY: Remove before production
     async debugGetAllSites() {
         return this.prisma.scrapeSite.findMany();
     }

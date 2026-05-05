@@ -16,9 +16,8 @@ export class ShopifyService {
 
   private pairingCodes = new Map<string, { userId: string; expiresAt: Date }>();
 
-  /** In-memory cache: key -> { data, expiresAt } */
   private cache = new Map<string, { data: any; expiresAt: number }>();
-  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000;
 
   private getCached(key: string): any | null {
     const entry = this.cache.get(key);
@@ -34,7 +33,6 @@ export class ShopifyService {
     this.cache.set(key, { data, expiresAt: Date.now() + this.CACHE_TTL_MS });
   }
 
-  /** Invalidate cache entries for a specific shop (e.g. after inventory update) */
   invalidateCache(shop?: string): void {
     if (!shop) {
       this.cache.clear();
@@ -57,17 +55,13 @@ export class ShopifyService {
     private readonly emailService: EmailService,
   ) { }
 
-
-
   generatePairingCode(userId: string): string {
-
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const part1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const part2 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const part3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const code = `${part1}-${part2}-${part3}`;
 
-    // Store with 10-minute expiry
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     this.pairingCodes.set(code, { userId, expiresAt });
 
@@ -75,17 +69,11 @@ export class ShopifyService {
     return code;
   }
 
-  /**
-   * Validates a pairing code and returns the associated userId.
-   * Consumes the code (one-time use), except for the master review code.
-   */
   async validateAndConsumePairingCode(code: string): Promise<string | null> {
-    // Hardcoded master code for Shopify Reviewers
     if (code === 'STOCK-BUD-REVIEW') {
       console.log(`[Pairing] Master review code used. Linking to tester account.`);
       let tester = await this.usersService.findByEmail('tester@stockbud.xyz');
       if (!tester) {
-        // Create the tester user on the fly if it doesn't exist
         tester = await this.usersService.createUser(
           'tester@stockbud.xyz',
           'Shopify Reviewer',
@@ -108,21 +96,16 @@ export class ShopifyService {
       return null;
     }
 
-    // Consume the code
     this.pairingCodes.delete(code);
     console.log(`[Pairing] Code ${code} validated for user ${entry.userId}`);
     return entry.userId;
   }
 
-  /**
-   * Connects a Shopify store using a pairing code.
-   */
   async connectWithCode(code: string, shop: string, accessToken: string) {
     const userId = await this.validateAndConsumePairingCode(code);
     if (!userId) {
       return { success: false, error: 'Invalid or expired pairing code' };
     }
-
 
     const dto = { shop, accessToken };
     return this.connectShop(dto as any, userId);
@@ -133,7 +116,6 @@ export class ShopifyService {
   }
 
   async connectShop(dto: ConnectShopDto, userId?: string) {
-
     const tokenPrefix = dto.accessToken ? dto.accessToken.substring(0, 10) + '...' : 'MISSING';
     console.log(`[Connect] Connecting shop: ${dto.shop}, Token Prefix: ${tokenPrefix}`);
 
@@ -142,7 +124,6 @@ export class ShopifyService {
     if (userId) {
       user = await this.usersService.findById(userId);
     }
-
 
     if (!user) {
       const users = await this.usersService.getAllUsers();
@@ -153,23 +134,17 @@ export class ShopifyService {
       }
     }
 
-
-
     this.shopifyGateway.emitStatusUpdate(dto.shop, 1, 'Initiating Handshake');
     await this.delay(1500);
-
 
     this.shopifyGateway.emitStatusUpdate(dto.shop, 2, 'Verifying Credentials');
     await this.delay(2000);
 
-
     this.shopifyGateway.emitStatusUpdate(dto.shop, 3, 'Syncing Product Catalog');
     await this.delay(2500);
 
-
     this.shopifyGateway.emitStatusUpdate(dto.shop, 4, 'Collecting Store Catalog & Historical Data');
 
-    // Asynchronously start the deep sync
     try {
       const dbStore = await this.usersService.getActiveShop(user.id);
       if (dbStore) {
@@ -181,12 +156,8 @@ export class ShopifyService {
 
     await this.delay(1000);
 
-
-
     if (user) {
-
       await this.usersService.updateShopifyCredentials(user.id, dto.shop, dto.accessToken);
-
 
       if (dto.name) {
         await this.usersService.updateProfile(user.id, { name: dto.name });
@@ -195,8 +166,6 @@ export class ShopifyService {
       this.shopifyGateway.emitStatusUpdate(dto.shop, 5, 'Connection Secure & Active');
       return { success: true, action: 'updated', userId: user.id };
     } else {
-
-
       const email = dto.email || `shop+${dto.shop}@stockbud.com`;
       const name = dto.shop.replace('.myshopify.com', '');
       const passwordHash = '$2b$10$NotARealPasswordHashForShopConnect' + Math.random();
@@ -205,10 +174,8 @@ export class ShopifyService {
       const newUser = await this.usersService.createUser(email, name, passwordHash, true, verificationToken, true);
       await this.usersService.updateShopifyCredentials(newUser.id, dto.shop, dto.accessToken);
 
-      // Send Welcome & Verification Email via Brevo
       await this.emailService.sendAccountVerificationEmail(newUser.email, newUser.name || 'User', verificationToken);
       await this.emailService.sendWelcomeEmail(newUser.email, newUser.name || 'User');
-
 
       this.shopifyGateway.emitStatusUpdate(dto.shop, 5, 'Connection Secure & Active');
       return { success: true, action: 'created', userId: newUser.id };
@@ -338,7 +305,6 @@ export class ShopifyService {
   }
 
   async getProducts(shop: string, token: string, options: any = {}) {
-
     const cacheKey = `products:${shop}:${JSON.stringify(options)}`;
     const cached = this.getCached(cacheKey);
     if (cached) {
@@ -346,15 +312,12 @@ export class ShopifyService {
       return cached;
     }
 
-    console.log(`[ShopifyService] Fetching products for shop: ${shop} `, options);
-
     const apiUrl = `https://${shop}/admin/api/2024-01/graphql.json`;
     const headers = {
       'X-Shopify-Access-Token': token,
       'Content-Type': 'application/json',
     };
 
-    // Fetch product statistics for the summary
     let summary = {
       total: 0,
       active: 0,
@@ -386,17 +349,14 @@ export class ShopifyService {
       console.warn('[ShopifyService] Could not fetch product statistics:', statsError.message);
     }
 
-    // Main products query
     const { first, last, after, before } = options;
 
-    // Construct query arguments dynamically
     let argsArr = [];
     if (first) argsArr.push(`first: ${first}`);
     if (last) argsArr.push(`last: ${last}`);
     if (after) argsArr.push(`after: "${after}"`);
     if (before) argsArr.push(`before: "${before}"`);
 
-    // Default to first 6 if neither first nor last is provided
     if (argsArr.length === 0 || (!first && !last)) {
       argsArr.unshift('first: 6');
     }
@@ -487,10 +447,10 @@ export class ShopifyService {
       return { products: [], pageInfo: {}, totalCount: summary.total, summary };
     }
   }
+
   async updateInventory(shop: string, token: string, variantId: string, delta: number) {
     if (!shop || !token) return;
 
-    // First fetch the inventoryItemId for this variant
     const variantQuery = `
     {
       productVariant(id: "${variantId}") {
@@ -517,7 +477,6 @@ export class ShopifyService {
         return;
       }
 
-      // Fetch the first location ID
       const locationQuery = `{ locations(first: 1) { edges { node { id } } } }`;
       const locationResponse = await firstValueFrom(
         this.httpService.post(apiUrl, { query: locationQuery }, { headers, timeout: 30000 }),
@@ -529,7 +488,6 @@ export class ShopifyService {
         return;
       }
 
-      // Perform the adjustment
       const mutation = `
       mutation inventoryAdjustQuantities($input: InventoryAdjustQuantitiesInput!) {
         inventoryAdjustQuantities(input: $input) {

@@ -39,7 +39,6 @@ export class DashboardService {
 
         let mergedOrders: any[] = [];
 
-        // 1. Fetch Shopify Orders from ALL connected stores
         for (const store of shopifyStores) {
             try {
                 const limit = range === 'year' ? 250 : (range === 'month' ? 100 : 50);
@@ -61,7 +60,6 @@ export class DashboardService {
             }
         }
 
-        // 2. Fetch ALL Local Orders (no store filtering)
         const [orders, stores] = await Promise.all([
             this.prisma.order.findMany({ where: { userId } }),
             this.prisma.socialStore.findMany({ where: { userId } })
@@ -79,23 +77,18 @@ export class DashboardService {
             });
         });
 
-
-        // 3. Filter by date and source
         let filteredOrders = mergedOrders.filter(o => new Date(o.created_at) >= filterDate);
         if (sourceFilter && sourceFilter !== 'all') {
             const normalizedFilter = sourceFilter.toLowerCase();
             filteredOrders = filteredOrders.filter(o => {
                 const fSource = o.normalized_source || (o.source || '').toLowerCase();
-                // If filter is 'web', match 'shopify' or 'web'
                 if (normalizedFilter === 'web' || normalizedFilter === 'shopify') {
                     return fSource.includes('shopify') || fSource.includes('web');
                 }
-                // Match the filter against the source type
                 return fSource.includes(normalizedFilter);
             });
         }
 
-        // 4. Sorting
         if (sortBy === 'highest') {
             filteredOrders.sort((a, b) => b.normalized_total - a.normalized_total);
         } else if (sortBy === 'lowest') {
@@ -103,11 +96,9 @@ export class DashboardService {
         } else if (sortBy === 'oldest') {
             filteredOrders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         } else {
-            // Default to newest
             filteredOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         }
 
-        // 5. Calculate Revenue
         filteredOrders.forEach(o => {
             if (o.cancelled_at) {
                 lostRevenue += o.normalized_total;
@@ -116,7 +107,6 @@ export class DashboardService {
             }
         });
 
-        // 6. Weekly Revenue Change
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
@@ -140,7 +130,6 @@ export class DashboardService {
             revenueChange = 100;
         }
 
-        // 7. Chart Data (Last 7 Days)
         const last7Days = [...Array(7)].map((_, i) => {
             const d = new Date();
             d.setDate(d.getDate() - (6 - i));
@@ -164,7 +153,6 @@ export class DashboardService {
             };
         });
 
-        // 8. Sources breakdown
         const sources = {};
         filteredOrders.forEach(o => {
             const source = o.source || 'Direct';
@@ -178,7 +166,6 @@ export class DashboardService {
             color: this.getColorForSource(name)
         }));
 
-        // 9. Sales History (Already sorted)
         salesHistoryData = filteredOrders
             .slice(0, 10)
             .map(o => ({
@@ -191,7 +178,6 @@ export class DashboardService {
                 source: o.source || 'Direct'
             }));
 
-        // 10. Heatmap Data (Last 35 Days)
         const last35Days = [...Array(35)].map((_, i) => {
             const d = new Date();
             d.setDate(d.getDate() - (34 - i));
@@ -213,7 +199,6 @@ export class DashboardService {
             return { date, level };
         });
 
-        // 11. Top Products
         const productCounts = {};
         filteredOrders.forEach(o => {
             if (!o.cancelled_at) {
@@ -230,7 +215,6 @@ export class DashboardService {
             .slice(0, 5)
             .map(([name, count]) => ({ name, count }));
 
-        // 12. Potential Inventory Value (Inventory items * Price)
         const productsRaw = await this.prisma.product.findMany({
             where: { userId }
         });
@@ -269,6 +253,7 @@ export class DashboardService {
         if (s.includes('shopify') || s.includes('web')) return '#4F46E5'; // Premium Indigo
         if (s.includes('instagram')) return '#EC4899'; // Instagram Pink
         if (s.includes('whatsapp')) return '#22C55E'; // WhatsApp Green
+        if (s.includes('meta')) return '#1877F2'; // Meta Blue
         if (s.includes('pos')) return '#F59E0B'; // Amber for POS
         return '#94A3B8'; // Slate for others
     }

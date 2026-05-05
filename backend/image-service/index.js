@@ -24,11 +24,9 @@ const app = express();
 const port = process.env.IMAGE_SERVICE_PORT || 3002;
 const RABBIT_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
 
-// Prometheus Registry and Default Metrics
 const register = new client.Registry();
 client.collectDefaultMetrics({ register });
 
-// Custom Metrics
 const imageUploadsCounter = new client.Counter({
     name: 'image_uploads_total',
     help: 'Total number of image uploads',
@@ -51,34 +49,29 @@ register.registerMetric(uploadDurationHistogram);
 app.use(cors());
 app.use(express.json());
 
-// Rate Limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50, // limit each IP to 50 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 50,
     message: { success: false, error: 'Too many requests, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
 });
 app.use(limiter);
 
-// Metrics Endpoint
 app.get('/metrics', async (req, res) => {
     res.set('Content-Type', register.contentType);
     res.end(await register.metrics());
 });
 
-// Cloudinary Configuration
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// RabbitMQ State
 let rabbitChannel = null;
 const QUEUE_NAME = 'image_upload_events';
 
-// Circuit Breaker for Cloudinary
 const uploadToCloudinary = (file) => {
     const start = Date.now();
     return new Promise((resolve, reject) => {
@@ -111,7 +104,6 @@ const cloudinaryBreaker = new CircuitBreaker(uploadToCloudinary, {
 });
 cloudinaryBreaker.fallback(() => { throw new Error('Cloudinary integration currently unstable.'); });
 
-// RabbitMQ Initialization
 async function initRabbit() {
     try {
         const connection = await amqp.connect(RABBIT_URL);
@@ -129,14 +121,12 @@ async function initRabbit() {
             setTimeout(initRabbit, 5000);
         });
 
-        // 2. Consume processing requests from main server
         const inboundQueue = 'image_processing_requests';
         await rabbitChannel.assertQueue(inboundQueue, { durable: false });
         rabbitChannel.consume(inboundQueue, (msg) => {
             if (msg !== null) {
                 const content = JSON.parse(msg.content.toString());
                 logger.info({ pattern: content.pattern, data: content.data }, '[Image Service] Received async processing request');
-                // In a real scenario, this would trigger resizing, blurring, watermark, etc.
                 rabbitChannel.ack(msg);
             }
         });
@@ -148,7 +138,6 @@ async function initRabbit() {
 }
 initRabbit();
 
-// Circuit Breaker for RabbitMQ Messaging
 const publishToRabbit = async (message) => {
     if (!rabbitChannel) throw new Error('RabbitMQ channel not available');
     return rabbitChannel.sendToQueue(QUEUE_NAME, Buffer.from(JSON.stringify(message)), { persistent: true });
@@ -161,7 +150,6 @@ const rabbitBreaker = new CircuitBreaker(publishToRabbit, {
 });
 rabbitBreaker.fallback(() => logger.warn('[RabbitMQ] Circuit Open: Message suppressed to prevent blocking.'));
 
-// Routes
 app.get('/health', (req, res) => {
     res.json({
         status: 'UP',
@@ -184,11 +172,9 @@ app.post('/upload', upload.array('images', 10), async (req, res) => {
     try {
         logger.info(`[Image Service] Processing ${req.files.length} images...`);
 
-        // 1. Upload to Cloudinary using Opossum breaker
         const uploadPromises = req.files.map(file => cloudinaryBreaker.fire(file));
         const urls = await Promise.all(uploadPromises);
 
-        // 2. Notify Main Platform via RabbitMQ using Opossum breaker
         await rabbitBreaker.fire({
             type: 'IMAGE_UPLOAD_DONE',
             timestamp: new Date().toISOString(),
@@ -208,5 +194,4 @@ app.post('/upload', upload.array('images', 10), async (req, res) => {
 
 app.listen(port, () => {
     logger.info(`Image Microservice running on http://localhost:${port}`);
-    logger.info(` Managing image uploads independently with RabbitMQ & Circuit Breaker.`);
 });

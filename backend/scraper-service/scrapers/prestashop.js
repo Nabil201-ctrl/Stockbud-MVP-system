@@ -11,7 +11,6 @@ class PrestaShopScraper extends BaseScraper {
     async extractProducts() {
         return await this.page.evaluate(() => {
             const products = [];
-            // Common PrestaShop 1.7+ selectors
             const items = document.querySelectorAll('.product-miniature, .product-item');
             
             items.forEach(item => {

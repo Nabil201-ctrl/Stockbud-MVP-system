@@ -2,13 +2,11 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-// Create the global Axios instance
 const api = axios.create({
     baseURL: API_URL,
-    withCredentials: true, // Crucial for sending secure cookies (access_token & refresh_token)
+    withCredentials: true,
 });
 
-// Refreshed token queue to handle concurrent 401s
 let isRefreshing = false;
 let refreshSubscribers = [];
 
@@ -21,7 +19,6 @@ function onRefreshed(token) {
     refreshSubscribers = [];
 }
 
-// REQUEST INTERCEPTOR: Attach Bearer token if it exists in localStorage
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('stockbud_access_token');
     if (token) {
@@ -30,10 +27,8 @@ api.interceptors.request.use((config) => {
     return config;
 }, (error) => Promise.reject(error));
 
-// RESPONSE INTERCEPTOR: Handle automated token refresh and offline states
 api.interceptors.response.use(
     (response) => {
-        // If login/register/refresh returns a token in the body, store it
         if (response.data && response.data.access_token) {
             localStorage.setItem('stockbud_access_token', response.data.access_token);
         }
@@ -42,13 +37,11 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        // Check if the error is due to being offline (Network Error)
         if (error.message === 'Network Error' || !error.response) {
             console.warn('Network error (offline mode enabled).');
             return Promise.reject({ isOffline: true, message: 'You are currently offline' });
         }
 
-        // Handle rate limiting (429 Too Many Requests)
         if (error.response && error.response.status === 429) {
             console.error("Too many requests. Rate limit exceeded.");
             globalThis.dispatchEvent(new CustomEvent('app:notification', {
@@ -60,7 +53,6 @@ api.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // If error is 401 Unauthorized, attempt to refresh tokens
         if (error.response && error.response.status === 401 && !originalRequest._retry) {
             if (isRefreshing) {
                 return new Promise((resolve) => {
@@ -75,14 +67,11 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                // Request a refresh
                 const refreshResponse = await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
 
                 if (refreshResponse.status === 200 || refreshResponse.status === 201) {
                     const { access_token } = refreshResponse.data;
 
-                    // Note: If the backend only returns token in cookie, this might be undefined depending on endpoint
-                    // But we should try to get it if returned in body
                     if (access_token) {
                         localStorage.setItem('stockbud_access_token', access_token);
                     }
@@ -90,18 +79,15 @@ api.interceptors.response.use(
                     isRefreshing = false;
                     onRefreshed(access_token);
 
-                    // Retrying original request
                     return api(originalRequest);
                 }
             } catch (refreshError) {
                 isRefreshing = false;
                 console.error("Token refresh failed. User needs to re-login", refreshError);
 
-                // Clear state if strictly unauthorized
                 if (refreshError.response && (refreshError.response.status === 401 || refreshError.response.status === 403)) {
                     localStorage.removeItem('stockbud_access_token');
                     localStorage.removeItem('stockbud_cached_user');
-                    // Broadcast event so UI logs out smoothly
                     globalThis.dispatchEvent(new Event('auth:logout'));
                 }
                 return Promise.reject(refreshError);
@@ -112,9 +98,6 @@ api.interceptors.response.use(
     }
 );
 
-// ==========================================
-// CENTRALIZED API REQUEST ENDPOINTS
-// ==========================================
 
 export const authAPI = {
     login: (email, password) => api.post('/auth/login', { email, password }),

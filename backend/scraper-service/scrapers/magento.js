@@ -11,7 +11,6 @@ class MagentoScraper extends BaseScraper {
     async extractProducts() {
         return await this.page.evaluate(() => {
             const products = [];
-            // Common Magento 2 selectors
             const items = document.querySelectorAll('.product-item, .item.product.product-item');
             
             items.forEach(item => {

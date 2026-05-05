@@ -80,4 +80,16 @@ export class MetaController {
 
     return { store, syncedCount };
   }
+
+  @Post('webhook-event')
+  async handleWebhookEvent(@Req() req, @Body() body: any) {
+    const internalKey = req.headers['x-internal-key'];
+    const expectedKey = this.configService.get('INTERNAL_API_KEY') || 'stockbud_internal_secret';
+
+    if (internalKey !== expectedKey) {
+      return { status: 'unauthorized' };
+    }
+
+    return this.metaService.handleWebhookEvent(body);
+  }
 }

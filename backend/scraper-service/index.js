@@ -14,7 +14,8 @@ const logger = pino({
     }
 });
 
-// Prometheus Metrics
+
+
 const collectDefaultMetrics = client.collectDefaultMetrics;
 collectDefaultMetrics({ register: client.register });
 
@@ -53,9 +54,11 @@ async function runScrape(payload) {
     
     try {
         const context = await browser.newContext();
+        
+        await context.route('**/*.{png,jpg,jpeg,gif,svg,webp,css,woff,woff2,ttf,otf}', (route) => route.abort());
+        
         const page = await context.newPage();
 
-        // Select scraper
         const ScraperClass = Scrapers[sitePlatform] || Scrapers.generic;
         const scraper = new ScraperClass(page, logger, {
             ollamaUrl: process.env.OLLAMA_URL,
@@ -63,12 +66,10 @@ async function runScrape(payload) {
             geminiApiKey: process.env.GEMINI_API_KEY
         });
 
-        // Handle login if credentials provided
         if (loginUrl && username && password) {
             await scraper.login(loginUrl, username, password);
         }
 
-        // Run scrape
         const products = await scraper.scrape(url);
         
         const duration = (Date.now() - jobStartTime) / 1000;
@@ -127,7 +128,7 @@ async function connectRabbitMQ() {
                     logger.info(`Job ${jobData.jobId} result sent to scraper_results.`);
                 } catch (err) {
                     logger.error('Error processing message:', err.message);
-                    channel.nack(msg, false, false); // Don't requeue if it's a parsing error
+                    channel.nack(msg, false, false);
                 }
             }
         });

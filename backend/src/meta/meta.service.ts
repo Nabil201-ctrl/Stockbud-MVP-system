@@ -109,4 +109,54 @@ export class MetaService {
       throw error;
     }
   }
+
+  async handleWebhookEvent(body: any) {
+    if (body.object !== 'catalog') return { status: 'ignored' };
+
+    for (const entry of body.entry) {
+      const catalogId = entry.id;
+      // Find the store linked to this catalog
+      const store = await this.prisma.socialStore.findFirst({
+        where: { metaCatalogId: catalogId }
+      });
+
+      if (!store) {
+        this.logger.warn(`Received webhook for unknown catalog: ${catalogId}`);
+        continue;
+      }
+
+      for (const change of entry.changes) {
+        const { field, value } = change;
+        const externalId = value.retailer_id || value.id;
+
+        if (!externalId) continue;
+
+        if (field === 'availability' || field === 'price') {
+          // Fetch existing product to preserve other fields
+          const existing = await this.prisma.product.findFirst({
+            where: { externalId: externalId, socialStoreId: store.id }
+          });
+
+          if (existing) {
+            const updateData: any = {};
+            if (field === 'availability') {
+              updateData.status = value.availability === 'in stock' ? 'active' : 'archived';
+              updateData.inventory = value.availability === 'in stock' ? 100 : 0;
+            }
+            if (field === 'price') {
+              updateData.price = parseFloat(value.price.replace(/[^0-9.]/g, '')) || 0;
+            }
+
+            await this.prisma.product.update({
+              where: { id: existing.id },
+              data: updateData
+            });
+            this.logger.log(`Updated product ${externalId} from webhook`);
+          }
+        }
+      }
+    }
+
+    return { status: 'processed' };
+  }
 }

@@ -18,8 +18,7 @@ const ProductsPage = () => {
   const { showNotification } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('all');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // stores product for deletion
-
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
   const [products, setProducts] = useState([]);
   const [pageInfo, setPageInfo] = useState({
@@ -45,7 +44,6 @@ const ProductsPage = () => {
   const [paginationLoading, setPaginationLoading] = useState(false);
   const [shopifyNotConnected, setShopifyNotConnected] = useState(false);
   const [error, setError] = useState(null);
-
 
   const [thresholds, setThresholds] = useState({});
   const [showThresholdModal, setShowThresholdModal] = useState(null);
@@ -112,7 +110,6 @@ const ProductsPage = () => {
 
     try {
       if (!cursor) {
-        // PWA Offline Storage: Immediately load from IndexedDB
         const cacheKey = `products_${user.activeShopId}`;
         const cachedProducts = await storage.get(cacheKey);
         if (cachedProducts) {
@@ -128,7 +125,6 @@ const ProductsPage = () => {
         setPaginationLoading(true);
       }
 
-      // Construct params object
       const params = {};
       if (cursor) {
         if (direction === 'next') {
@@ -145,11 +141,9 @@ const ProductsPage = () => {
       const res = await storesAPI.getShopifyProducts(params);
       const data = res.data;
 
-      // Successfully connected
       setShopifyNotConnected(false);
       setError(null);
 
-      // Handle response structure { products: [], pageInfo: {}, totalCount: number }
       const productsData = Array.isArray(data) ? data : (data.products || []);
       const pageInfoData = data.pageInfo || { hasNextPage: false, hasPreviousPage: false };
       const serverTotalCount = data.totalCount || 0;
@@ -157,7 +151,6 @@ const ProductsPage = () => {
       setPageInfo(pageInfoData);
       setTotalCount(serverTotalCount);
 
-      // Update page number
       if (!cursor) {
         setCurrentPage(1);
       } else if (direction === 'next') {
@@ -166,7 +159,6 @@ const ProductsPage = () => {
         setCurrentPage(prev => Math.max(1, prev - 1));
       }
 
-      // Transform data
       const transformedProducts = productsData.map(p => ({
         id: p.id,
         name: p.title || p.name || 'Unknown Product',
@@ -178,7 +170,6 @@ const ProductsPage = () => {
         revenue: p.revenue || 0,
       }));
 
-      // Update statistics from server summary if available
       if (data.summary) {
         setProductStats(prev => ({
           ...prev,
@@ -252,7 +243,6 @@ const ProductsPage = () => {
     await fetchDashboardStats();
   };
 
-  // Update notifications when products or thresholds change
   useEffect(() => {
     if (products.length > 0 && Object.keys(thresholds).length > 0) {
       const newNotifications = [];
@@ -294,9 +284,6 @@ const ProductsPage = () => {
     setImagePreview(null);
   };
 
-
-
-  // Dynamic Categories calculation
   const categories = useMemo(() => {
     const cats = productStats.categories && Object.keys(productStats.categories).length > 0
       ? { ...productStats.categories }
@@ -323,13 +310,11 @@ const ProductsPage = () => {
     });
   }, [products, t]);
 
-  // Max Stock for bar scaling
   const maxStock = useMemo(() => {
     if (!products.length) return 100;
     return Math.max(100, ...products.map(p => p.stock));
   }, [products]);
 
-  // Filter products based on search and category
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = category === 'all' ||
@@ -345,7 +330,6 @@ const ProductsPage = () => {
     );
   }
 
-  // Show Shopify not connected state
   if (shopifyNotConnected) {
     return (
       <div className={`p-6 min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -368,7 +352,6 @@ const ProductsPage = () => {
       </div>
     );
   }
-
 
   if (error) {
     return (
@@ -395,7 +378,6 @@ const ProductsPage = () => {
   return (
     <div className="p-3 sm:p-6 space-y-6 sm:space-y-8 min-h-full">
       <div className="max-w-7xl mx-auto">
-        { }
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
@@ -430,7 +412,6 @@ const ProductsPage = () => {
           )}
         </div>
 
-        {/* Stats cards – 2-col on mobile, 4-col on lg */}
         <div id="products-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           {[
             { icon: <Package size={24} />, label: t('products.totalProducts'), value: productStats.total || 0, change: null, color: 'bg-blue-500' },
@@ -456,7 +437,6 @@ const ProductsPage = () => {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-          { }
           <div className={`xl:col-span-2 rounded-xl p-4 sm:p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold">{t('products.catalog')}</h2>
@@ -500,7 +480,6 @@ const ProductsPage = () => {
                 </div>
               ) : (
                 <>
-                  {/* Table for Desktop/Tablet */}
                   <div className="hidden md:block overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -621,7 +600,6 @@ const ProductsPage = () => {
                     </table>
                   </div>
 
-                  {/* Cards for Mobile */}
                   <div className="md:hidden space-y-4">
                     {filteredProducts.map((product) => (
                       <div key={product.id} className={`p-4 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} shadow-sm transition-all hover:shadow-md`}>
@@ -730,8 +708,6 @@ const ProductsPage = () => {
               )}
             </div>
 
-
-            {/* Pagination Controls */}
             <div className={`px-3 sm:px-6 py-3 sm:py-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex items-center justify-between flex-wrap gap-2`}>
               <button
                 onClick={() => fetchProducts(pageInfo.startCursor, 'prev')}
@@ -761,6 +737,40 @@ const ProductsPage = () => {
               </button>
             </div>
           </div>
+
+          <div className="space-y-6">
+            <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+              <h3 className="text-lg font-semibold mb-4">{t('products.categories')}</h3>
+              <div className="space-y-3">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setCategory(cat.id)}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${category === cat.id
+                      ? isDarkMode ? 'bg-blue-900/30 border-blue-500' : 'bg-blue-50 border-blue-500'
+                      : isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'
+                      } border`}
+                  >
+                    <span className="capitalize">{cat.name}</span>
+                    <span className={`px-2 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'
+                      }`}>
+                      {cat.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+              <h3 className="text-lg font-semibold mb-4">{t('products.stockStatus')}</h3>
+              <div className="space-y-4">
+                {[
+                  { status: t('products.inStock'), count: productStats.active || 0, color: 'bg-green-500' },
+                  { status: t('products.lowStock'), count: productStats.lowStock || 0, color: 'bg-yellow-500' },
+                  { status: t('products.outOfStock'), count: productStats.outOfStock || 0, color: 'bg-red-500' }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
 
           { }
           <div className="space-y-6">

@@ -4,7 +4,6 @@ class ShopifyScraper extends BaseScraper {
     async scrape(url) {
         this.logger.info(`Shopify specific scraping: ${url}`);
         
-        // Shopify sites usually have a /products.json endpoint which is easier than HTML
         const productsUrl = url.endsWith('/') ? `${url}products.json` : `${url}/products.json`;
         
         try {
@@ -25,13 +24,11 @@ class ShopifyScraper extends BaseScraper {
             this.logger.warn(`JSON endpoint failed, falling back to HTML scraping: ${err.message}`);
         }
 
-        // Fallback to HTML scraping with specific selectors
         await this.page.goto(url);
         return await this.extractProducts();
     }
 
     async extractProducts() {
-        // Common Shopify theme selectors
         return await this.page.evaluate(() => {
             const products = [];
             const items = document.querySelectorAll('.product-card, .grid-view-item, .product-item');
@@ -44,9 +41,9 @@ class ShopifyScraper extends BaseScraper {
                 if (name) {
                     products.push({
                         name: name.trim(),
-                        sku: 'N/A', // Hard to get SKU from frontend grid
+                        sku: 'N/A',
                         price: price,
-                        inventory: 0 // Usually not visible on frontend
+                        inventory: 0
                     });
                 }
             });

@@ -1,13 +1,11 @@
-/**
- * Base Scraper class
- */
+
 class BaseScraper {
     constructor(page, logger, config = {}) {
         this.page = page;
         this.logger = logger;
         this.ollamaUrl = config.ollamaUrl;
         this.ollamaModel = config.ollamaModel || 'llama3';
-        this.genAI = config.geminiApiKey; // Placeholder for fallback
+        this.genAI = config.geminiApiKey;
     }
 
     async discoverLoginSelectors(html) {
@@ -61,7 +59,6 @@ class BaseScraper {
             await this.page.click(selectors.submit);
             await this.page.waitForNavigation({ timeout: 10000 });
             
-            // Check if login was successful (e.g., no more password field)
             const isLoggedOut = await this.page.$(selectors.password);
             if (isLoggedOut) {
                 throw new Error("Login form still visible after attempt. Credentials might be wrong.");

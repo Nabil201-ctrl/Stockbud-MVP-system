@@ -13,7 +13,8 @@ import {
     Search,
     Filter,
     Cloud,
-    Facebook
+    Facebook,
+    Activity
 } from 'lucide-react';
 
 
@@ -350,13 +351,21 @@ const SocialStoresPanel = ({ isDarkMode, user: userFromProps }) => {
                                         }`}
                                 >
                                     <div className="flex items-center gap-3 pr-8">
-                                        <div className={`p-2 rounded-lg ${store.type === 'instagram' ? 'bg-pink-500' : 'bg-green-500'} text-white`}>
-                                            {store.type === 'instagram' ? <Instagram size={16} /> : <MessageCircle size={16} />}
+                                        <div className={`p-2 rounded-lg ${store.type === 'instagram' ? 'bg-pink-500' : (store.type === 'whatsapp' ? 'bg-green-500' : 'bg-[#1877F2]')} text-white`}>
+                                            {store.type === 'instagram' ? <Instagram size={16} /> : (store.type === 'whatsapp' ? <MessageCircle size={16} /> : <Facebook size={16} />)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold dark:text-white truncate">{store.name}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm font-bold dark:text-white truncate">{store.name}</p>
+                                                {store.type === 'meta' && (
+                                                    <span className="flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-black uppercase tracking-tighter animate-pulse">
+                                                        <Activity size={8} />
+                                                        Live
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-1.5 mt-0.5">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${userFromProps?.activeShopId === store.id ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'}`} />
+                                                <div className={`w-1.5 h-1.5 rounded-full ${userFromProps?.activeShopId === store.id ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'} `} />
                                                 <p className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
                                                     {userFromProps?.activeShopId === store.id ? 'Active Context' : store.type}
                                                 </p>
