@@ -28,6 +28,7 @@ export class ScraperService {
                 name,
                 url,
                 loginUrl,
+                requiresLogin: dto.requiresLogin !== undefined ? dto.requiresLogin : true,
                 schedule: schedule || '0 8 * * *',
                 platform,
                 targetStoreId: dto.targetStoreId,
@@ -46,7 +47,7 @@ export class ScraperService {
                 const title = 'Website Monitoring Setup Started';
                 const message = `We have successfully received your request to monitor <strong>${name}</strong> (${url}).<br/><br/>Our team is currently verifying the site status and setting up the AI connection. You don't need to do anything else right now. We will notify you once the monitoring starts successfully.`;
                 const htmlContent = this.emailService.buildGeneralNotificationHtml(user.name || 'there', title, message);
-                
+
                 await this.emailService.sendEmail({
                     to: [{ email: user.email, name: user.name || '' }],
                     subject: title,
@@ -143,23 +144,33 @@ export class ScraperService {
             throw new NotFoundException('Site not found');
         }
 
-        const updatedSite = await this.prisma.scrapeSite.update({
-            where: { id: cleanId },
-            data: {
-                status: 'idle',
-                credentials: {
-                    upsert: {
-                        create: {
-                            username,
-                            password: this.encryptionService.encrypt(password),
-                        },
-                        update: {
-                            username,
-                            password: this.encryptionService.encrypt(password),
-                        }
+        const updateData: any = {
+            status: 'idle',
+        };
+
+        if (site.requiresLogin && username && password) {
+            updateData.credentials = {
+                upsert: {
+                    create: {
+                        username,
+                        password: this.encryptionService.encrypt(password),
+                    },
+                    update: {
+                        username,
+                        password: this.encryptionService.encrypt(password),
                     }
                 }
-            },
+            };
+        } else if (site.requiresLogin) {
+            // If it requires login but we didn't get credentials, we might want to throw an error 
+            // OR just proceed if we are doing a prohibited-check-only verification.
+            // For now, let's allow it but log a warning.
+            console.warn(`[ScraperService] Site ${cleanId} requires login but no credentials provided.`);
+        }
+
+        const updatedSite = await this.prisma.scrapeSite.update({
+            where: { id: cleanId },
+            data: updateData,
             include: { credentials: true }
         });
 
@@ -169,7 +180,32 @@ export class ScraperService {
             console.error('Failed to automatically trigger scrape after verification', error);
         }
 
+        const user = await this.prisma.user.findUnique({ where: { id: site.userId } });
+        if (user && user.email) {
+            try {
+                const title = 'Website Monitoring Activated!';
+                const message = `Great news! Your request to monitor <strong>${site.name}</strong> has been verified and activated.<br/><br/>We have already started the first scan of the site. You should see products appearing in your dashboard shortly.`;
+                const htmlContent = this.emailService.buildGeneralNotificationHtml(user.name || 'there', title, message);
+
+                await this.emailService.sendEmail({
+                    to: [{ email: user.email, name: user.name || '' }],
+                    subject: title,
+                    htmlContent: htmlContent
+                });
+            } catch (err) {
+                console.error('Failed to send activation email to user:', err.message);
+            }
+        }
+
         return updatedSite;
+    }
+
+    async getSiteById(siteId: string) {
+        const site = await this.prisma.scrapeSite.findUnique({
+            where: { id: siteId }
+        });
+        if (!site) throw new NotFoundException('Site not found');
+        return site;
     }
 
     async triggerScrape(userId: string, siteId: string) {
@@ -190,8 +226,14 @@ export class ScraperService {
             }
         });
 
-        const decryptedPassword = site.credentials?.password 
-            ? this.encryptionService.decrypt(site.credentials.password) 
+        // Update site status to show it's currently being scraped
+        await this.prisma.scrapeSite.update({
+            where: { id: siteId },
+            data: { status: 'scraping' }
+        });
+
+        const decryptedPassword = site.credentials?.password
+            ? this.encryptionService.decrypt(site.credentials.password)
             : null;
 
         const payload = {
@@ -199,6 +241,7 @@ export class ScraperService {
             siteId: site.id,
             url: site.url,
             loginUrl: site.loginUrl,
+            requiresLogin: site.requiresLogin,
             username: site.credentials?.username,
             password: decryptedPassword,
             platform: site.platform

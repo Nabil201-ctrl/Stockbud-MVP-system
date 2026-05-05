@@ -1,11 +1,11 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
 export class AddCredentialsDto {
     @IsString()
-    @IsNotEmpty()
-    username: string;
+    @IsOptional()
+    username?: string;
 
     @IsString()
-    @IsNotEmpty()
-    password: string;
+    @IsOptional()
+    password?: string;
 }

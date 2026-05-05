@@ -62,6 +62,7 @@ const LinkShop = () => {
         setConnecting(platformId);
 
         setTimeout(async () => {
+            await completeOnboarding();
             setSuccess(true);
             setTimeout(() => {
                 navigate('/dashboard');
@@ -73,7 +74,16 @@ const LinkShop = () => {
         e.preventDefault();
         setConnecting('standalone');
         try {
-            await storesAPI.scraper.createSite(standaloneData);
+            // Only send fields supported by CreateSiteDto to avoid 400 error (forbidNonWhitelisted)
+            const cleanData = {
+                name: standaloneData.name,
+                url: standaloneData.url.trim(),
+                platform: standaloneData.platform,
+                requiresLogin: true // Standalone sites in onboarding usually imply monitoring a private store
+            };
+            
+            await storesAPI.scraper.createSite(cleanData);
+            await completeOnboarding();
             setSuccess(true);
             setTimeout(() => {
                 navigate('/dashboard');
@@ -86,6 +96,7 @@ const LinkShop = () => {
     };
 
     const handleSkipOrComplete = async () => {
+        await completeOnboarding();
         navigate('/dashboard');
     };
 

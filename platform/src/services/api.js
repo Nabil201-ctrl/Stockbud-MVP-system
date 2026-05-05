@@ -148,6 +148,7 @@ export const storesAPI = {
         updateSite: (id, data) => api.patch(`/scraper/sites/${id}`, data),
         triggerScrape: (id) => api.post(`/scraper/sites/${id}/scrape`),
         deleteSite: (id) => api.delete(`/scraper/sites/${id}`),
+        getSiteForVerification: (id) => api.get(`/scraper/verify/${id}`),
         verifySite: (id, data) => api.post(`/scraper/verify/${id}`, data),
     }
 };

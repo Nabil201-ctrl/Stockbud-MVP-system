@@ -35,6 +35,11 @@ export class ScraperController {
     }
 
     // This endpoint is used by staff via a secure email link.
+    @Get('verify/:id')
+    async getSiteForVerification(@Param('id') id: string) {
+        return this.scraperService.getSiteById(id);
+    }
+
     // Temporarily public for debugging
     @Post('verify/:id')
     async verifySite(@Param('id') id: string, @Body() dto: AddCredentialsDto) {

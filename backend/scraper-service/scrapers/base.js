@@ -45,6 +45,61 @@ class BaseScraper {
         }
     }
 
+    async discoverLoginUrl(baseUrl) {
+        this.logger.info(`Attempting to discover login URL for ${baseUrl}`);
+        try {
+            await this.page.goto(baseUrl, { waitUntil: 'load', timeout: 15000 }).catch(e => this.logger.warn(`Initial goto failed: ${e.message}`));
+            await this.page.waitForTimeout(2000);
+            
+            // 1. Look for common login links/buttons in the page
+            const loginLinkSelectors = [
+                'a:has-text("Log In")', 'a:has-text("Login")', 'a:has-text("Sign In")', 'a:has-text("Account")',
+                'a[href*="/login"]', 'a[href*="/signin"]', 'a[href*="/account"]',
+                'button:has-text("Log In")', 'button:has-text("Login")', 'button:has-text("Sign In")'
+            ];
+
+            for (const selector of loginLinkSelectors) {
+                try {
+                    const link = await this.page.$(selector);
+                    if (link) {
+                        const href = await link.getAttribute('href');
+                        if (href) {
+                            const absoluteUrl = new URL(href, baseUrl).toString();
+                            this.logger.info(`Found potential login URL via link: ${absoluteUrl}`);
+                            return absoluteUrl;
+                        }
+                    }
+                } catch (e) {
+                    // Ignore selector errors
+                }
+            }
+
+            // 2. Try common login paths
+            const commonPaths = ['/login', '/signin', '/account/login', '/user/login', '/admin/login', '/wp-login.php'];
+            for (const path of commonPaths) {
+                const testUrl = new URL(path, baseUrl).toString();
+                try {
+                    const response = await this.page.request.get(testUrl);
+                    if (response.status() === 200) {
+                        const text = await response.text();
+                        if (text.toLowerCase().includes('password') || text.toLowerCase().includes('login')) {
+                            this.logger.info(`Found potential login URL via common path: ${testUrl}`);
+                            return testUrl;
+                        }
+                    }
+                } catch (e) {
+                    // Ignore request errors
+                }
+            }
+
+            this.logger.warn(`Could not discover login URL for ${baseUrl}`);
+            return null;
+        } catch (err) {
+            this.logger.error(`Error during login URL discovery: ${err.message}`);
+            return null;
+        }
+    }
+
     async login(loginUrl, username, password) {
         this.logger.info(`Attempting login at ${loginUrl}`);
         await this.page.goto(loginUrl);

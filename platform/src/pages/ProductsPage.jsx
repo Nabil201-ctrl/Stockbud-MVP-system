@@ -738,6 +738,7 @@ const ProductsPage = () => {
             </div>
           </div>
 
+
           <div className="space-y-6">
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.categories')}</h3>
@@ -760,44 +761,6 @@ const ProductsPage = () => {
                 ))}
               </div>
             </div>
-
-            <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-4">{t('products.stockStatus')}</h3>
-              <div className="space-y-4">
-                {[
-                  { status: t('products.inStock'), count: productStats.active || 0, color: 'bg-green-500' },
-                  { status: t('products.lowStock'), count: productStats.lowStock || 0, color: 'bg-yellow-500' },
-                  { status: t('products.outOfStock'), count: productStats.outOfStock || 0, color: 'bg-red-500' }
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-
-          { }
-          <div className="space-y-6">
-            { }
-            <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-              <h3 className="text-lg font-semibold mb-4">{t('products.categories')}</h3>
-              <div className="space-y-3">
-                {categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setCategory(cat.id)}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${category === cat.id
-                      ? isDarkMode ? 'bg-blue-900/30 border-blue-500' : 'bg-blue-50 border-blue-500'
-                      : isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'
-                      } border`}
-                  >
-                    <span className="capitalize">{cat.name}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'
-                      }`}>
-                      {cat.count}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.stockStatus')}</h3>
               <div className="space-y-4">
@@ -824,8 +787,6 @@ const ProductsPage = () => {
                 ))}
               </div>
             </div>
-
-            { }
             <div className={`rounded-xl p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
               <h3 className="text-lg font-semibold mb-4">{t('products.topPerforming')}</h3>
               <div className="space-y-4">
@@ -934,7 +895,6 @@ const ProductsPage = () => {
             </div>
           </div>
         )}
-      </div>
 
       {
         triggerAddProduct && (
@@ -1200,8 +1160,9 @@ const ProductsPage = () => {
         confirmText="Delete"
         type="danger"
       />
-    </div >
-  );
+    </div>
+  </div>
+);
 };
 
 export default ProductsPage;

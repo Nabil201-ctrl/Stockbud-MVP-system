@@ -221,6 +221,7 @@ model ScrapeSite {
   isActive          Boolean           @default(true)
   lastScrapeAt      DateTime?
   status            String            @default("idle") // "idle", "scraping", "failed"
+  requiresLogin     Boolean           @default(true)
   
   credentials       ScrapeCredential?
   jobs              ScrapeJob[]

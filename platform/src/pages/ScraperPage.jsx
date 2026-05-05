@@ -27,6 +27,7 @@ const ScraperPage = () => {
         name: '',
         url: '',
         loginUrl: '',
+        requiresLogin: true,
         platform: 'generic',
         targetStoreId: '',
         targetStoreType: ''
@@ -40,6 +41,10 @@ const ScraperPage = () => {
 
     useEffect(() => {
         fetchSites();
+        
+        // Poll for updates every 10 seconds to show scrape progress
+        const interval = setInterval(fetchSites, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     const fetchSites = async () => {
@@ -62,11 +67,26 @@ const ScraperPage = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
+            // Clean data: remove empty strings for optional URL fields
+            const dataToSave = { 
+                ...newSite,
+                url: newSite.url.trim(),
+                loginUrl: newSite.loginUrl?.trim()
+            };
+            if (!dataToSave.loginUrl) delete dataToSave.loginUrl;
+            if (!dataToSave.requiresLogin) {
+                delete dataToSave.loginUrl;
+            }
+            if (!dataToSave.targetStoreId) {
+                delete dataToSave.targetStoreId;
+                delete dataToSave.targetStoreType;
+            }
+
             if (editingSite) {
-                await storesAPI.scraper.updateSite(editingSite.id, newSite);
+                await storesAPI.scraper.updateSite(editingSite.id, dataToSave);
                 showNotification('Website settings updated successfully', 'success');
             } else {
-                await storesAPI.scraper.createSite(newSite);
+                await storesAPI.scraper.createSite(dataToSave);
                 showNotification('Website added successfully', 'success');
             }
             setShowAddModal(false);
@@ -75,6 +95,7 @@ const ScraperPage = () => {
                 name: '', 
                 url: '', 
                 loginUrl: '', 
+                requiresLogin: true,
                 platform: 'generic',
                 targetStoreId: '',
                 targetStoreType: ''
@@ -298,6 +319,7 @@ const ScraperPage = () => {
                                                     name: site.name,
                                                     url: site.url,
                                                     loginUrl: site.loginUrl || '',
+                                                    requiresLogin: site.requiresLogin !== undefined ? site.requiresLogin : true,
                                                     platform: site.platform || 'generic',
                                                     targetStoreId: site.targetStoreId || '',
                                                     targetStoreType: site.targetStoreType || ''
@@ -326,8 +348,18 @@ const ScraperPage = () => {
                                 <div className="space-y-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-500 dark:text-gray-400 font-medium">Status</span>
-                                        <span className={`flex items-center gap-1 font-bold ${site.status === 'failed' ? 'text-red-500' : 'text-green-500'}`}>
-                                            {site.status === 'failed' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                                        <span className={`flex items-center gap-1 font-bold ${
+                                            site.status === 'failed' ? 'text-red-500' : 
+                                            site.status === 'scraping' ? 'text-indigo-600 dark:text-indigo-400' : 
+                                            'text-green-500'
+                                        }`}>
+                                            {site.status === 'failed' ? (
+                                                <AlertCircle className="w-4 h-4" />
+                                            ) : site.status === 'scraping' ? (
+                                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <CheckCircle2 className="w-4 h-4" />
+                                            )}
                                             {(site.status || 'pending').charAt(0).toUpperCase() + (site.status || 'pending').slice(1)}
                                         </span>
                                     </div>
@@ -335,6 +367,12 @@ const ScraperPage = () => {
                                         <span className="text-gray-500 dark:text-gray-400 font-medium">Last Scrape</span>
                                         <span className="text-gray-700 dark:text-gray-300 font-bold text-right">
                                             {site.lastScrapeAt ? new Date(site.lastScrapeAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : 'Never'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500 dark:text-gray-400 font-medium">Auth Required</span>
+                                        <span className={`font-bold ${site.requiresLogin ? 'text-indigo-500' : 'text-gray-400'}`}>
+                                            {site.requiresLogin ? 'Yes' : 'No'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-sm">
@@ -381,15 +419,29 @@ const ScraperPage = () => {
                                     placeholder="https://example.com/admin"
                                 />
                             </div>
-                            <div>
+                            <div className={!newSite.requiresLogin ? 'opacity-50 pointer-events-none' : ''}>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Login URL (Optional)</label>
                                 <input 
                                     type="url"
+                                    disabled={!newSite.requiresLogin}
                                     value={newSite.loginUrl}
                                     onChange={e => setNewSite({...newSite, loginUrl: e.target.value})}
                                     className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-gray-900 dark:text-white"
                                     placeholder="https://example.com/login"
                                 />
+                                <p className="text-[10px] text-gray-400 mt-1">If left blank, our AI will try to find the login page automatically.</p>
+                            </div>
+                            <div className="flex items-center gap-3 py-2">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={newSite.requiresLogin}
+                                        onChange={e => setNewSite({...newSite, requiresLogin: e.target.checked})}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                </label>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Requires Authentication</span>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sync to Store (Optional)</label>

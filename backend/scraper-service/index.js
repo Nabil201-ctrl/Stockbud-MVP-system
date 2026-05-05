@@ -65,9 +65,21 @@ async function runScrape(payload) {
             ollamaModel: process.env.OLLAMA_MODEL,
             geminiApiKey: process.env.GEMINI_API_KEY
         });
+        
+        const shouldLogin = payload.requiresLogin !== false;
 
-        if (loginUrl && username && password) {
-            await scraper.login(loginUrl, username, password);
+        if (shouldLogin && username && password) {
+            let effectiveLoginUrl = loginUrl;
+            if (!effectiveLoginUrl) {
+                logger.info(`Login URL not provided, attempting discovery for ${url}`);
+                effectiveLoginUrl = await scraper.discoverLoginUrl(url);
+            }
+            
+            if (effectiveLoginUrl) {
+                await scraper.login(effectiveLoginUrl, username, password);
+            } else {
+                logger.warn(`Skipping login for ${url} because no login URL could be found.`);
+            }
         }
 
         const products = await scraper.scrape(url);
