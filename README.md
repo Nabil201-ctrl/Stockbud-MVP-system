@@ -26,8 +26,6 @@ Copy and paste this into the "Test instructions" field:
 2. Use the **"Manually Pair Account"** section at the bottom.
 3. Enter the code: `STOCK-BUD-REVIEW`.
 6. The dashboard will load once the catalog sync is complete (~10 seconds).
-
-**Video Tutorial (Unlisted):** [Insert Loom/YouTube Link Here]
 ---
 
 ## Getting Started
