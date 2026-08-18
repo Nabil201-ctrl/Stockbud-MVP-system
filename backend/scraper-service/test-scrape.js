@@ -25,8 +25,8 @@ async function testScrape(url, platform = 'generic') {
         const ScraperClass = scrapers[platform.toLowerCase()] || scrapers.generic;
         const config = {
             geminiApiKey: process.env.GEMINI_API_KEY,
-            ollamaUrl: process.env.OLLAMA_URL,
-            ollamaModel: process.env.OLLAMA_MODEL
+            groqApiKey: process.env.GROQ_API_KEY,
+            groqModel: process.env.GROQ_MODEL
         };
         
         const scraper = new ScraperClass(page, logger, config);

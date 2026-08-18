@@ -61,8 +61,8 @@ async function runScrape(payload) {
 
         const ScraperClass = Scrapers[sitePlatform] || Scrapers.generic;
         const scraper = new ScraperClass(page, logger, {
-            ollamaUrl: process.env.OLLAMA_URL,
-            ollamaModel: process.env.OLLAMA_MODEL,
+            groqApiKey: process.env.GROQ_API_KEY,
+            groqModel: process.env.GROQ_MODEL,
             geminiApiKey: process.env.GEMINI_API_KEY
         });
         

@@ -3,26 +3,34 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'stockbud-backend'
+  - job_name: stockbud-backend
     static_configs:
-      - targets: ['host.docker.internal:3000']
-    metrics_path: '/metrics'
+      - targets: ['backend:3000']
+    metrics_path: /metrics
 
-  - job_name: 'stockbud-image-service'
+  - job_name: stockbud-image-service
     static_configs:
-      - targets: ['host.docker.internal:3002']
-    metrics_path: '/metrics'
+      - targets: ['image-service:3002']
+    metrics_path: /metrics
 
-  - job_name: 'stockbud-order-processor'
+  - job_name: stockbud-order-processor
     static_configs:
-      - targets: ['host.docker.internal:3001']
-    metrics_path: '/metrics'
+      - targets: ['order-processor:3003']
+    metrics_path: /metrics
 
-  - job_name: 'stockbud-orders-microservice'
+  - job_name: stockbud-scraper-worker
     static_configs:
-      - targets: ['host.docker.internal:3003']
-    metrics_path: '/metrics'
+      - targets: ['scraper-worker:3005']
+    metrics_path: /metrics
 
-  - job_name: 'mail'
+  - job_name: cadvisor
     static_configs:
-      - targets: ['mail-exporter:9154']
+      - targets: ['cadvisor:8080']
+
+  - job_name: node-exporter
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  - job_name: redis
+    static_configs:
+      - targets: ['redis-exporter:9121']

@@ -11,8 +11,7 @@ const logger = pino({
 
 async function test() {
     console.log('--- STARTING SCRAPER TEST ---');
-    console.log('Using Ollama at:', process.env.OLLAMA_URL);
-    console.log('Model:', process.env.OLLAMA_MODEL);
+    console.log('Using Groq model:', process.env.GROQ_MODEL || 'groq/compound-mini');
 
     const payload = {
         jobId: 'test-job-' + Date.now(),

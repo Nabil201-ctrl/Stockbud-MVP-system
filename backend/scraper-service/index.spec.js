@@ -8,15 +8,8 @@ describe('Scraper Worker', () => {
     let mockPage;
     let mockBrowser;
     
-    // Set a default OLLAMA_URL for the test environment if not provided
-    // In this specific environment, we found it at 10.0.3.3
-    const DEFAULT_OLLAMA_URL = 'http://10.0.3.3:11434';
-    
     beforeAll(() => {
-        if (!process.env.OLLAMA_URL) {
-            process.env.OLLAMA_URL = DEFAULT_OLLAMA_URL;
-            console.log(`Setting default OLLAMA_URL to ${DEFAULT_OLLAMA_URL} for tests`);
-        }
+        process.env.GROQ_MODEL = process.env.GROQ_MODEL || 'groq/compound-mini';
     });
 
     beforeEach(() => {
@@ -51,9 +44,8 @@ describe('Scraper Worker', () => {
     });
 
     describe('extractWithAI', () => {
-        it('should extract products using real Ollama', async () => {
-            // Ensure we have a model pulled (llama3 is confirmed to exist)
-            process.env.OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
+        it('should extract products using Groq', async () => {
+            process.env.GROQ_MODEL = process.env.GROQ_MODEL || 'groq/compound-mini';
 
             const result = await extractWithAI('<html><body><table><tr><td>Product A</td><td>SKU-123</td><td>10.99</td><td>50</td></tr></table></body></html>');
 

@@ -1,15 +1,16 @@
+const { groqJson } = require('../groq');
 
 class BaseScraper {
     constructor(page, logger, config = {}) {
         this.page = page;
         this.logger = logger;
-        this.ollamaUrl = config.ollamaUrl;
-        this.ollamaModel = config.ollamaModel || 'llama3';
+        this.groqApiKey = config.groqApiKey;
+        this.groqModel = config.groqModel;
         this.genAI = config.geminiApiKey;
     }
 
     async discoverLoginSelectors(html) {
-        if (!this.ollamaUrl) {
+        if (!this.groqApiKey) {
             return {
                 username: 'input[type="text"], input[type="email"], input[name="username"]',
                 password: 'input[type="password"]',
@@ -18,7 +19,7 @@ class BaseScraper {
         }
 
         try {
-            this.logger.info("Using AI to discover login selectors...");
+            this.logger.info("Using Groq to discover login selectors...");
             const prompt = `
                 Analyze the following HTML and identify the CSS selectors for the login form.
                 Return ONLY a JSON object with these keys: "username", "password", "submit".
@@ -26,15 +27,10 @@ class BaseScraper {
                 HTML: ${html.substring(0, 10000)}
             `;
 
-            const axios = require('axios');
-            const response = await axios.post(`${this.ollamaUrl}/api/generate`, {
-                model: this.ollamaModel,
-                prompt: prompt,
-                stream: false,
-                format: "json"
+            return await groqJson(prompt, {
+                apiKey: this.groqApiKey,
+                model: this.groqModel
             });
-
-            return JSON.parse(response.data.response);
         } catch (err) {
             this.logger.warn(`AI selector discovery failed, using defaults: ${err.message}`);
             return {

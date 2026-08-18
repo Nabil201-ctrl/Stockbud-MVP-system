@@ -1,13 +1,13 @@
 const BaseScraper = require('./base');
-const axios = require('axios');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { groqJson } = require('../groq');
 
 class GenericAIScraper extends BaseScraper {
     constructor(page, logger, config = {}) {
-        super(page, logger);
+        super(page, logger, config);
         this.genAI = config.geminiApiKey ? new GoogleGenerativeAI(config.geminiApiKey) : null;
-        this.ollamaUrl = config.ollamaUrl;
-        this.ollamaModel = config.ollamaModel || 'llama3';
+        this.groqApiKey = config.groqApiKey;
+        this.groqModel = config.groqModel;
     }
 
     async scrape(url) {
@@ -74,7 +74,7 @@ class GenericAIScraper extends BaseScraper {
     async extractProducts(text) {
         const prompt = `
             Extract product information from the following text content of an e-commerce site.
-            Return ONLY a JSON array of objects with the following keys:
+            Return ONLY a JSON object with a "products" array. Each product object must have the following keys:
             - name (string)
             - sku (string or "N/A")
             - price (number)
@@ -84,26 +84,25 @@ class GenericAIScraper extends BaseScraper {
             ${text.substring(0, 30000)}
         `;
 
-        if (this.ollamaUrl) {
+        if (this.groqApiKey) {
             try {
-                this.logger.info(`Using Ollama for extraction at ${this.ollamaUrl}`);
-                const response = await axios.post(`${this.ollamaUrl}/api/generate`, {
-                    model: this.ollamaModel,
-                    prompt: prompt,
-                    stream: false,
-                    format: "json"
+                this.logger.info('Using Groq for product extraction');
+                const parsed = await groqJson(prompt, {
+                    apiKey: this.groqApiKey,
+                    model: this.groqModel
                 });
-                
-                const resultText = response.data.response;
-                return JSON.parse(resultText);
-            } catch (ollamaError) {
-                this.logger.error('Ollama extraction failed:', ollamaError.message);
+                const products = Array.isArray(parsed) ? parsed : (parsed.products || []);
+                if (products.length > 0) {
+                    return products;
+                }
+            } catch (groqError) {
+                this.logger.error('Groq extraction failed:', groqError.message);
             }
         }
         
         if (this.genAI) {
             try {
-                this.logger.info('Ollama failed or unavailable, falling back to Gemini...');
+                this.logger.info('Groq failed or unavailable, falling back to Gemini...');
                 const model = this.genAI.getGenerativeModel({ 
                     model: "gemini-1.5-flash",
                     generationConfig: { responseMimeType: "application/json" }
@@ -111,7 +110,8 @@ class GenericAIScraper extends BaseScraper {
 
                 const result = await model.generateContent(prompt);
                 const resultText = result.response.text();
-                return JSON.parse(resultText);
+                const parsed = JSON.parse(resultText);
+                return Array.isArray(parsed) ? parsed : (parsed.products || []);
             } catch (geminiError) {
                 this.logger.error('Gemini extraction fallback failed:', geminiError.message);
             }
